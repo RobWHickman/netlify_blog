@@ -1,9 +1,9 @@
 +++
-title = "Mobile visual clothing search"
+title = "No evidence for intracellular magnetite in putative vertebrate magnetoreceptors identified by magnetic screening"
 date = "2013-07-01"
 
 # Authors. Comma separated list, e.g. `["Bob Smith", "David Jones"]`.
-authors = ["GA Cushen", "MS Nixon"]
+authors = ["NB Edelman", "T Fritz", "S Nimpf", "P Pichler", "M Lauwers", "RW Hickman", "A Papadaki-Anastasopoulou", "L Ushakova", "T Heuser", "GP Resch", "M Saunders", "JA Shaw", "DA Keays"]
 
 # Publication type.
 # Legend:
@@ -14,15 +14,14 @@ authors = ["GA Cushen", "MS Nixon"]
 # 4 = Technical report
 # 5 = Book
 # 6 = Book chapter
-publication_types = ["1"]
+publication_types = ["2"]
 
 # Publication name and optional abbreviated version.
-publication = "In *International Conference on Multimedia and Expo Workshops (ICMEW)*, IEEE."
-publication_short = "In *ICMEW*"
+publication = "In *Proceeding of the National Academy of Sciences (PNAS)*, PNAS."
+publication_short = "In *PNAS*"
 
 # Abstract and optional shortened version.
-abstract = "We present a mobile visual clothing search system whereby a smart phone user can either choose a social networking photo or take a new photo of a person wearing clothing of interest and search for similar clothing in a retail database. From the query image, the person is detected, clothing is segmented, and clothing features are extracted and quantized. The information is sent from the phone client to a server, where the feature vector of the query image is used to retrieve similar clothing products from online databases. The phone's GPS location is used to re-rank results by retail store location. State of the art work focuses primarily on the recognition of a diverse range of clothing offline and pays little attention to practical applications. Evaluated on a challenging dataset, the system is relatively fast and achieves promising results."
-abstract_short = "A mobile visual clothing search system is presented whereby a smart phone user can either choose a social networking image or capture a new photo of a person wearing clothing of interest and search for similar clothing in a large cloud-based ecommerce database. The phone's GPS location is used to re-rank results by retail store location, to inform the user of local stores where similar clothing items can be tried on."
+abstract = "The cellular basis of the magnetic sense remains an unsolved scientific mystery. One theory that aims to explain how animals detect the magnetic field is the magnetite hypothesis. It argues that intracellular crystals of the iron oxide magnetite (Fe3O4) are coupled to mechanosensitive channels that elicit neuronal activity in specialized sensory cells. Attempts to find these primary sensors have largely relied on the Prussian Blue stain that labels cells rich in ferric iron. This method has proved problematic as it has led investigators to conflate iron-rich macrophages with magnetoreceptors. An alternative approach developed by Eder et al. [Eder SH, et al. (2012) Proc Natl Acad Sci USA 109(30):12022–12027] is to identify candidate magnetoreceptive cells based on their magnetic moment. Here, we explore the utility of this method by undertaking a screen for magnetic cells in the pigeon. We report the identification of a small number of cells (1 in 476,000) with large magnetic moments (8–106 fAm2) from various tissues. The development of single-cell correlative light and electron microscopy (CLEM) coupled with electron energy loss spectroscopy (EELS) and energy-filtered transmission electron microscopy (EFTEM) permitted subcellular analysis of magnetic cells. This revealed the presence of extracellular structures composed of iron, titanium, and chromium accounting for the magnetic properties of these cells. Application of single-cell CLEM to magnetic cells from the trout failed to identify any intracellular structures consistent with biogenically derived magnetite. Our work illustrates the need for new methods to test the magnetite hypothesis of magnetosensation."
 
 # Featured image thumbnail (optional)
 image_preview = ""
@@ -33,22 +32,22 @@ selected = true
 # Projects (optional).
 #   Associate this publication with one or more of your projects.
 #   Simply enter the filename (excluding '.md') of your project file in `content/project/`.
-projects = ["example-external-project"]
+#projects = ["example-external-project"]
 
 # Links (optional).
-url_pdf = "http://eprints.soton.ac.uk/352095/1/Cushen-IMV2013.pdf"
-url_preprint = "http://eprints.soton.ac.uk/352095/1/Cushen-IMV2013.pdf"
-url_code = "#"
-url_dataset = "#"
-url_project = "#"
-url_slides = "#"
-url_video = "#"
-url_poster = "#"
-url_source = "#"
+url_pdf = "http://www.pnas.org/content/112/1/262.full.pdf"
+#url_preprint = "http://eprints.soton.ac.uk/352095/1/Cushen-IMV2013.pdf"
+#url_code = "#"
+#url_dataset = "#"
+#url_project = "#"
+#url_slides = "#"
+#url_video = "#"
+#url_poster = "#"
+#url_source = "#"
 
 # Custom links (optional).
 #   Uncomment line below to enable. For multiple links, use the form `[{...}, {...}, {...}]`.
-url_custom = [{name = "Custom Link", url = "http://example.org"}]
+#url_custom = [{name = "Custom Link", url = "http://example.org"}]
 
 # Does the content use math formatting?
 math = true
@@ -59,8 +58,8 @@ highlight = true
 # Featured image
 # Place your image in the `static/img/` folder and reference its filename below, e.g. `image = "example.jpg"`.
 [header]
-image = "headers/bubbles-wide.jpg"
-caption = "My caption :smile:"
+image = "headers/noevidence.png"
+caption = "Figure 1"
 
 +++
 

@@ -17,7 +17,7 @@ weight = 5
 
 # List your qualifications (such as academic degrees).
 [[education.courses]]
-  course = "PhD in Artificial Intelligence"
+  course = "PhD in Neuroscience"
   institution = "University of Cambridge"
   year = 2020
 
