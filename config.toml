@@ -217,7 +217,7 @@ defaultContentLanguageInSubdir = false
   [[params.social]]
     icon = "envelope"
     icon_pack = "fa"
-    link = "mailto:robwhickman@gmail.com
+    link = "mailto:robwhickman@gmail.com"
 
   [[params.social]]
     icon = "twitter"
