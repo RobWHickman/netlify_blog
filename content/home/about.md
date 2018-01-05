@@ -18,23 +18,16 @@ weight = 5
 # List your qualifications (such as academic degrees).
 [[education.courses]]
   course = "PhD in Artificial Intelligence"
-  institution = "Stanford University"
-  year = 2012
+  institution = "University of Cambridge"
+  year = 2017-
 
 [[education.courses]]
-  course = "MEng in Artificial Intelligence"
-  institution = "Massachusetts Institute of Technology"
-  year = 2009
-
-[[education.courses]]
-  course = "BSc in Artificial Intelligence"
-  institution = "Massachusetts Institute of Technology"
-  year = 2008
+  course = "BA in Physiological Sciences"
+  institution = "University of Oxford"
+  year = 2010-2013
  
 +++
 
 # Biography
 
-Lena Smith is a professor of artificial intelligence at the Stanford AI Lab. Her research interests include distributed robotics, mobile computing and programmable matter. She leads the Robotic Neurobiology group, which develops self-reconfiguring robots, systems of self-organizing robots, and mobile sensor networks.
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed neque elit, tristique placerat feugiat ac, facilisis vitae arcu. Proin eget egestas augue. Praesent ut sem nec arcu pellentesque aliquet. Duis dapibus diam vel metus tempus vulputate. 
+I'm currently a first year PhD Student in the lab of Wolfram Schultz at the University of Cambridge. I study decision making in simple economic tasks in non-human primates, and in my spare time enjoy practising my coding- mostly in R- and writing about neuroscience and AI. This website serves as a hub for small pieces of work relating to both those interests.
