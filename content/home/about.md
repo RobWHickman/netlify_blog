@@ -19,12 +19,12 @@ weight = 5
 [[education.courses]]
   course = "PhD in Artificial Intelligence"
   institution = "University of Cambridge"
-  year = 2017-
+  year = 2020
 
 [[education.courses]]
   course = "BA in Physiological Sciences"
   institution = "University of Oxford"
-  year = 2010-2013
+  year = 2013
  
 +++
 
