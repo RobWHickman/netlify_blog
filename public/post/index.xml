@@ -13,15 +13,15 @@
     
     
     <item>
-      <title>Hello World! A Small Chess Plotting Package</title>
+      <title>Hello World! And A Small Chess Plotting Package</title>
       <link>/post/hello-world-a-small-chess-plotting-package/</link>
       <pubDate>Wed, 21 Mar 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/hello-world-a-small-chess-plotting-package/</guid>
       <description>Finally gotten around to using my blogdown website!
-Feels like a fairly good place to publicise a small package to plot chess games using only the pgn using ggplot2 in R which can be found [here])https://github.com/RobWHickman/kaRpov)
+Feels like a fairly good place to publicise a small package to plot chess games using only the pgn using ggplot2 in R which can be found here
 To copy the readme mini-vignette provides a nice overview of the uber-function which goes from pgn -&amp;gt; gif.
-library(kaRpov) #the pgn for the immortal game immortal_pgn &amp;lt;- &amp;quot;1.e4 e5 2.f4 exf4 3.Bc4 Qh4+ 4.Kf1 b5 5.</description>
+As in the README massive thanks and inspiration to Joshua Kunst and his rchess package which I failed to get going on my laptop and decided to try my arm at writing something from scratch.</description>
     </item>
     
   </channel>

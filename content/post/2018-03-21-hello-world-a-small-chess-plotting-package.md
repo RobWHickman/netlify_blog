@@ -1,5 +1,5 @@
 ---
-title: Hello World! A Small Chess Plotting Package
+title: Hello World! And A Small Chess Plotting Package
 author: Robert Hickman
 date: '2018-03-21'
 slug: hello-world-a-small-chess-plotting-package
@@ -15,9 +15,11 @@ header:
 
 Finally gotten around to using my [blogdown](https://cran.r-project.org/web/packages/blogdown/index.html) website!
 
-Feels like a fairly good place to publicise a small package to plot chess games using only the pgn using ggplot2 in R which can be found [here])https://github.com/RobWHickman/kaRpov)
+Feels like a fairly good place to publicise a small package to plot chess games using only the pgn using ggplot2 in R which can be found [here](https://github.com/RobWHickman/kaRpov)
 
 To copy the readme mini-vignette provides a nice overview of the uber-function which goes from pgn -> gif.
+
+As in the README massive thanks and inspiration to [Joshua Kunst](https://twitter.com/jbkunst) and his [rchess package](http://jkunst.com/rchess/) which I failed to get going on my laptop and decided to try my arm at writing something from scratch.
 
 ```{r}
 library(kaRpov)

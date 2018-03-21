@@ -11,16 +11,18 @@
     <atom:link href="/" rel="self" type="application/rss+xml" />
     
     <item>
-      <title>Hello World! A Small Chess Plotting Package</title>
+      <title>Hello World! And A Small Chess Plotting Package</title>
       <link>/post/hello-world-a-small-chess-plotting-package/</link>
       <pubDate>Wed, 21 Mar 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/hello-world-a-small-chess-plotting-package/</guid>
       <description>&lt;p&gt;Finally gotten around to using my &lt;a href=&#34;https://cran.r-project.org/web/packages/blogdown/index.html&#34; target=&#34;_blank&#34;&gt;blogdown&lt;/a&gt; website!&lt;/p&gt;
 
-&lt;p&gt;Feels like a fairly good place to publicise a small package to plot chess games using only the pgn using ggplot2 in R which can be found [here])&lt;a href=&#34;https://github.com/RobWHickman/kaRpov)&#34; target=&#34;_blank&#34;&gt;https://github.com/RobWHickman/kaRpov)&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Feels like a fairly good place to publicise a small package to plot chess games using only the pgn using ggplot2 in R which can be found &lt;a href=&#34;https://github.com/RobWHickman/kaRpov&#34; target=&#34;_blank&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
 
 &lt;p&gt;To copy the readme mini-vignette provides a nice overview of the uber-function which goes from pgn -&amp;gt; gif.&lt;/p&gt;
+
+&lt;p&gt;As in the README massive thanks and inspiration to &lt;a href=&#34;https://twitter.com/jbkunst&#34; target=&#34;_blank&#34;&gt;Joshua Kunst&lt;/a&gt; and his &lt;a href=&#34;http://jkunst.com/rchess/&#34; target=&#34;_blank&#34;&gt;rchess package&lt;/a&gt; which I failed to get going on my laptop and decided to try my arm at writing something from scratch.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;library(kaRpov)
 
