@@ -1,4 +1,4 @@
-+++
+﻿+++
 title = "No evidence for intracellular magnetite in putative vertebrate magnetoreceptors identified by magnetic screening"
 date = "2013-07-01"
 
@@ -21,8 +21,7 @@ publication = "In *Proceeding of the National Academy of Sciences (PNAS)*, PNAS.
 publication_short = "In *PNAS*"
 
 # Abstract and optional shortened version.
-abstract = "The cellular basis of the magnetic sense remains an unsolved scientific mystery. One theory that aims to explain how animals detect the magnetic field is the magnetite hypothesis. It argues that intracellular crystals of the iron oxide magnetite (Fe3O4) are coupled to mechanosensitive channels that elicit neuronal activity in specialized sensory cells. Attempts to find these primary sensors have largely relied on the Prussian Blue stain that labels cells rich in ferric iron. This method has proved problematic as it has led investigators to conflate iron-rich macrophages with magnetoreceptors. An alternative approach developed by Eder et al. [Eder SH, et al. (2012) Proc Natl Acad Sci USA 109(30):12022–12027] is to identify candidate magnetoreceptive cells based on their magnetic moment. Here, we explore the utility of this method by undertaking a screen for magnetic cells in the pigeon. We report the identification of a small number of cells (1 in 476,000) with large magnetic moments (8–106 fAm2) from various tissues. The development of single-cell correlative light and electron microscopy (CLEM) coupled with electron energy loss spectroscopy (EELS) and energy-filtered transmission electron microscopy (EFTEM) permitted subcellular analysis of magnetic cells. This revealed the presence of extracellular structures composed of iron, titanium, and chromium accounting for the magnetic properties of these cells. Application of single-cell CLEM to magnetic cells from the trout failed to identify any intracellular structures consistent with biogenically derived magnetite. Our work illustrates the need for new methods to test the magnetite hypothesis of magnetosensation."
-
+abstract = "The cellular basis of the magnetic sense remains an unsolved scientific mystery. One theory that aims to explain how animals detect the magnetic field is the magnetite hypothesis. It argues that intracellular crystals of the iron oxide magnetite (Fe3O4) are coupled to mechanosensitive channels that elicit neuronal activity in specialized sensory cells. Attempts to find these primary sensors have largely relied on the Prussian Blue stain that labels cells rich in ferric iron..."
 # Featured image thumbnail (optional)
 image_preview = ""
 

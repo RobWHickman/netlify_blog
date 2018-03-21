@@ -11,20 +11,54 @@
     <atom:link href="/" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>Hello World! A Small Chess Plotting Package</title>
+      <link>/post/hello-world-a-small-chess-plotting-package/</link>
+      <pubDate>Wed, 21 Mar 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/hello-world-a-small-chess-plotting-package/</guid>
+      <description>&lt;p&gt;Finally gotten around to using my &lt;a href=&#34;https://cran.r-project.org/web/packages/blogdown/index.html&#34; target=&#34;_blank&#34;&gt;blogdown&lt;/a&gt; website!&lt;/p&gt;
+
+&lt;p&gt;Feels like a fairly good place to publicise a small package to plot chess games using only the pgn using ggplot2 in R which can be found [here])&lt;a href=&#34;https://github.com/RobWHickman/kaRpov)&#34; target=&#34;_blank&#34;&gt;https://github.com/RobWHickman/kaRpov)&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;To copy the readme mini-vignette provides a nice overview of the uber-function which goes from pgn -&amp;gt; gif.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;library(kaRpov)
+
+#the pgn for the immortal game
+immortal_pgn &amp;lt;- &amp;quot;1.e4 e5 2.f4 exf4 3.Bc4 Qh4+ 4.Kf1 b5 5.Bxb5 Nf6 6.Nf3 Qh6 7.d3 Nh5 8.Nh4 Qg5 9.Nf5 c6 10.g4 Nf6 11.Rg1 cxb5 12.h4 Qg6 13.h5 Qg5 14.Qf3 Ng8 15.Bxf4 Qf6 16.Nc3 Bc5 17.Nd5 Qxb2 18.Bd6 Bxg1 19.e5 Qxa1+ 20.Ke2 Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7#&amp;quot;
+
+filename &amp;lt;- &amp;quot;C:/Users/MagnusCarlsen/Desktop/immortal_game&amp;quot;
+
+#need to fix library importing
+library(tweenr)
+library(animation)
+library(ggplot2)
+library(grid)
+library(png)
+
+#create the gif
+plot_pgn (immortal_pgn, 
+          light_col = &amp;quot;#f5f5dc&amp;quot;, dark_col = &amp;quot;#00688b&amp;quot;, square_labels = FALSE, plot = FALSE,
+          move_cutoff = NULL, frames = 100, interpolation = 0.5,
+          speed = 10, pause_end = TRUE, black_shift = NULL,
+          name = filename)
+          
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;There&amp;rsquo;s also a load of semi-arranged smaller functions used to work out the positions of the pieces and plot the board etc. which people can play around with. I&amp;rsquo;ll probably do a bit more cleaning of it and really want to try and integrate it with a chess engine API to add the relative strengths of each player to the package, but for now there&amp;rsquo;s more interesting things to do elsewhere :)&lt;/p&gt;
+
+&lt;p&gt;Thank you for reading- and I hope you enjoy the package!&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;/img/immortal_game.gif&#34; alt=&#34;Immortal Game&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
       <title>RInforcement Learning</title>
       <link>/project/rinforcement_learning/</link>
       <pubDate>Fri, 05 Jan 2018 00:00:00 +0000</pubDate>
       
       <guid>/project/rinforcement_learning/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Procedural Generation in Blender</title>
-      <link>/project/procedural_gen/</link>
-      <pubDate>Mon, 24 Apr 2017 00:00:00 +0000</pubDate>
-      
-      <guid>/project/procedural_gen/</guid>
       <description></description>
     </item>
     
@@ -35,26 +69,6 @@
       
       <guid>/talk/example-talk/</guid>
       <description>&lt;p&gt;Embed your slides or video here using &lt;a href=&#34;https://sourcethemes.com/academic/post/writing-markdown-latex/&#34; target=&#34;_blank&#34;&gt;shortcodes&lt;/a&gt;. Further details can easily be added using &lt;em&gt;Markdown&lt;/em&gt; and $\rm \LaTeX$ math code.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>A Person Re-Identification System For Mobile Devices</title>
-      <link>/publication/person-re-identification/</link>
-      <pubDate>Tue, 01 Sep 2015 00:00:00 +0000</pubDate>
-      
-      <guid>/publication/person-re-identification/</guid>
-      <description>&lt;p&gt;More detail can easily be written here using &lt;em&gt;Markdown&lt;/em&gt; and $\rm \LaTeX$ math code.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>No evidence for intracellular magnetite in putative vertebrate magnetoreceptors identified by magnetic screening</title>
-      <link>/publication/clothing-search/</link>
-      <pubDate>Mon, 01 Jul 2013 00:00:00 +0000</pubDate>
-      
-      <guid>/publication/clothing-search/</guid>
-      <description>&lt;p&gt;More detail can easily be written here using &lt;em&gt;Markdown&lt;/em&gt; and $\rm \LaTeX$ math code.&lt;/p&gt;
 </description>
     </item>
     
