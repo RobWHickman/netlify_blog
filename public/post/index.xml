@@ -13,6 +13,17 @@
     
     
     <item>
+      <title>Riddler 27th April 2018</title>
+      <link>/post/riddler-27th-april-2018/</link>
+      <pubDate>Tue, 01 May 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/riddler-27th-april-2018/</guid>
+      <description>I’ve been looking for small programming problems to practice on while running experiments. One such source is Fivethirtyeight’s Riddler column which posts conundrums weekly. This week one problem focus on one of life’s universal problems: how many urinals are needed in any bathroom for all patrons to use it without awkwardness.
+Formally this is phrased as:
+Some number, N, of people need to pee, and there is some number, M, of urinals in a row in a men’s room.</description>
+    </item>
+    
+    <item>
       <title>Hello World! And A Small Chess Plotting Package</title>
       <link>/post/hello-world-a-small-chess-plotting-package/</link>
       <pubDate>Wed, 21 Mar 2018 00:00:00 +0000</pubDate>

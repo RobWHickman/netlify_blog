@@ -1,0 +1,265 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={Riddler 27th April 2018},
+            pdfauthor={Robert Hickman},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\newcommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+  \title{Riddler 27th April 2018}
+  \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+  \author{Robert Hickman}
+  \preauthor{\centering\large\emph}
+  \postauthor{\par}
+  \predate{\centering\large\emph}
+  \postdate{\par}
+  \date{2018-05-01}
+
+
+\begin{document}
+\maketitle
+
+I've been looking for small programming problems to practice on while
+running experiments. One such source is
+\href{https://fivethirtyeight.com/features/how-fast-can-you-type-a-million-letters/}{Fivethirtyeight's
+Riddler} column which posts conundrums weekly. This week one problem
+focus on one of life's universal problems: how many urinals are needed
+in any bathroom for all patrons to use it without awkwardness.
+
+Formally this is phrased as:
+
+\begin{quote}
+Some number, N, of people need to pee, and there is some number, M, of
+urinals in a row in a men's room. The people always follow a rule for
+which urinal they select: The first person goes to one on either far end
+of the row, and the rest try to maximize the number of urinals between
+them and any other person. So the second person will go on the other far
+end, the third person in the middle, and so on. They continue to occupy
+the urinals until one person would have to go directly next to another
+person, at which point that person decides not to go at all.
+\end{quote}
+
+\begin{quote}
+What's the minimum number, M, of urinals required to accommodate all the
+N people at the same time?
+\end{quote}
+
+Which is perhaps easiest explained using the `urinal etiquette' meme:
+
+\emph{}
+
+Luckily, this sort of problem is extremely tractable in R to get an
+estimate of the function for any 1:N people with a few simple loops:
+
+```\{r, warning=FALSE,message=FALSE\} \#just going to use dplyr and purr
+\#data.table might be faster but not too worried- verbose programming
+anyway library(dplyr) library(purrr)
+
+\section{a tip from colin fay}\label{a-tip-from-colin-fay}
+
+\section{\texorpdfstring{\url{https://twitter.com/_ColinFay/status/987260548344631298?ref_src=twsrc\%5Etfw\&ref_url=https\%3A\%2F\%2Frweekly.org\%2F}}{https://twitter.com/\_ColinFay/status/987260548344631298?ref\_src=twsrc\%5Etfw\&ref\_url=https\%3A\%2F\%2Frweekly.org\%2F}}\label{httpstwitter.com_colinfaystatus987260548344631298ref_srctwsrc5etfwref_urlhttps3a2f2frweekly.org2f}
+
+\texttt{\%not\_in\%} \textless{}- negate(\texttt{\%in\%})
+
+\section{start with n = 1 and with a bathroom with 1
+urinal}\label{start-with-n-1-and-with-a-bathroom-with-1-urinal}
+
+n \textless{}- 1 urinal\_number \textless{}- 1
+
+\section{create a df with 1 urinal which is
+unoccupied}\label{create-a-df-with-1-urinal-which-is-unoccupied}
+
+urinals\_df \textless{}- data.frame(urinal = 1:urinal\_number, occupied
+= rep(NA, urinal\_number))
+
+\section{for how many n do we want to
+solve}\label{for-how-many-n-do-we-want-to-solve}
+
+while(n \textless{} 10) \{ \#whilst not all n have a urinal to use loop
+through
+while(sum(urinals\_df\(occupied, na.rm = TRUE) < n) {  #when all are unoccupied take the first urinal  if(sum(urinals_df\)occupied,
+na.rm = TRUE) == 0) \{
+urinals\_df\(occupied[1] <- 1  #when all but 1 are unoccupied and there are more than 2 urinals take the opposite end one next  } else if(sum(urinals_df\)occupied,
+na.rm = TRUE) == 1 \& nrow(urinals\_df) \textgreater{} 2) \{
+urinals\_df\(occupied[nrow(urinals_df)] <- 1  #otherwise work out the most isolated free urinal  } else {  #get the distances from each urinal to all the occupied urinals  urinal_distances <- abs(1:nrow(urinals_df) - rep(which(!is.na(urinals_df\)occupied)),
+each = nrow(urinals\_df))) \%\textgreater{}\% matrix(., nrow =
+length(!is.na(urinals\_df\$occupied))) \#index
+rownames(urinal\_distances) \textless{}- 1:nrow(urinal\_distances)
+
+\begin{verbatim}
+  #awkward urinals are ones that are either taken or next to taken urinals
+  #don't want to urinate there
+  awkward <- c(which(urinal_distances == 1, arr.ind = TRUE)[,1], 
+               which(urinal_distances == 0, arr.ind = TRUE)[,1]) %>%
+    unique()
+  
+  #use %not_in% to find free urinals that aren't in an awkward position
+  possible_urinals <- which(rownames(urinal_distances) %not_in% awkward)
+  
+  #if only one remains use this urinal
+  if(length(possible_urinals) == 1) {
+    taken_urinal <- possible_urinals
+  } else if(length(possible_urinals) > 1) {
+    #for the remaining possible urinals find how far the closest taken urinal is
+    #initialise a small nameless func
+    closest_distance <- lapply(seq(nrow(urinal_distances)), function(x){
+      row <- urinal_distances[x,]
+      min <- min(row)
+      }) %>%
+      unlist()
+    
+    #use the urinal that has the maximum distance to its closest urinal
+    taken_urinal <- as.numeric(rownames(urinal_distances)[which.max(closest_distance)])
+  } else if(length(possible_urinals) == 0) {
+    #if there are no free urinals break the loop and add one to the urinal number in the hypothetical bathroom
+    urinal_number <- urinal_number + 1
+    break
+  }
+  #occupy the chosen urinal
+  urinals_df$occupied[taken_urinal] <- 1
+}
+\end{verbatim}
+
+\}
+
+\#if completed \#i.e.~if all users have found a satisfactory free urinal
+if(sum(urinals\_df\$occupied, na.rm = TRUE) == n) \{ if(n == 1) \{
+\#when n = 1 initial a df to hold the results per n results\_df
+\textless{}- data.frame(n = 1, urinals\_required = urinal\_number) \}
+else \{ \#otherwise add in a new row to results\_df results\_df
+\textless{}- rbind(results\_df, data.frame(n = n, urinals\_required =
+urinal\_number)) \} \#increase n to the next number of patrons n
+\textless{}- n + 1 \#start with at least n urinals in the next bathroom
+\#this is the bare minimum we would need urinal\_number \textless{}- n
+\}
+
+\#reintialise the bathroom to see if it is big enough for the n patrons
+urinals\_df \textless{}- data.frame(urinal = 1:urinal\_number, occupied
+= rep(NA, urinal\_number))
+
+\}
+
+```
+
+We can then plot this. I decided to add a little flair to the plot using
+annotate\_custom which is a nice little trick to spice up ggplots
+
+```\{r, warning=FALSE,message=FALSE\} \#load the libraries for plotting
+library(ggplot2) library(png) library(grid)
+
+\section{a nice png of a urinal I found
+online}\label{a-nice-png-of-a-urinal-i-found-online}
+
+urinal\_image \textless{}- readPNG(``/img/urinal.png'')
+\%\textgreater{}\% rasterGrob()
+
+\section{plot the number of urinals needed for any n number of
+patrons}\label{plot-the-number-of-urinals-needed-for-any-n-number-of-patrons}
+
+urinals\_plot \textless{}- ggplot(data = results\_df, aes(x = n, y =
+urinals\_required)) + geom\_point() + \#mapply a function to paste the
+urinal image as an annotation to the graph \#takes the x and y arguments
+from the ggplot aesthetic mapply(function(x, y, size) \{
+annotation\_custom(urinal\_image, xmin = x - size, ymin = y - size, xmax
+= x + size, ymax = y + size) \}, x =
+results\_df\(n, y = results_df\)urinals\_required, size = 7) +
+\#labelling and etc. ylab(``Urinals Required'') + xlab(``Number of
+Patrons'') + ggtitle(``How many urinals are needed for any n number of
+socially awkward urinators'', subtitle = ``answer to The Riddler
+27/04/2018'') + theme(panel.background = element\_rect(fill =
+`lightblue'))
+
+urinals\_plot ```
+
+which gives a surprisingly complex function! I had assume it would be
+some simple function of x but clearly something more complex is going
+on.
+
+Why this happens become clear if you plot out why M urinals are needed
+for N people. Optimally each person would be separated by 1 urinal, but
+as the number of urinals increases they become less efficiently packed,
+with 2 urinals (neither of which can be used without standing next to
+someone) between each urinating person. This eventually reaches a
+breaking point and the number of urinals necessary jumps upward.
+
+The formula is known as `The Pay Phone Packing Sequence' (where users of
+pay phones don't want to be overheard) and is summarised at
+\url{https://oeis.org/A185456}. The formula itself is:
+
+\(f(n) = n + 2 ^ (1 + floor(log(n - 2)))\)
+
+That's all for this weeks riddler.
+
+\href{https://www.youtube.com/watch?v=l3V4KfeJBCQ}{Franz Ferdinand and
+Sparks - Piss Off}
+
+
+\end{document}

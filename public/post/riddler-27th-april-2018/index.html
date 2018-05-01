@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme" content="hugo-academic">
+  <meta name="generator" content="Hugo 0.37.1" />
+  <meta name="author" content="Robert Hickman">
+
+  
+  
+  
+  
+    
+      
+    
+  
+  <meta name="description" content="I’ve been looking for small programming problems to practice on while running experiments. One such source is Fivethirtyeight’s Riddler column which posts conundrums weekly. This week one problem focus on one of life’s universal problems: how many urinals are needed in any bathroom for all patrons to use it without awkwardness.
+Formally this is phrased as:
+Some number, N, of people need to pee, and there is some number, M, of urinals in a row in a men’s room.">
+
+  
+  <link rel="alternate" hreflang="en-us" href="/post/riddler-27th-april-2018/">
+
+  
+
+
+  
+
+  
+  
+  <meta name="theme-color" content="#0095eb">
+  
+  
+  
+  
+    
+  
+  
+    
+    
+      
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+      
+    
+  
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha512-6MXa8B6uaO18Hid6blRMetEIoPqHf7Ux1tnyIQdpt9qI5OACx7C+O3IVTr98vwGnlcg0LOLa02i9Y1HpVhlfiw==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.1/css/academicons.min.css" integrity="sha512-NThgw3XKQ1absAahW6to7Ey42uycrVvfNfyjqcFNgCmOCQ5AR4AO0SiXrN+8ZtYeappp56lk1WtvjVmEa+VR6A==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous">
+  
+  
+  
+  
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Montserrat:400,700%7cRoboto:400,400italic,700%7cRoboto&#43;Mono">
+  
+  <link rel="stylesheet" href="/styles.css">
+  
+
+  
+
+  
+  <link rel="alternate" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="feed" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  
+
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" href="/img/icon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
+
+  <link rel="canonical" href="/post/riddler-27th-april-2018/">
+
+  <meta property="twitter:card" content="summary_large_image">
+  
+  <meta property="twitter:site" content="@robert_squared">
+  <meta property="twitter:creator" content="@robert_squared">
+  
+  <meta property="og:site_name" content="Robert Hickman">
+  <meta property="og:url" content="/post/riddler-27th-april-2018/">
+  <meta property="og:title" content="Riddler 27th April 2018 | Robert Hickman">
+  <meta property="og:description" content="I’ve been looking for small programming problems to practice on while running experiments. One such source is Fivethirtyeight’s Riddler column which posts conundrums weekly. This week one problem focus on one of life’s universal problems: how many urinals are needed in any bathroom for all patrons to use it without awkwardness.
+Formally this is phrased as:
+Some number, N, of people need to pee, and there is some number, M, of urinals in a row in a men’s room.">
+  <meta property="og:locale" content="en-us">
+  
+  <meta property="article:published_time" content="2018-05-01T00:00:00&#43;00:00">
+  
+  <meta property="article:modified_time" content="2018-05-01T00:00:00&#43;00:00">
+  
+
+  <script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+</script>
+<script async type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <title>Riddler 27th April 2018 | Robert Hickman</title>
+
+</head>
+<body id="top" data-spy="scroll" data-target="#toc" data-offset="71" >
+
+<nav class="navbar navbar-default navbar-fixed-top" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="navbar-header">
+      
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+              data-target=".navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      
+      <a class="navbar-brand" href="/">Robert Hickman</a>
+    </div>
+
+    
+    <div class="collapse navbar-collapse">
+
+      
+      
+      <ul class="nav navbar-nav navbar-right">
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#about">
+            
+            <span>Home</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#publications_selected">
+            
+            <span>Publications</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#posts">
+            
+            <span>Posts</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#projects">
+            
+            <span>Projects</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#writing">
+            
+            <span>Writing</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#contact">
+            
+            <span>Contact</span>
+            
+          </a>
+        </li>
+
+        
+        
+      
+
+      
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+
+<article class="article" itemscope itemtype="http://schema.org/Article">
+
+  
+
+
+  <div class="article-container">
+    <div class="article-inner">
+      <h1 itemprop="name">Riddler 27th April 2018</h1>
+
+      
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2018-05-01 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      May 1, 2018
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    5 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+  
+<div class="share-box" aria-hidden="true">
+  <ul class="share">
+    <li>
+      <a class="twitter"
+         href="https://twitter.com/intent/tweet?text=Riddler%2027th%20April%202018&amp;url=%2fpost%2friddler-27th-april-2018%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-twitter"></i>
+      </a>
+    </li>
+    <li>
+      <a class="facebook"
+         href="https://www.facebook.com/sharer.php?u=%2fpost%2friddler-27th-april-2018%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-facebook"></i>
+      </a>
+    </li>
+    <li>
+      <a class="linkedin"
+         href="https://www.linkedin.com/shareArticle?mini=true&amp;url=%2fpost%2friddler-27th-april-2018%2f&amp;title=Riddler%2027th%20April%202018"
+         target="_blank" rel="noopener">
+        <i class="fa fa-linkedin"></i>
+      </a>
+    </li>
+    <li>
+      <a class="weibo"
+         href="http://service.weibo.com/share/share.php?url=%2fpost%2friddler-27th-april-2018%2f&amp;title=Riddler%2027th%20April%202018"
+         target="_blank" rel="noopener">
+        <i class="fa fa-weibo"></i>
+      </a>
+    </li>
+    <li>
+      <a class="email"
+         href="mailto:?subject=Riddler%2027th%20April%202018&amp;body=%2fpost%2friddler-27th-april-2018%2f">
+        <i class="fa fa-envelope"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+  
+
+</div>
+
+
+      <div class="article-style" itemprop="articleBody">
+        <p>I’ve been looking for small programming problems to practice on while running experiments. One such source is <a href="https://fivethirtyeight.com/features/how-fast-can-you-type-a-million-letters/">Fivethirtyeight’s Riddler</a> column which posts conundrums weekly. This week one problem focus on one of life’s universal problems: how many urinals are needed in any bathroom for all patrons to use it without awkwardness.</p>
+<p>Formally this is phrased as:</p>
+<blockquote>
+<p>Some number, N, of people need to pee, and there is some number, M, of urinals in a row in a men’s room. The people always follow a rule for which urinal they select: The first person goes to one on either far end of the row, and the rest try to maximize the number of urinals between them and any other person. So the second person will go on the other far end, the third person in the middle, and so on. They continue to occupy the urinals until one person would have to go directly next to another person, at which point that person decides not to go at all.</p>
+</blockquote>
+<blockquote>
+<p>What’s the minimum number, M, of urinals required to accommodate all the N people at the same time?</p>
+</blockquote>
+<p>Which is perhaps easiest explained using the ‘urinal etiquette’ meme:</p>
+<div class="figure">
+<img src="/img/urinal_etiquette.png" />
+
+</div>
+<p>Luckily, this sort of problem is extremely tractable in R to get an estimate of the function for any 1:N people with a few simple loops:</p>
+<pre class="r"><code>#just going to use dplyr and purr
+#data.table might be faster but not too worried- verbose programming anyway
+library(dplyr)
+library(purrr)
+
+#a tip from colin fay
+#https://tinyurl.com/colin-fay-purrr
+`%not_in%` &lt;- negate(`%in%`)
+
+#start with n = 1 and with a bathroom with 1 urinal
+n &lt;- 1
+urinal_number &lt;- 1
+
+#create a df with 1 urinal which is unoccupied
+urinals_df &lt;- data.frame(urinal = 1:urinal_number,
+                         occupied = rep(NA, urinal_number))
+
+#for how many n do we want to solve
+while(n &lt; 101) {
+  #whilst not all n have a urinal to use loop through
+  while(sum(urinals_df$occupied, na.rm = TRUE) &lt; n) {
+    #when all are unoccupied take the first urinal
+    if(sum(urinals_df$occupied, na.rm = TRUE) == 0) {
+      urinals_df$occupied[1] &lt;- 1
+    #when all but 1 are unoccupied and there are more than 2 urinals
+    #take the opposite end one next
+    } else if(sum(urinals_df$occupied, na.rm = TRUE) == 1 &amp;
+              nrow(urinals_df) &gt; 2) {
+      urinals_df$occupied[nrow(urinals_df)] &lt;- 1
+    #otherwise work out the most isolated free urinal
+    } else {
+      #get the distances from each urinal to all the occupied urinals
+      urinal_distances &lt;- abs(1:nrow(urinals_df) - 
+                                rep(which(!is.na(urinals_df$occupied)), each = nrow(urinals_df))) %&gt;%
+        matrix(., nrow = length(!is.na(urinals_df$occupied)))
+      #index
+      rownames(urinal_distances) &lt;- 1:nrow(urinal_distances)  
+      
+      #awkward urinals are ones that are either taken or next to taken urinals
+      #don&#39;t want to urinate there
+      awkward &lt;- c(which(urinal_distances == 1, arr.ind = TRUE)[,1], 
+                   which(urinal_distances == 0, arr.ind = TRUE)[,1]) %&gt;%
+        unique()
+      
+      #use %not_in% to find free urinals that aren&#39;t in an awkward position
+      possible_urinals &lt;- which(rownames(urinal_distances) %not_in% awkward)
+      
+      #if only one remains use this urinal
+      if(length(possible_urinals) == 1) {
+        taken_urinal &lt;- possible_urinals
+      } else if(length(possible_urinals) &gt; 1) {
+        #for the remaining possible urinals find how far the closest taken urinal is
+        #initialise a small nameless func
+        closest_distance &lt;- lapply(seq(nrow(urinal_distances)), function(x){
+          row &lt;- urinal_distances[x,]
+          min &lt;- min(row)
+          }) %&gt;%
+          unlist()
+        
+        #use the urinal that has the maximum distance to its closest urinal
+        taken_urinal &lt;- as.numeric(rownames(urinal_distances)[which.max(closest_distance)])
+      } else if(length(possible_urinals) == 0) {
+        #if there are no free urinals break the loop
+        #and add one to the urinal number in the hypothetical bathroom
+        urinal_number &lt;- urinal_number + 1
+        break
+      }
+      #occupy the chosen urinal
+      urinals_df$occupied[taken_urinal] &lt;- 1
+    }
+  }
+  
+  #if completed
+  #i.e. if all users have found a satisfactory free urinal
+  if(sum(urinals_df$occupied, na.rm = TRUE) == n) {
+    if(n == 1) {
+      #when n = 1 initial a df to hold the results per n
+      results_df &lt;- data.frame(n = 1,
+                               urinals_required = urinal_number)
+    } else {
+      #otherwise add in a new row to results_df
+      results_df &lt;- rbind(results_df, data.frame(n = n, urinals_required = urinal_number))
+    }
+      #increase n to the next number of patrons
+      n &lt;- n + 1
+      #start with at least n urinals in the next bathroom
+      #this is the bare minimum we would need
+      urinal_number &lt;- n
+  }
+  
+  #reintialise the bathroom to see if it is big enough for the n patrons
+  urinals_df &lt;- data.frame(urinal = 1:urinal_number,
+                           occupied = rep(NA, urinal_number))
+  
+}</code></pre>
+<p>We can then plot this. I decided to add a little flair to the plot using annotate_custom which is a nice little trick to spice up ggplots</p>
+<pre class="r"><code>#load the libraries for plotting
+library(ggplot2)
+library(png)
+library(grid)
+
+#a nice png of a urinal I found online
+urinal_image &lt;- readPNG(&quot;../../static/img/urinal.png&quot;) %&gt;%
+  rasterGrob()
+
+#plot the number of urinals needed for any n number of patrons
+urinals_plot &lt;- ggplot(data = results_df, aes(x = n, y = urinals_required)) + 
+  geom_point() +
+  #mapply a function to paste the urinal image as an annotation to the graph
+  #takes the x and y arguments from the ggplot aesthetic
+  mapply(function(x, y, size) {
+    annotation_custom(urinal_image,
+                      xmin = x - size, xmax = x + size, 
+                      ymin = y - size, ymax = y + size) },
+    x = results_df$n, y = results_df$urinals_required, size = 7) +
+  #labelling and etc.
+  ylab(&quot;Urinals Required&quot;) +
+  xlab(&quot;Number of Patrons&quot;) +
+  ggtitle(&quot;How many urinals are needed for any n number of socially awkward urinators&quot;,
+          subtitle = &quot;answer to The Riddler 27/04/2018&quot;) +
+  theme(panel.background = element_rect(fill = &#39;lightblue&#39;))
+
+urinals_plot</code></pre>
+<p><img src="/post/2018-05-01-riddler-27th-april-2018_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>which gives a surprisingly complex function! I had assume it would be some simple function of x but clearly something more complex is going on.</p>
+<p>Why this happens become clear if you plot out why M urinals are needed for N people. Optimally each person would be separated by 1 urinal, but as the number of urinals increases they become less efficiently packed, with 2 urinals (neither of which can be used without standing next to someone) between each urinating person. This eventually reaches a breaking point and the number of urinals necessary jumps upward.</p>
+<p>The formula is known as ‘The Pay Phone Packing Sequence’ (where users of pay phones don’t want to be overheard) and is summarised at <a href="https://oeis.org/A185456" class="uri">https://oeis.org/A185456</a> (where packing occurs/ n &gt; 2). The formula itself is:</p>
+<p><span class="math display">\[f(n) = n + 2 ^ {(1 + floor(log(n - 2)))}\]</span></p>
+<p>That’s all for this weeks riddler.</p>
+<p><a href="https://www.youtube.com/watch?v=l3V4KfeJBCQ">Franz Ferdinand and Sparks - Piss Off</a></p>
+
+      </div>
+
+      
+
+
+<div class="article-tags">
+  
+  <a class="btn btn-primary btn-outline" href="/tags/rstats">rstats</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/package">package</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/chess">chess</a>
+  
+</div>
+
+
+
+    </div>
+  </div>
+
+</article>
+
+
+
+<div class="article-container article-widget">
+  <div class="hr-light"></div>
+  <h3>Related</h3>
+  <ul>
+    
+    <li><a href="/post/hello-world-a-small-chess-plotting-package/">Hello World! And A Small Chess Plotting Package</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="article-container">
+  
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="powered-by">
+
+      &copy; 2018 &middot; 
+
+      Powered by the
+      <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+      <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+      <span class="pull-right" aria-hidden="true">
+        <a href="#" id="back_to_top">
+          <span class="button_icon">
+            <i class="fa fa-chevron-up fa-2x"></i>
+          </span>
+        </a>
+      </span>
+
+    </p>
+  </div>
+</footer>
+
+
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close btn-large" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Cite</h4>
+      </div>
+      <div>
+        <pre><code class="modal-body tex"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-primary btn-outline js-copy-cite" href="#" target="_blank">
+          <i class="fa fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-primary btn-outline js-download-cite" href="#" target="_blank">
+          <i class="fa fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+    
+
+    
+
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.3/imagesloaded.pkgd.min.js" integrity="sha512-umsR78NN0D23AzgoZ11K7raBD+R6hqKojyBZs1w8WvYlsI+QuKRGBx3LFCwhatzBunCjDuJpDHwxD13sLMbpRA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha512-iztkobsvnjKfAtTNdHkGVjAYTrrtlC7mGp/54c40wowO7LhURYl3gVzzcEqGl/qKXQltJ2HwMrdLcNUdo+N/RQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.4/isotope.pkgd.min.js" integrity="sha512-VDBOIlDbuC4VWxGJNmuFRQ0Li0SKkDpmGyuhAG5LTDLd/dJ/S0WMVxriR2Y+CyPL5gzjpN4f/6iqWVBJlht0tQ==" crossorigin="anonymous"></script>
+    
+    
+    <script src="/js/hugo-academic.js"></script>
+    
+
+    
+    
+      
+      
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+      
+
+      
+
+      
+
+      <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    
+    
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_CHTML" integrity="sha512-tOav5w1OjvsSJzePRtt2uQPFwBoHt1VZcUq8l8nm5284LEKE9FSJBQryzMBzHxY5P0zRdNqEcpLIRVYFNgu1jw==" crossorigin="anonymous"></script>
+    
+    
+
+  </body>
+</html>
+

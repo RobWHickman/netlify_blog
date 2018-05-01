@@ -5,6 +5,15 @@
     
     <url>
     
+      <loc>/post/riddler-27th-april-2018/</loc>
+      <lastmod>2018-05-01T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/hello-world-a-small-chess-plotting-package/</loc>
       <lastmod>2018-03-21T00:00:00+00:00</lastmod>
     </url>
@@ -97,7 +106,7 @@
     <url>
     
       <loc>/tags/chess/</loc>
-      <lastmod>2018-03-21T00:00:00+00:00</lastmod>
+      <lastmod>2018-05-01T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -117,7 +126,7 @@
     <url>
     
       <loc>/tags/package/</loc>
-      <lastmod>2018-03-21T00:00:00+00:00</lastmod>
+      <lastmod>2018-05-01T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -157,7 +166,7 @@
     <url>
     
       <loc>/tags/rstats/</loc>
-      <lastmod>2018-03-21T00:00:00+00:00</lastmod>
+      <lastmod>2018-05-01T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
