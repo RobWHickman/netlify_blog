@@ -11,6 +11,573 @@
     <atom:link href="/" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>Could an Independent Yorkshire Win the World Cup - Data &amp; Scraping</title>
+      <link>/post/yorkshire_world_cup_1/</link>
+      <pubDate>Thu, 07 Jun 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/yorkshire_world_cup_1/</guid>
+      <description>&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+&lt;p&gt;This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.&lt;/p&gt;
+&lt;p&gt;To start, there are 95 historic counts of Great Britain + the 6 counties of Northern Ireland which I included for completeness. These are of a wide variety of sizes and &lt;a href=&#34;https://www.citymetric.com/horizons/which-historic-english-county-has-highest-population-3386&#34;&gt;approximate population&lt;/a&gt; and demographic, so it’s not clear how each would do simply from inspection.&lt;/p&gt;
+&lt;p&gt;The data for this comes from &lt;a href=&#34;https://www.ordnancesurvey.co.uk/business-and-government/products/boundary-line.html&#34;&gt;Boundary Line&lt;/a&gt; and the &lt;a href=&#34;https://www.opendatani.gov.uk/dataset?q=boundary&#34;&gt;Northern Irish Boundary Database&lt;/a&gt;, I’ve put them together already, but its simple enough to do it in sf.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
+library(rvest)
+library(data.table)
+library(ggplot2)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p &amp;lt;- ggplot(data = uk_counties) +
+  geom_sf() +
+  theme_void()
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_1_files/figure-html/historic_counties-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;In order to calculate how good each county team would be, I needed a measure of the ability of all of the players they could field. For this I turned to the FIFA18 video game which rates players along a variety of scales.&lt;/p&gt;
+&lt;div id=&#34;scrape-player-data&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Scrape Player Data&lt;/h1&gt;
+&lt;p&gt;To get data on every player in the game I wrote a quick scraping function. This finds the links to every player on all 602 pages of &lt;a href=&#34;https://www.fifaindex.com/players/&#34; class=&#34;uri&#34;&gt;https://www.fifaindex.com/players/&lt;/a&gt; and then downloads all the data required on each player.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#both steps here take a fair amount of time
+#about 10mins and an hour respectively
+
+#get the links to each players page
+all_player_links &amp;lt;- unlist(lapply(paste0(&amp;quot;https://www.fifaindex.com/players/&amp;quot;, 1:602), function(x) {
+  player_link &amp;lt;- read_html(x) %&amp;gt;%
+    html_nodes(&amp;quot;td:nth-child(4) a&amp;quot;) %&amp;gt;%
+    html_attr(&amp;quot;href&amp;quot;)
+  })) %&amp;gt;%
+  paste0(&amp;quot;https://www.fifaindex.com/&amp;quot;, .)
+
+#big function to scrape every piece of data we could want of each players page
+get_player_data &amp;lt;- function(link) {
+  #read the players web page
+  read &amp;lt;- read_html(link)
+  
+  #basic data
+  name &amp;lt;- read %&amp;gt;%html_nodes(&amp;quot;.big&amp;quot;) %&amp;gt;% html_text()
+  club &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.panel-title a+ a&amp;quot;) %&amp;gt;% html_text() %&amp;gt;% .[length(.)]
+  if(length(club) == 0) {
+    club &amp;lt;- NA
+  }
+  nationality &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.subtitle a&amp;quot;) %&amp;gt;% html_text()
+  
+  #general info on the player
+  height &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(1) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
+    gsub(&amp;quot; cm&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;% as.numeric()
+  weight &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(2) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
+    gsub(&amp;quot; kg&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;% as.numeric()
+  foot &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(3) .pull-right&amp;quot;) %&amp;gt;% html_text()
+  birthdate &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(4) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
+    as.Date(&amp;quot;%m/%d/%Y&amp;quot;)
+  age &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(5) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
+    as.numeric()
+  main_position &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;body &amp;gt; div.container.main &amp;gt; div:nth-child(3) &amp;gt; div.col-md-8 &amp;gt; div:nth-child(3) &amp;gt; div.col-lg-5.col-sm-6 &amp;gt; div &amp;gt; div.panel-body &amp;gt; p:nth-child(6) &amp;gt; span &amp;gt; a&amp;quot;) %&amp;gt;% 
+    .[1] %&amp;gt;% html_attr(&amp;quot;title&amp;quot;)
+  work_rate &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(7) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;% 
+    str_split(., &amp;quot; / &amp;quot;) %&amp;gt;% unlist()
+  
+  #the players rating for each skill
+  ratings &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.rating&amp;quot;) %&amp;gt;% html_text() %&amp;gt;% as.numeric() %&amp;gt;%
+    as.matrix() %&amp;gt;% t() %&amp;gt;% as.data.frame()
+  names(ratings) &amp;lt;- c(&amp;quot;overall&amp;quot;,&amp;quot;specific&amp;quot;,&amp;quot;ball_control&amp;quot;,&amp;quot;dribbling&amp;quot;,&amp;quot;marking&amp;quot;,&amp;quot;slide_tackle&amp;quot;,&amp;quot;stand_tackle&amp;quot;,
+                      &amp;quot;aggression&amp;quot;,&amp;quot;reactions&amp;quot;,&amp;quot;positioning&amp;quot;,&amp;quot;interceptions&amp;quot;,&amp;quot;vision&amp;quot;,&amp;quot;composure&amp;quot;,&amp;quot;crossing&amp;quot;,
+                      &amp;quot;short_pass&amp;quot;,&amp;quot;long_pass&amp;quot;,&amp;quot;acceleration&amp;quot;,&amp;quot;stamina&amp;quot;,&amp;quot;strength&amp;quot;,&amp;quot;balance&amp;quot;,&amp;quot;sprint_speed&amp;quot;,
+                      &amp;quot;agility&amp;quot;,&amp;quot;jumping&amp;quot;,&amp;quot;heading&amp;quot;,&amp;quot;shot_power&amp;quot;,&amp;quot;finishing&amp;quot;,&amp;quot;long_shots&amp;quot;,&amp;quot;curve&amp;quot;,&amp;quot;free_kicks&amp;quot;,
+                      &amp;quot;penalties&amp;quot;,&amp;quot;volleys&amp;quot;,&amp;quot;gk_positioning&amp;quot;,&amp;quot;gk_diving&amp;quot;,&amp;quot;gk_handling&amp;quot;,&amp;quot;gk_kicking&amp;quot;,&amp;quot;gk_reflexes&amp;quot;)
+  
+  #stick everything into a dataframe to be output
+  df &amp;lt;- data.frame(name = name, club = club, nationality = nationality,
+                   height = height, weight = weight, foot = foot, birthdate = birthdate, age = age,
+                   main_position = main_position, work_rate1 = work_rate[1], work_rate2 = work_rate[2]) %&amp;gt;%
+    cbind(ratings)
+  return(df)
+}
+
+#scrape the info on all players
+all_players_data &amp;lt;- rbindlist(lapply(all_player_links, get_player_data)) %&amp;gt;%
+  setDT() %&amp;gt;%
+  #add an id column for each player
+  .[, id := 1:.N]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Once that’s scraped and bound we can take a peek at the data. There’s 18k players in total and 48 variables for each so we’ll just look at a few for now.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#show a selection of the some key info for each player
+#the id we gave them, their name, nationality, and their overall ability
+head(select(all_players_data, id, name, nationality, overall))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##    id              name nationality overall
+## 1:  1      Lionel Messi   Argentina      94
+## 2:  2 Cristiano Ronaldo    Portugal      94
+## 3:  3            Neymar      Brazil      92
+## 4:  4       Luis Suárez     Uruguay      92
+## 5:  5      Manuel Neuer     Germany      92
+## 6:  6            De Gea       Spain      91&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Over the course of the next posts, we’ll use this data to calculate a player’s ability in any position on the field. This will then be used to select optimal teams for each nation (or each historic British county). Finally we’ll take the average ability of these optimal teams and use them to simulate the World Cup to get the chance each team has to win the tournament.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Could an Independent Yorkshire Win the World Cup - Finding British Player&#39;s Birthplaces</title>
+      <link>/post/yorkshire_world_cup_3/</link>
+      <pubDate>Thu, 07 Jun 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/yorkshire_world_cup_3/</guid>
+      <description>&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+&lt;p&gt;This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we found the position abilities of each player using LASSO regression. This time, we’ll geolocate the birthplace of the British players in our dataset to find which county teaam they’d be eligible for.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
+library(magrittr)
+library(rvest)
+library(data.table)
+library(ggplot2)
+#use pediarr to query wikipedia to find the birthplace of players
+library(pediarr)
+#use googleway to geocode birthplaces
+library(googleway)
+#use sf to bin players into counties
+library(sf)&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;find-british-players-birthplaces&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Find British Players Birthplaces&lt;/h1&gt;
+&lt;p&gt;To select our county teams, we need to know where each British player was born (and thus their ‘county’ nationality). Fortunately, wikipedia has an extremely detailed database of thousands of footballers, incluiding their birthplace (which we can assume is at least reasonably correct).&lt;/p&gt;
+&lt;p&gt;First, the data needs to be filtered to include only players with British nationalities (English, Welsh, Scottish, or Northern Irish) or Irish. It’s very plausible that some players representing other countries would be born in England, and so eligible for the hypothetical county teams, but unlikely, and more trouble than it’s worth.&lt;/p&gt;
+&lt;p&gt;When filtering, I also remove players who have no wikipedia page/birthplace listed. For some of these, I was able to manually locate their birthplace. Some players don’t get matched very well (mostly due to Australian/American footballers) and it was easiest just to manually supply the links to their wikipedia page.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#players with no wikipedia birthplace listed
+players_missing_data &amp;lt;- c(&amp;quot;Liam Lindsay&amp;quot;,&amp;quot;Greg Docherty&amp;quot;,&amp;quot;Mikey Devlin&amp;quot;,&amp;quot;Josh Dacres-Cogley&amp;quot;,
+                          &amp;quot;Tom Broadbent&amp;quot;,&amp;quot;Callum Gribbin&amp;quot;,&amp;quot;Sam Hughes&amp;quot;,&amp;quot;
+                          James Cook&amp;quot;,&amp;quot;Daniel Jarvis&amp;quot;,&amp;quot;Zachary Dearnley&amp;quot;,&amp;quot;Ro-Shaun Williams&amp;quot;,
+                          &amp;quot;Jack Fitzwater&amp;quot;,&amp;quot;Jack Hamilton&amp;quot;,&amp;quot;Lewis Banks&amp;quot;,&amp;quot;Greg Bolger&amp;quot;,&amp;quot;Chris Shields&amp;quot;,
+                          &amp;quot;Conor Wilkinson&amp;quot;,&amp;quot;Barry McNamee&amp;quot;,&amp;quot;Keith Ward&amp;quot;,&amp;quot;Simon Madden&amp;quot;,&amp;quot;Dylan Connolly&amp;quot;,
+                          &amp;quot;Brian Gartland&amp;quot;,&amp;quot;Dinny Corcoran&amp;quot;)
+
+#players whose birthplace was manually found
+missing_players_data &amp;lt;- readRDS(&amp;quot;missing_player_birthplaces.rds&amp;quot;)
+
+#players whose wikipedia page is manually linked
+manual_links &amp;lt;- readRDS(&amp;quot;manual_links.rds&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The function below then iterates through every player with a nationality from the British Isles and searches for a matching wikipedia page.&lt;/p&gt;
+&lt;p&gt;It then looks for the birthplace of that player on their wikipedia page and returns a df containing the player and their birthplace.&lt;/p&gt;
+&lt;p&gt;It also tries to match the birthdate listed from FIFA18 with that on their wikipedia page as a check and throws a warning if they don’t match. I haven’t looked into if there are mismatches there but ~50 players overall don’t match perfectly.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;uk_players_info &amp;lt;- all_players_data %&amp;gt;%
+  #only want data to help identify players by wiki page
+  select(id, name, nationality, birthdate) %&amp;gt;%
+  #only include UK nations (+Ireland)
+  filter(nationality %in% c(&amp;quot;England&amp;quot;, &amp;quot;Scotland&amp;quot;, &amp;quot;Wales&amp;quot;, &amp;quot;Northern Ireland&amp;quot;, &amp;quot;Republic of Ireland&amp;quot;)) %&amp;gt;%
+  #remove duplicated names
+  #might lose some players here but they&amp;#39;re all so far down the pecking order effect should be minimal
+  filter(!duplicated(name)) %&amp;gt;%
+  #remove players who have no wikipedia birthplace
+  filter(!name %in% players_missing_data)
+
+#function to find the wikipedia page of each player
+#returns a df with the player name and birthplace scraped from wikipedia
+get_info &amp;lt;- function(row) {
+  #get player info
+  name &amp;lt;- uk_players_info$name[row]
+  birthday &amp;lt;- uk_players_info$birthdate[row]
+  id &amp;lt;- uk_players_info$id[row]
+  
+  #search wikipedia using the player name
+  search &amp;lt;- pediasearch(name, extract = TRUE, limit = 10)
+  #if a troublesome search use manual link
+  if(name %in% manual_links$name) {
+    wiki_suffix &amp;lt;- manual_links$link[which(manual_links$name == as.character(name))]
+  } else {
+    #else find the wikipedia page suffix for the player
+    if(search[1] == &amp;quot;&amp;quot; &amp;amp; length(search) == 1) {
+      wiki_suffix &amp;lt;- name %&amp;gt;%
+        gsub(&amp;quot; &amp;quot;, &amp;quot;_&amp;quot;, .)
+    } else {
+      footballer &amp;lt;- grep(&amp;quot;football&amp;quot;, search)[1]
+      wiki_suffix &amp;lt;- names(search)[footballer] %&amp;gt;%
+        gsub(&amp;quot; &amp;quot;, &amp;quot;_&amp;quot;, .)
+    }
+  }
+  
+  #read the info card from the players wikipedia page
+  info_card &amp;lt;- read_html(paste0(&amp;quot;https://en.wikipedia.org/wiki/&amp;quot;, wiki_suffix)) %&amp;gt;%
+    html_nodes(&amp;quot;.vcard&amp;quot;) %&amp;gt;%
+    .[1] %&amp;gt;%
+    html_table(fill = TRUE) %&amp;gt;%
+    data.frame()
+  
+  names(info_card) &amp;lt;- paste0(&amp;quot;X&amp;quot;, 1:ncol(info_card))
+  info_card$X1 &amp;lt;- tolower(info_card$X1)
+  
+  #check if the wikipedia birthdate matches the FIFA one
+  birthdate &amp;lt;- info_card %&amp;gt;%
+    filter(X1 == &amp;quot;date of birth&amp;quot;)
+  
+  birthdate &amp;lt;- birthdate$X2 %&amp;gt;%
+    as.character() %&amp;gt;%
+    gsub(&amp;quot; .*&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;%
+    gsub(&amp;quot;\\(|\\)&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;%
+    as.Date()
+  
+  if(birthdate != birthday){
+    warning(paste(row, &amp;quot;birthdays do not match&amp;quot;))
+  }  
+  
+  #find the players birthplace
+  birthplace &amp;lt;- info_card %&amp;gt;%
+    filter(X1 == &amp;quot;place of birth&amp;quot;)
+  
+  birthplace &amp;lt;- birthplace$X2 %&amp;gt;%
+    gsub(&amp;quot;\\[.*&amp;quot;, &amp;quot;&amp;quot;, .)
+  
+  #return info as a df
+  df &amp;lt;- data.frame(id = id,
+                   name = name,
+                   birthdate = birthdate,
+                   birthplace = birthplace)
+  return(df)
+}
+
+#run the function over the first 1333 players
+#after this very few players are found
+british_player_birthplaces &amp;lt;- rbindlist(lapply(1:1329, get_info)) %&amp;gt;%
+  #bind in the manually found data
+  rbind(., missing_players_data)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now that we have the birthplaces for each player, we need to convert these into coordinates via geocoding. For this I use googleway, but the geocode() function from ggmap could also be used.&lt;/p&gt;
+&lt;p&gt;The function takes a place and a key (for the API which isn’t included in the knitted markdown) and finds the lat lon for that place. To save on API requests I only run it on unique birthplaces then merge this back into the dataset.&lt;/p&gt;
+&lt;p&gt;Once we have the lat/lon of each birthplace we can convert the df of players into an sf (spatial) object. If we do this, we see that a lot of players who are eligible for British nations aren’t actually born on the islands (e.g. Raheem Sterling was born in Jamaica). so I only select those which are born within the grouped spatial object of all 5 countries.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#geocodes locations using googlemaps
+#requires a google maps API key (hidden here)
+googleway_geocode &amp;lt;- function(place, key){
+  data &amp;lt;- google_geocode(place, key = key)
+  latlon &amp;lt;- data$results$geometry$location[1,] %&amp;gt;%
+    mutate(birthplace = place)
+  #returns coordinates in the form latitude/longitude
+  return(latlon)
+}
+
+birthplace_coords &amp;lt;- rbindlist(lapply(as.character(unique(british_player_birthplaces$birthplace)),
+                                      googleway_geocode, key = key))
+
+#also melt into one spatial row for subsetting later
+uk &amp;lt;- uk_counties %&amp;gt;%
+  group_by(&amp;quot;UK&amp;quot;) %&amp;gt;%
+  summarise()
+
+british_player_birthplaces &amp;lt;- british_player_birthplaces %&amp;gt;%
+  merge(., birthplace_coords, by = &amp;quot;birthplace&amp;quot;) %&amp;gt;%
+  #convert to an sf object
+  st_as_sf(coords = c(&amp;quot;lng&amp;quot;, &amp;quot;lat&amp;quot;), crs = st_crs(uk_counties)) %&amp;gt;%
+  #keep only those born within the UK proper
+  .[unlist(st_contains(uk, .)),]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If we plot the players, we see they tend to be grouped around the large cities in London, Lancashire, and Yorkshire, with realtively few in Northern Ireland, rural Wales and the Highlands&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p &amp;lt;- ggplot(data = uk_counties) +
+  geom_sf() +
+  geom_sf(data = british_player_birthplaces, colour = &amp;quot;darkred&amp;quot;, alpha = 0.3) +
+  ggtitle(&amp;quot;Players Born in Historic UK Counties&amp;quot;) +
+  theme_void()
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_3_files/figure-html/plot_british_players-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;To find which county each player comes from, we can take the lat/lon of their birthplace and find which county shapefile contains it. The name of that county shapefile is then returned as a new column on the df of all British players&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the historic county each player was born within
+british_player_birthplaces$county &amp;lt;- unlist(lapply(seq(nrow(british_player_birthplaces)), function(player) {
+  #which county is there birthplace coordinates in
+  container &amp;lt;- st_contains(uk_counties, british_player_birthplaces[player,])
+  if(length(unlist(container)) == 1) {
+    #which county name is this
+    county &amp;lt;- as.character(uk_counties$county[as.numeric(t(container))])
+    } else {
+      county &amp;lt;- NA
+    }
+  return(county)
+}))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;if we table the results of the county binning, we can see that many counties contain very few players, whereas some contain many more (e.g. Lancashire has 164 available players, whereas Cambridgeshire has only 5). Later, we will only look at counties that can field at least 10 outfield players + 1 goalkeeper.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#the number of players from each historic county
+table(british_player_birthplaces$county)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 
+##                   Aberdeen                   Anglesey 
+##                         12                          1 
+##                      Angus                   Ayrshire 
+##                          3                         12 
+##               Bedfordshire                  Berkshire 
+##                         10                         15 
+##               Berwickshire            Buckinghamshire 
+##                          1                         15 
+##                  Caithness             Cambridgeshire 
+##                          1                          5 
+##              Cardiganshire            Carmarthenshire 
+##                          1                          2 
+##             Carnarvonshire                   Cheshire 
+##                          2                         50 
+##                   Cornwall              County Antrim 
+##                          5                         13 
+##              County Armagh County Derry / Londonderry 
+##                          2                          7 
+##                County Down           County Fermanagh 
+##                          3                          2 
+##              County Tyrone                 Cumberland 
+##                          3                          8 
+##               Denbighshire                 Derbyshire 
+##                          4                         13 
+##                      Devon                     Dorset 
+##                         17                          3 
+##              Dumfriesshire             Dunbartonshire 
+##                          2                          5 
+##                     Dundee                     Durham 
+##                          6                         26 
+##                  Edinburgh                      Essex 
+##                         23                         71 
+##                       Fife                 Flintshire 
+##                          5                          4 
+##                  Glamorgan                    Glasgow 
+##                         12                         35 
+##            Gloucestershire                  Hampshire 
+##                         13                         28 
+##              Herefordshire              Hertfordshire 
+##                          5                         33 
+##            Huntingdonshire            Inverness-shire 
+##                          3                          3 
+##                       Kent                Lanarkshire 
+##                         50                         18 
+##                 Lancashire             Leicestershire 
+##                        164                         12 
+##               Lincolnshire                  Middlesex 
+##                          8                         77 
+##                 Midlothian              Monmouthshire 
+##                          5                          5 
+##                      Nairn                    Norfolk 
+##                          1                          6 
+##           Northamptonshire             Northumberland 
+##                         12                         14 
+##            Nottinghamshire                Oxfordshire 
+##                         20                          6 
+##                 Perthshire               Renfrewshire 
+##                          3                          3 
+##               Selkirkshire                 Shropshire 
+##                          1                         11 
+##                   Somerset              Staffordshire 
+##                         12                         46 
+##              Stirlingshire                    Suffolk 
+##                          4                         10 
+##                     Surrey                     Sussex 
+##                         63                         16 
+##               Warwickshire               West Lothian 
+##                         44                          1 
+##               Wigtownshire                  Wiltshire 
+##                          1                          6 
+##             Worcestershire                  Yorkshire 
+##                          6                        103&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Could an Independent Yorkshire Win the World Cup - LASSOs and Player Positions</title>
+      <link>/post/yorkshire_world_cup_2/</link>
+      <pubDate>Thu, 07 Jun 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/yorkshire_world_cup_2/</guid>
+      <description>&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+&lt;p&gt;This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we got the shapefiles for the historic counties of the UK and scraped the player data we’ll use to build the teams&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
+library(magrittr)
+library(rvest)
+library(data.table)
+library(ggplot2)
+#we&amp;#39;ll use glmnet to do LASSO regression to determine players positional ability
+library(glmnet)&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;work-out-player-position-ability&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Work Out Player Position Ability&lt;/h1&gt;
+&lt;p&gt;The data we’ve scraped only gives a player’s overall ‘ability’ and their abilities on specific skills (e.g. strength, long shots, dribbling…). We want to use this to work out how good each player is at each position.&lt;/p&gt;
+&lt;p&gt;It’s logical to assume that a player’s overall ability is how good they are at their main position (the position listed first on their page on fifaindex.com). We can therefore use &lt;a href=&#34;https://en.wikipedia.org/wiki/Lasso_(statistics)&#34;&gt;LASSO regression&lt;/a&gt; to work out which stats are contributing to their overall ability score. For instance, we would expect that a goalkeepers overall ability score is just a function of gk_positioning, gk_diving, gk_handling and so on… and doesn’t care about (e.g.) dribbling.&lt;/p&gt;
+&lt;p&gt;This positional ability score is important as we can’t just select the 11 best players for each team as we might end up playing a goalkeeper and 10 defenders (or etc.). We need to make sure we select the best palyers for each position on a realistic formation.&lt;/p&gt;
+&lt;p&gt;Unfortunately, there’s going to be no real way to tell between a players ability to play on either side of the field. There’s some correlation with their footedness ($foot), but it’s not worth going too in the weeds about that. So first we want to make all position symmetrical (i.e. we do discriminate between left and right sided positions).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;all_players_data %&amp;lt;&amp;gt;% mutate(symmetric_position = gsub(&amp;quot;L|R&amp;quot;, &amp;quot;W&amp;quot;, main_position))
+
+unique(as.character(all_players_data$main_position))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##  [1] &amp;quot;CF&amp;quot;  &amp;quot;LW&amp;quot;  &amp;quot;ST&amp;quot;  &amp;quot;GK&amp;quot;  &amp;quot;CAM&amp;quot; &amp;quot;CM&amp;quot;  &amp;quot;CB&amp;quot;  &amp;quot;CDM&amp;quot; &amp;quot;RW&amp;quot;  &amp;quot;LB&amp;quot;  &amp;quot;RM&amp;quot; 
+## [12] &amp;quot;LM&amp;quot;  &amp;quot;RB&amp;quot;  &amp;quot;LWB&amp;quot; &amp;quot;RWB&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;unique(all_players_data$symmetric_position)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##  [1] &amp;quot;CF&amp;quot;  &amp;quot;WW&amp;quot;  &amp;quot;ST&amp;quot;  &amp;quot;GK&amp;quot;  &amp;quot;CAM&amp;quot; &amp;quot;CM&amp;quot;  &amp;quot;CB&amp;quot;  &amp;quot;CDM&amp;quot; &amp;quot;WB&amp;quot;  &amp;quot;WM&amp;quot;  &amp;quot;WWB&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;First we need to convert the stats that we’re going to use for this regression/prediction into matrix form&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;player_stats &amp;lt;- all_players_data %&amp;gt;%
+  #select only the players stats for each skill
+  select(c(12, 14:47)) %&amp;gt;%
+  #transition data into matrix
+  model.matrix(overall~., .)
+
+#show the first 6 instances of the first 5 stats
+head(player_stats[,c(1:5)])&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##   (Intercept) ball_control dribbling marking slide_tackle
+## 1           1           96        97      13           26
+## 2           1           93        91      22           23
+## 3           1           95        96      21           33
+## 4           1           91        86      30           38
+## 5           1           48        30      10           11
+## 6           1           42        18      13           13&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To show how this works I’m going to illustrate it using goalkeepers and predicting the ability of each outfield player to play in goal.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#filter out only the goalkeepers
+goalkeepers &amp;lt;- all_players_data %&amp;gt;%
+  filter(symmetric_position == &amp;quot;GK&amp;quot;)
+
+#select a percentage of these to use as training data
+sample_percent &amp;lt;- 10
+train_samples &amp;lt;- sample(1:nrow(goalkeepers), (nrow(goalkeepers)/100)*sample_percent)
+
+gk_stats &amp;lt;- goalkeepers %&amp;gt;%
+  slice(train_samples) %&amp;gt;%
+  select(c(12, 14:47))
+
+#get the stats per skill
+train_matrix &amp;lt;- model.matrix(overall~., gk_stats)
+#and the overall (gk) ability
+train_ability &amp;lt;- gk_stats$overall
+  
+#perform the regression
+cv_model &amp;lt;- cv.glmnet(train_matrix, train_ability)
+
+#look at the weightings given to important variables using lambda value that gives minimum mean cross-validated error
+coef(cv_model, s = &amp;quot;lambda.min&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 36 x 1 sparse Matrix of class &amp;quot;dgCMatrix&amp;quot;
+##                           1
+## (Intercept)    1.1626827766
+## (Intercept)    .           
+## ball_control   .           
+## dribbling      .           
+## marking        .           
+## slide_tackle   .           
+## stand_tackle   .           
+## aggression     .           
+## reactions      0.1084637922
+## positioning    .           
+## interceptions  .           
+## vision         .           
+## composure      .           
+## crossing       .           
+## short_pass     .           
+## long_pass      .           
+## acceleration   0.0006049698
+## stamina        .           
+## strength       .           
+## balance        .           
+## sprint_speed   .           
+## agility        0.0037006448
+## jumping        .           
+## heading        .           
+## shot_power     .           
+## finishing      .           
+## long_shots     .           
+## curve          .           
+## free_kicks     .           
+## penalties      .           
+## volleys        .           
+## gk_positioning 0.1995454151
+## gk_diving      0.2064788664
+## gk_handling    0.2292371065
+## gk_kicking     0.0358555935
+## gk_reflexes    0.2151390407&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The regression selects only variables which have a strong relationship with the outcome (overall ability in the gk position in this case). As expected, it selects only the gk_… skillset and also a players reactions, which makes sense if goalkeepers have to make point blank saves.&lt;/p&gt;
+&lt;p&gt;We can validate this by predicting the overall ability of the goalkeepers that aren’t in the training set fairly simply&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find non training examples of goalkeepers
+test_matrix &amp;lt;- goalkeepers %&amp;gt;%
+  slice(-train_samples) %&amp;gt;%
+  select(c(12, 14:47)) %&amp;gt;%
+  model.matrix(overall~., .)
+
+#get the overall ability for these players
+gk_abilities &amp;lt;- goalkeepers %&amp;gt;%
+  slice(-train_samples) %&amp;gt;%
+  select(overall)
+
+#predict their overall ability based on their stats
+gk_abilities$predicted &amp;lt;- as.vector(predict(cv_model, newx = test_matrix, s = &amp;quot;lambda.min&amp;quot;, type=&amp;quot;response&amp;quot;))
+
+#plot these
+p &amp;lt;- ggplot(data = gk_abilities, aes(x = overall, y = predicted)) +
+  geom_point() +
+  xlab(&amp;quot;Overall FIFA Ability&amp;quot;) +
+  ylab(&amp;quot;Predicted FIFA Ability&amp;quot;) +
+  ggtitle(&amp;quot;Actual and Predicted Goalkeeping Ability of Goalkeepers in FIFA18&amp;quot;)
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_2_files/figure-html/example_LASSO_validation-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Which gives a very good fit. This is expected for the dataset we’re using as the overall ability hasbeen directly calclulated from the complete set of skills using some hidden algorithm. In the real world, the actual vs. predicted results would most likely have more noise.&lt;/p&gt;
+&lt;p&gt;We can use this model now to predict how well outfield players would fare in goal, given that they have (low) ratings for all of these skills&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find all outfield players and convert stats the matrix
+outfield_players &amp;lt;- all_players_data %&amp;gt;%
+  filter(symmetric_position != &amp;quot;GK&amp;quot;) %&amp;gt;%
+  select(c(12, 14:47)) %&amp;gt;%
+  model.matrix(overall~., .)
+
+#get the names of each outfield palyer
+outfield_goalkeepers &amp;lt;- all_players_data %&amp;gt;%
+  filter(symmetric_position != &amp;quot;GK&amp;quot;) %&amp;gt;%
+  select(name)
+
+#predict how well each outfield player would do in goal
+outfield_goalkeepers$predicted_ability &amp;lt;- as.vector(predict(cv_model, newx = outfield_players, s = &amp;quot;lambda.min&amp;quot;, type=&amp;quot;response&amp;quot;))
+
+head(outfield_goalkeepers)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##                 name predicted_ability
+## 1       Lionel Messi          20.66852
+## 2  Cristiano Ronaldo          21.62337
+## 3             Neymar          20.93861
+## 4        Luis Suárez          38.58383
+## 5    Kevin De Bruyne          22.32387
+## 6 Robert Lewandowski          20.01996&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;It is of course, extremely ironic that Luis Suarez scores relatively highly as an outfield player in goal &lt;a href=&#34;https://www.youtube.com/watch?v=wn_oYeugGiw&#34;&gt;given his history&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;We can use this technique to predict how each player would play in each position using the following function&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#function to predict how each player would play in each position
+get_position_weights &amp;lt;- function(position, sample_percent) {
+  #filter data
+  position_df &amp;lt;- all_players_data %&amp;gt;%
+    filter(symmetric_position == position)
+  
+  #get training data
+  train_samples &amp;lt;- sample(1:nrow(position_df), (nrow(position_df)/100)*sample_percent)
+  
+  train_stats &amp;lt;- position_df %&amp;gt;%
+    .[train_samples,] %&amp;gt;%
+    select(c(12, 14:47))
+  
+  train_matrix &amp;lt;- model.matrix(overall~., train_stats)
+  
+  train_ability &amp;lt;- train_stats$overall
+  
+  #use LASSO regression to find weighting of significant covariates
+  cv_model &amp;lt;- cv.glmnet(train_matrix, train_ability)
+  
+  #predict players ability in that position
+  position_ability &amp;lt;- predict(cv_model, newx = player_stats, s = &amp;quot;lambda.min&amp;quot;, type=&amp;quot;response&amp;quot;)
+}
+
+#run through every mirrored position
+#using a high percentage of palyers in training set (50%) as in theory should be perfect regression
+position_abilities &amp;lt;- lapply(unique(all_players_data$symmetric_position), 
+                             get_position_weights, sample_percent = 50) %&amp;gt;%
+  do.call(cbind, .) %&amp;gt;%
+  data.frame()
+
+#name each position
+names(position_abilities) &amp;lt;- unique(all_players_data$symmetric_position)
+
+#bind this to the data we have on all the players
+all_players_data &amp;lt;- cbind(all_players_data, position_abilities) %&amp;gt;%
+  #convert all non-natural goalkeepers goalkeeping ability to zero
+  #want to make sure no non-goalkeepers are chosen in goal
+  mutate(GK = ifelse(main_position == &amp;quot;GK&amp;quot;, overall, 0)) 
+
+#show the first 6 rows
+head(select(all_players_data, c(1, 49:60)))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##                name symmetric_position       CF       WW       ST GK
+## 1      Lionel Messi                 CF 93.13928 91.80825 89.64258  0
+## 2 Cristiano Ronaldo                 WW 91.79662 90.65933 92.59522  0
+## 3            Neymar                 WW 89.23998 88.89749 85.11431  0
+## 4       Luis Suárez                 ST 89.04229 87.03752 88.92704  0
+## 5      Manuel Neuer                 GK 43.94357 39.91661 36.59936 92
+## 6            De Gea                 GK 41.13068 37.09709 34.49081 91
+##        CAM       CM       CB      CDM       WB       WM      WWB
+## 1 93.33547 85.22086 45.98759 60.29131 58.23509 91.16316 63.91952
+## 2 90.31693 83.22465 53.58049 62.70410 62.21942 90.29478 67.54105
+## 3 88.95197 80.75545 47.25937 60.24005 60.14189 88.26346 65.65777
+## 4 87.56410 81.21401 59.81830 66.78885 65.15123 86.43675 69.34578
+## 5 47.47983 49.53337 34.12896 42.60231 35.01530 44.37032 36.03348
+## 6 44.01616 46.33546 34.50629 42.06630 36.11099 41.06575 36.00981&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we have the ability of each player to perform in any position we can use it to build teams. First however, we need to sort British players into the county of their birth, which we’ll do in the next post.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Riddler 27th April 2018</title>
       <link>/post/riddler-27th-april-2018/</link>
       <pubDate>Tue, 01 May 2018 00:00:00 +0000</pubDate>

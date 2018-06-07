@@ -5,6 +5,33 @@
     
     <url>
     
+      <loc>/post/yorkshire_world_cup_1/</loc>
+      <lastmod>2018-06-07T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/post/yorkshire_world_cup_3/</loc>
+      <lastmod>2018-06-07T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/post/yorkshire_world_cup_2/</loc>
+      <lastmod>2018-06-07T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/riddler-27th-april-2018/</loc>
       <lastmod>2018-05-01T00:00:00+00:00</lastmod>
     </url>
@@ -125,6 +152,16 @@
     
     <url>
     
+      <loc>/tags/football/</loc>
+      <lastmod>2018-06-07T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/tags/package/</loc>
       <lastmod>2018-05-01T00:00:00+00:00</lastmod>
       <priority>0</priority>
@@ -166,7 +203,7 @@
     <url>
     
       <loc>/tags/rstats/</loc>
-      <lastmod>2018-05-01T00:00:00+00:00</lastmod>
+      <lastmod>2018-06-07T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -177,6 +214,16 @@
     
       <loc>/tags/</loc>
       <lastmod>2017-01-01T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/world-cup/</loc>
+      <lastmod>2018-06-07T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     

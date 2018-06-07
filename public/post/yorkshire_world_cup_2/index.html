@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme" content="hugo-academic">
+  <meta name="generator" content="Hugo 0.32.2" />
+  <meta name="author" content="Robert Hickman">
+
+  
+  
+  
+  
+    
+      
+    
+  
+  <meta name="description" content="Recently, a Yorkshire national football team appeared in a league of national teams for stateless people. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
+This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.">
+
+  
+  <link rel="alternate" hreflang="en-us" href="/post/yorkshire_world_cup_2/">
+
+  
+
+
+  
+
+  
+  
+  <meta name="theme-color" content="#0095eb">
+  
+  
+  
+  
+    
+  
+  
+    
+    
+      
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+      
+    
+  
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha512-6MXa8B6uaO18Hid6blRMetEIoPqHf7Ux1tnyIQdpt9qI5OACx7C+O3IVTr98vwGnlcg0LOLa02i9Y1HpVhlfiw==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.1/css/academicons.min.css" integrity="sha512-NThgw3XKQ1absAahW6to7Ey42uycrVvfNfyjqcFNgCmOCQ5AR4AO0SiXrN+8ZtYeappp56lk1WtvjVmEa+VR6A==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous">
+  
+  
+  
+  
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Montserrat:400,700%7cRoboto:400,400italic,700%7cRoboto&#43;Mono">
+  
+  <link rel="stylesheet" href="/styles.css">
+  
+
+  
+
+  
+  <link rel="alternate" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="feed" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  
+
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" href="/img/icon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
+
+  <link rel="canonical" href="/post/yorkshire_world_cup_2/">
+
+  <meta property="twitter:card" content="summary_large_image">
+  
+  <meta property="twitter:site" content="@robert_squared">
+  <meta property="twitter:creator" content="@robert_squared">
+  
+  <meta property="og:site_name" content="Robert Hickman">
+  <meta property="og:url" content="/post/yorkshire_world_cup_2/">
+  <meta property="og:title" content="Could an Independent Yorkshire Win the World Cup - LASSOs and Player Positions | Robert Hickman">
+  <meta property="og:description" content="Recently, a Yorkshire national football team appeared in a league of national teams for stateless people. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
+This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.">
+  <meta property="og:locale" content="en-us">
+  
+  <meta property="article:published_time" content="2018-06-07T00:00:00&#43;00:00">
+  
+  <meta property="article:modified_time" content="2018-06-07T00:00:00&#43;00:00">
+  
+
+  <script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+</script>
+<script async type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <title>Could an Independent Yorkshire Win the World Cup - LASSOs and Player Positions | Robert Hickman</title>
+
+</head>
+<body id="top" data-spy="scroll" data-target="#toc" data-offset="71" >
+
+<nav class="navbar navbar-default navbar-fixed-top" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="navbar-header">
+      
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+              data-target=".navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      
+      <a class="navbar-brand" href="/">Robert Hickman</a>
+    </div>
+
+    
+    <div class="collapse navbar-collapse">
+
+      
+      
+      <ul class="nav navbar-nav navbar-right">
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#about">
+            
+            <span>Home</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#publications_selected">
+            
+            <span>Publications</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#posts">
+            
+            <span>Posts</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#projects">
+            
+            <span>Projects</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#writing">
+            
+            <span>Writing</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#contact">
+            
+            <span>Contact</span>
+            
+          </a>
+        </li>
+
+        
+        
+      
+
+      
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+
+<article class="article" itemscope itemtype="http://schema.org/Article">
+
+  
+
+
+  <div class="article-container">
+    <div class="article-inner">
+      <h1 itemprop="name">Could an Independent Yorkshire Win the World Cup - LASSOs and Player Positions</h1>
+
+      
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2018-06-07 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Jun 7, 2018
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    7 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+  
+<div class="share-box" aria-hidden="true">
+  <ul class="share">
+    <li>
+      <a class="twitter"
+         href="https://twitter.com/intent/tweet?text=Could%20an%20Independent%20Yorkshire%20Win%20the%20World%20Cup%20-%20LASSOs%20and%20Player%20Positions&amp;url=%2fpost%2fyorkshire_world_cup_2%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-twitter"></i>
+      </a>
+    </li>
+    <li>
+      <a class="facebook"
+         href="https://www.facebook.com/sharer.php?u=%2fpost%2fyorkshire_world_cup_2%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-facebook"></i>
+      </a>
+    </li>
+    <li>
+      <a class="linkedin"
+         href="https://www.linkedin.com/shareArticle?mini=true&amp;url=%2fpost%2fyorkshire_world_cup_2%2f&amp;title=Could%20an%20Independent%20Yorkshire%20Win%20the%20World%20Cup%20-%20LASSOs%20and%20Player%20Positions"
+         target="_blank" rel="noopener">
+        <i class="fa fa-linkedin"></i>
+      </a>
+    </li>
+    <li>
+      <a class="weibo"
+         href="http://service.weibo.com/share/share.php?url=%2fpost%2fyorkshire_world_cup_2%2f&amp;title=Could%20an%20Independent%20Yorkshire%20Win%20the%20World%20Cup%20-%20LASSOs%20and%20Player%20Positions"
+         target="_blank" rel="noopener">
+        <i class="fa fa-weibo"></i>
+      </a>
+    </li>
+    <li>
+      <a class="email"
+         href="mailto:?subject=Could%20an%20Independent%20Yorkshire%20Win%20the%20World%20Cup%20-%20LASSOs%20and%20Player%20Positions&amp;body=%2fpost%2fyorkshire_world_cup_2%2f">
+        <i class="fa fa-envelope"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+  
+
+</div>
+
+
+      <div class="article-style" itemprop="articleBody">
+        <p>Recently, a Yorkshire national football team <a href="https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples">appeared in a league of national teams for stateless people</a>. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?</p>
+<p>This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we got the shapefiles for the historic counties of the UK and scraped the player data we’ll use to build the teams</p>
+<pre class="r"><code>library(dplyr)
+library(magrittr)
+library(rvest)
+library(data.table)
+library(ggplot2)
+#we&#39;ll use glmnet to do LASSO regression to determine players positional ability
+library(glmnet)</code></pre>
+<div id="work-out-player-position-ability" class="section level1">
+<h1>Work Out Player Position Ability</h1>
+<p>The data we’ve scraped only gives a player’s overall ‘ability’ and their abilities on specific skills (e.g. strength, long shots, dribbling…). We want to use this to work out how good each player is at each position.</p>
+<p>It’s logical to assume that a player’s overall ability is how good they are at their main position (the position listed first on their page on fifaindex.com). We can therefore use <a href="https://en.wikipedia.org/wiki/Lasso_(statistics)">LASSO regression</a> to work out which stats are contributing to their overall ability score. For instance, we would expect that a goalkeepers overall ability score is just a function of gk_positioning, gk_diving, gk_handling and so on… and doesn’t care about (e.g.) dribbling.</p>
+<p>This positional ability score is important as we can’t just select the 11 best players for each team as we might end up playing a goalkeeper and 10 defenders (or etc.). We need to make sure we select the best palyers for each position on a realistic formation.</p>
+<p>Unfortunately, there’s going to be no real way to tell between a players ability to play on either side of the field. There’s some correlation with their footedness ($foot), but it’s not worth going too in the weeds about that. So first we want to make all position symmetrical (i.e. we do discriminate between left and right sided positions).</p>
+<pre class="r"><code>all_players_data %&lt;&gt;% mutate(symmetric_position = gsub(&quot;L|R&quot;, &quot;W&quot;, main_position))
+
+unique(as.character(all_players_data$main_position))</code></pre>
+<pre><code>##  [1] &quot;CF&quot;  &quot;LW&quot;  &quot;ST&quot;  &quot;GK&quot;  &quot;CAM&quot; &quot;CM&quot;  &quot;CB&quot;  &quot;CDM&quot; &quot;RW&quot;  &quot;LB&quot;  &quot;RM&quot; 
+## [12] &quot;LM&quot;  &quot;RB&quot;  &quot;LWB&quot; &quot;RWB&quot;</code></pre>
+<pre class="r"><code>unique(all_players_data$symmetric_position)</code></pre>
+<pre><code>##  [1] &quot;CF&quot;  &quot;WW&quot;  &quot;ST&quot;  &quot;GK&quot;  &quot;CAM&quot; &quot;CM&quot;  &quot;CB&quot;  &quot;CDM&quot; &quot;WB&quot;  &quot;WM&quot;  &quot;WWB&quot;</code></pre>
+<p>First we need to convert the stats that we’re going to use for this regression/prediction into matrix form</p>
+<pre class="r"><code>player_stats &lt;- all_players_data %&gt;%
+  #select only the players stats for each skill
+  select(c(12, 14:47)) %&gt;%
+  #transition data into matrix
+  model.matrix(overall~., .)
+
+#show the first 6 instances of the first 5 stats
+head(player_stats[,c(1:5)])</code></pre>
+<pre><code>##   (Intercept) ball_control dribbling marking slide_tackle
+## 1           1           96        97      13           26
+## 2           1           93        91      22           23
+## 3           1           95        96      21           33
+## 4           1           91        86      30           38
+## 5           1           48        30      10           11
+## 6           1           42        18      13           13</code></pre>
+<p>To show how this works I’m going to illustrate it using goalkeepers and predicting the ability of each outfield player to play in goal.</p>
+<pre class="r"><code>#filter out only the goalkeepers
+goalkeepers &lt;- all_players_data %&gt;%
+  filter(symmetric_position == &quot;GK&quot;)
+
+#select a percentage of these to use as training data
+sample_percent &lt;- 10
+train_samples &lt;- sample(1:nrow(goalkeepers), (nrow(goalkeepers)/100)*sample_percent)
+
+gk_stats &lt;- goalkeepers %&gt;%
+  slice(train_samples) %&gt;%
+  select(c(12, 14:47))
+
+#get the stats per skill
+train_matrix &lt;- model.matrix(overall~., gk_stats)
+#and the overall (gk) ability
+train_ability &lt;- gk_stats$overall
+  
+#perform the regression
+cv_model &lt;- cv.glmnet(train_matrix, train_ability)
+
+#look at the weightings given to important variables using lambda value that gives minimum mean cross-validated error
+coef(cv_model, s = &quot;lambda.min&quot;)</code></pre>
+<pre><code>## 36 x 1 sparse Matrix of class &quot;dgCMatrix&quot;
+##                           1
+## (Intercept)    1.1626827766
+## (Intercept)    .           
+## ball_control   .           
+## dribbling      .           
+## marking        .           
+## slide_tackle   .           
+## stand_tackle   .           
+## aggression     .           
+## reactions      0.1084637922
+## positioning    .           
+## interceptions  .           
+## vision         .           
+## composure      .           
+## crossing       .           
+## short_pass     .           
+## long_pass      .           
+## acceleration   0.0006049698
+## stamina        .           
+## strength       .           
+## balance        .           
+## sprint_speed   .           
+## agility        0.0037006448
+## jumping        .           
+## heading        .           
+## shot_power     .           
+## finishing      .           
+## long_shots     .           
+## curve          .           
+## free_kicks     .           
+## penalties      .           
+## volleys        .           
+## gk_positioning 0.1995454151
+## gk_diving      0.2064788664
+## gk_handling    0.2292371065
+## gk_kicking     0.0358555935
+## gk_reflexes    0.2151390407</code></pre>
+<p>The regression selects only variables which have a strong relationship with the outcome (overall ability in the gk position in this case). As expected, it selects only the gk_… skillset and also a players reactions, which makes sense if goalkeepers have to make point blank saves.</p>
+<p>We can validate this by predicting the overall ability of the goalkeepers that aren’t in the training set fairly simply</p>
+<pre class="r"><code>#find non training examples of goalkeepers
+test_matrix &lt;- goalkeepers %&gt;%
+  slice(-train_samples) %&gt;%
+  select(c(12, 14:47)) %&gt;%
+  model.matrix(overall~., .)
+
+#get the overall ability for these players
+gk_abilities &lt;- goalkeepers %&gt;%
+  slice(-train_samples) %&gt;%
+  select(overall)
+
+#predict their overall ability based on their stats
+gk_abilities$predicted &lt;- as.vector(predict(cv_model, newx = test_matrix, s = &quot;lambda.min&quot;, type=&quot;response&quot;))
+
+#plot these
+p &lt;- ggplot(data = gk_abilities, aes(x = overall, y = predicted)) +
+  geom_point() +
+  xlab(&quot;Overall FIFA Ability&quot;) +
+  ylab(&quot;Predicted FIFA Ability&quot;) +
+  ggtitle(&quot;Actual and Predicted Goalkeeping Ability of Goalkeepers in FIFA18&quot;)
+
+plot(p)</code></pre>
+<p><img src="/post/2018-06-07-yorkshire_world_cup_2_files/figure-html/example_LASSO_validation-1.png" width="672" /></p>
+<p>Which gives a very good fit. This is expected for the dataset we’re using as the overall ability hasbeen directly calclulated from the complete set of skills using some hidden algorithm. In the real world, the actual vs. predicted results would most likely have more noise.</p>
+<p>We can use this model now to predict how well outfield players would fare in goal, given that they have (low) ratings for all of these skills</p>
+<pre class="r"><code>#find all outfield players and convert stats the matrix
+outfield_players &lt;- all_players_data %&gt;%
+  filter(symmetric_position != &quot;GK&quot;) %&gt;%
+  select(c(12, 14:47)) %&gt;%
+  model.matrix(overall~., .)
+
+#get the names of each outfield palyer
+outfield_goalkeepers &lt;- all_players_data %&gt;%
+  filter(symmetric_position != &quot;GK&quot;) %&gt;%
+  select(name)
+
+#predict how well each outfield player would do in goal
+outfield_goalkeepers$predicted_ability &lt;- as.vector(predict(cv_model, newx = outfield_players, s = &quot;lambda.min&quot;, type=&quot;response&quot;))
+
+head(outfield_goalkeepers)</code></pre>
+<pre><code>##                 name predicted_ability
+## 1       Lionel Messi          20.66852
+## 2  Cristiano Ronaldo          21.62337
+## 3             Neymar          20.93861
+## 4        Luis Suárez          38.58383
+## 5    Kevin De Bruyne          22.32387
+## 6 Robert Lewandowski          20.01996</code></pre>
+<p>It is of course, extremely ironic that Luis Suarez scores relatively highly as an outfield player in goal <a href="https://www.youtube.com/watch?v=wn_oYeugGiw">given his history</a>.</p>
+<p>We can use this technique to predict how each player would play in each position using the following function</p>
+<pre class="r"><code>#function to predict how each player would play in each position
+get_position_weights &lt;- function(position, sample_percent) {
+  #filter data
+  position_df &lt;- all_players_data %&gt;%
+    filter(symmetric_position == position)
+  
+  #get training data
+  train_samples &lt;- sample(1:nrow(position_df), (nrow(position_df)/100)*sample_percent)
+  
+  train_stats &lt;- position_df %&gt;%
+    .[train_samples,] %&gt;%
+    select(c(12, 14:47))
+  
+  train_matrix &lt;- model.matrix(overall~., train_stats)
+  
+  train_ability &lt;- train_stats$overall
+  
+  #use LASSO regression to find weighting of significant covariates
+  cv_model &lt;- cv.glmnet(train_matrix, train_ability)
+  
+  #predict players ability in that position
+  position_ability &lt;- predict(cv_model, newx = player_stats, s = &quot;lambda.min&quot;, type=&quot;response&quot;)
+}
+
+#run through every mirrored position
+#using a high percentage of palyers in training set (50%) as in theory should be perfect regression
+position_abilities &lt;- lapply(unique(all_players_data$symmetric_position), 
+                             get_position_weights, sample_percent = 50) %&gt;%
+  do.call(cbind, .) %&gt;%
+  data.frame()
+
+#name each position
+names(position_abilities) &lt;- unique(all_players_data$symmetric_position)
+
+#bind this to the data we have on all the players
+all_players_data &lt;- cbind(all_players_data, position_abilities) %&gt;%
+  #convert all non-natural goalkeepers goalkeeping ability to zero
+  #want to make sure no non-goalkeepers are chosen in goal
+  mutate(GK = ifelse(main_position == &quot;GK&quot;, overall, 0)) 
+
+#show the first 6 rows
+head(select(all_players_data, c(1, 49:60)))</code></pre>
+<pre><code>##                name symmetric_position       CF       WW       ST GK
+## 1      Lionel Messi                 CF 93.13928 91.80825 89.64258  0
+## 2 Cristiano Ronaldo                 WW 91.79662 90.65933 92.59522  0
+## 3            Neymar                 WW 89.23998 88.89749 85.11431  0
+## 4       Luis Suárez                 ST 89.04229 87.03752 88.92704  0
+## 5      Manuel Neuer                 GK 43.94357 39.91661 36.59936 92
+## 6            De Gea                 GK 41.13068 37.09709 34.49081 91
+##        CAM       CM       CB      CDM       WB       WM      WWB
+## 1 93.33547 85.22086 45.98759 60.29131 58.23509 91.16316 63.91952
+## 2 90.31693 83.22465 53.58049 62.70410 62.21942 90.29478 67.54105
+## 3 88.95197 80.75545 47.25937 60.24005 60.14189 88.26346 65.65777
+## 4 87.56410 81.21401 59.81830 66.78885 65.15123 86.43675 69.34578
+## 5 47.47983 49.53337 34.12896 42.60231 35.01530 44.37032 36.03348
+## 6 44.01616 46.33546 34.50629 42.06630 36.11099 41.06575 36.00981</code></pre>
+<p>Now we have the ability of each player to perform in any position we can use it to build teams. First however, we need to sort British players into the county of their birth, which we’ll do in the next post.</p>
+</div>
+
+      </div>
+
+      
+
+
+<div class="article-tags">
+  
+  <a class="btn btn-primary btn-outline" href="/tags/rstats">rstats</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/world-cup">world cup</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/football">football</a>
+  
+</div>
+
+
+
+    </div>
+  </div>
+
+</article>
+
+
+
+<div class="article-container article-widget">
+  <div class="hr-light"></div>
+  <h3>Related</h3>
+  <ul>
+    
+    <li><a href="/post/yorkshire_world_cup_1/">Could an Independent Yorkshire Win the World Cup - Data &amp; Scraping</a></li>
+    
+    <li><a href="/post/yorkshire_world_cup_3/">Could an Independent Yorkshire Win the World Cup - Finding British Player&#39;s Birthplaces</a></li>
+    
+    <li><a href="/post/riddler-27th-april-2018/">Riddler 27th April 2018</a></li>
+    
+    <li><a href="/post/hello-world-a-small-chess-plotting-package/">Hello World! And A Small Chess Plotting Package</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="article-container">
+  
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="powered-by">
+
+      &copy; 2018 &middot; 
+
+      Powered by the
+      <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+      <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+      <span class="pull-right" aria-hidden="true">
+        <a href="#" id="back_to_top">
+          <span class="button_icon">
+            <i class="fa fa-chevron-up fa-2x"></i>
+          </span>
+        </a>
+      </span>
+
+    </p>
+  </div>
+</footer>
+
+
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close btn-large" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Cite</h4>
+      </div>
+      <div>
+        <pre><code class="modal-body tex"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-primary btn-outline js-copy-cite" href="#" target="_blank">
+          <i class="fa fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-primary btn-outline js-download-cite" href="#" target="_blank">
+          <i class="fa fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+    
+
+    
+
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.3/imagesloaded.pkgd.min.js" integrity="sha512-umsR78NN0D23AzgoZ11K7raBD+R6hqKojyBZs1w8WvYlsI+QuKRGBx3LFCwhatzBunCjDuJpDHwxD13sLMbpRA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha512-iztkobsvnjKfAtTNdHkGVjAYTrrtlC7mGp/54c40wowO7LhURYl3gVzzcEqGl/qKXQltJ2HwMrdLcNUdo+N/RQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.4/isotope.pkgd.min.js" integrity="sha512-VDBOIlDbuC4VWxGJNmuFRQ0Li0SKkDpmGyuhAG5LTDLd/dJ/S0WMVxriR2Y+CyPL5gzjpN4f/6iqWVBJlht0tQ==" crossorigin="anonymous"></script>
+    
+    
+    <script src="/js/hugo-academic.js"></script>
+    
+
+    
+    
+      
+      
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+      
+
+      
+
+      
+
+      <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    
+    
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_CHTML" integrity="sha512-tOav5w1OjvsSJzePRtt2uQPFwBoHt1VZcUq8l8nm5284LEKE9FSJBQryzMBzHxY5P0zRdNqEcpLIRVYFNgu1jw==" crossorigin="anonymous"></script>
+    
+    
+
+  </body>
+</html>
+
