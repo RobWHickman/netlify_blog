@@ -16,7 +16,7 @@ categories: []
 
 Recently, a Yorkshire national football team [appeared in a league of national teams for stateless people](https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples). This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
 
-This is the complete script for an short article I wrote for CityMetric on the topic. It's split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we got the shapefiles for the historic counties of the UK and scraped the player data we'll use to build the teams
+This is the complete script for an short article I wrote for [CityMetric](https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961) on the topic. It's split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we got the shapefiles for the historic counties of the UK and scraped the player data we'll use to build the teams
 
 ```{r libraries, warning=FALSE,message=FALSE}
 library(dplyr)

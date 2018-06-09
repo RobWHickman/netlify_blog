@@ -17,10 +17,9 @@ categories: []
 
 
 <p>Recently, a Yorkshire national football team <a href="https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples">appeared in a league of national teams for stateless people</a>. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?</p>
-<p>This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we got the shapefiles for the historic counties of the UK and scraped the player data we’ll use to build the teams</p>
+<p>This is the complete script for an short article I wrote for <a href="https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961">CityMetric</a> on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we got the shapefiles for the historic counties of the UK and scraped the player data we’ll use to build the teams</p>
 <pre class="r"><code>library(dplyr)
 library(magrittr)
-library(rvest)
 library(data.table)
 library(ggplot2)
 #we&#39;ll use glmnet to do LASSO regression to determine players positional ability
@@ -78,43 +77,43 @@ cv_model &lt;- cv.glmnet(train_matrix, train_ability)
 #look at the weightings given to important variables using lambda value that gives minimum mean cross-validated error
 coef(cv_model, s = &quot;lambda.min&quot;)</code></pre>
 <pre><code>## 36 x 1 sparse Matrix of class &quot;dgCMatrix&quot;
-##                           1
-## (Intercept)    1.1626827766
-## (Intercept)    .           
-## ball_control   .           
-## dribbling      .           
-## marking        .           
-## slide_tackle   .           
-## stand_tackle   .           
-## aggression     .           
-## reactions      0.1084637922
-## positioning    .           
-## interceptions  .           
-## vision         .           
-## composure      .           
-## crossing       .           
-## short_pass     .           
-## long_pass      .           
-## acceleration   0.0006049698
-## stamina        .           
-## strength       .           
-## balance        .           
-## sprint_speed   .           
-## agility        0.0037006448
-## jumping        .           
-## heading        .           
-## shot_power     .           
-## finishing      .           
-## long_shots     .           
-## curve          .           
-## free_kicks     .           
-## penalties      .           
-## volleys        .           
-## gk_positioning 0.1995454151
-## gk_diving      0.2064788664
-## gk_handling    0.2292371065
-## gk_kicking     0.0358555935
-## gk_reflexes    0.2151390407</code></pre>
+##                         1
+## (Intercept)    1.49389960
+## (Intercept)    .         
+## ball_control   .         
+## dribbling      .         
+## marking        .         
+## slide_tackle   .         
+## stand_tackle   .         
+## aggression     .         
+## reactions      0.10555172
+## positioning    .         
+## interceptions  .         
+## vision         .         
+## composure      .         
+## crossing       .         
+## short_pass     .         
+## long_pass      .         
+## acceleration   .         
+## stamina        .         
+## strength       .         
+## balance        .         
+## sprint_speed   .         
+## agility        .         
+## jumping        .         
+## heading        .         
+## shot_power     .         
+## finishing      .         
+## long_shots     .         
+## curve          .         
+## free_kicks     .         
+## penalties      .         
+## volleys        .         
+## gk_positioning 0.21544489
+## gk_diving      0.21175632
+## gk_handling    0.20973593
+## gk_kicking     0.04237876
+## gk_reflexes    0.20706256</code></pre>
 <p>The regression selects only variables which have a strong relationship with the outcome (overall ability in the gk position in this case). As expected, it selects only the gk_… skillset and also a players reactions, which makes sense if goalkeepers have to make point blank saves.</p>
 <p>We can validate this by predicting the overall ability of the goalkeepers that aren’t in the training set fairly simply</p>
 <pre class="r"><code>#find non training examples of goalkeepers
@@ -158,12 +157,12 @@ outfield_goalkeepers$predicted_ability &lt;- as.vector(predict(cv_model, newx = 
 
 head(outfield_goalkeepers)</code></pre>
 <pre><code>##                 name predicted_ability
-## 1       Lionel Messi          20.66852
-## 2  Cristiano Ronaldo          21.62337
-## 3             Neymar          20.93861
-## 4        Luis Suárez          38.58383
-## 5    Kevin De Bruyne          22.32387
-## 6 Robert Lewandowski          20.01996</code></pre>
+## 1       Lionel Messi          20.40736
+## 2  Cristiano Ronaldo          21.34585
+## 3             Neymar          20.72092
+## 4        Luis Suárez          38.35577
+## 5    Kevin De Bruyne          21.95462
+## 6 Robert Lewandowski          19.83660</code></pre>
 <p>It is of course, extremely ironic that Luis Suarez scores relatively highly as an outfield player in goal <a href="https://www.youtube.com/watch?v=wn_oYeugGiw">given his history</a>.</p>
 <p>We can use this technique to predict how each player would play in each position using the following function</p>
 <pre class="r"><code>#function to predict how each player would play in each position
@@ -209,18 +208,18 @@ all_players_data &lt;- cbind(all_players_data, position_abilities) %&gt;%
 #show the first 6 rows
 head(select(all_players_data, c(1, 49:60)))</code></pre>
 <pre><code>##                name symmetric_position       CF       WW       ST GK
-## 1      Lionel Messi                 CF 93.13928 91.80825 89.64258  0
-## 2 Cristiano Ronaldo                 WW 91.79662 90.65933 92.59522  0
-## 3            Neymar                 WW 89.23998 88.89749 85.11431  0
-## 4       Luis Suárez                 ST 89.04229 87.03752 88.92704  0
-## 5      Manuel Neuer                 GK 43.94357 39.91661 36.59936 92
-## 6            De Gea                 GK 41.13068 37.09709 34.49081 91
+## 1      Lionel Messi                 CF 93.39973 91.98654 89.67273  0
+## 2 Cristiano Ronaldo                 WW 92.73293 90.71623 92.64345  0
+## 3            Neymar                 WW 89.52807 89.13606 85.14353  0
+## 4       Luis Suárez                 ST 89.23497 87.18565 88.92543  0
+## 5      Manuel Neuer                 GK 42.45635 39.65024 36.44040 92
+## 6            De Gea                 GK 40.46262 36.85823 34.36129 91
 ##        CAM       CM       CB      CDM       WB       WM      WWB
-## 1 93.33547 85.22086 45.98759 60.29131 58.23509 91.16316 63.91952
-## 2 90.31693 83.22465 53.58049 62.70410 62.21942 90.29478 67.54105
-## 3 88.95197 80.75545 47.25937 60.24005 60.14189 88.26346 65.65777
-## 4 87.56410 81.21401 59.81830 66.78885 65.15123 86.43675 69.34578
-## 5 47.47983 49.53337 34.12896 42.60231 35.01530 44.37032 36.03348
-## 6 44.01616 46.33546 34.50629 42.06630 36.11099 41.06575 36.00981</code></pre>
+## 1 93.42688 85.31451 46.09995 60.46322 58.26892 91.24495 63.91045
+## 2 90.39364 83.30774 53.66245 62.87598 62.20207 90.39244 67.90685
+## 3 89.06793 80.78765 47.29903 60.34195 60.14417 88.32455 65.82948
+## 4 87.63452 81.29635 59.84038 66.82377 65.19170 86.46315 68.70411
+## 5 47.79191 49.58086 34.14320 42.91694 35.11637 44.31858 31.22583
+## 6 44.38408 46.45551 34.51197 42.35503 36.24596 41.01124 31.61708</code></pre>
 <p>Now we have the ability of each player to perform in any position we can use it to build teams. First however, we need to sort British players into the county of their birth, which we’ll do in the next post.</p>
 </div>

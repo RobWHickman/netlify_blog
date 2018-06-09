@@ -17,10 +17,9 @@ categories: []
 
 
 <p>Recently, a Yorkshire national football team <a href="https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples">appeared in a league of national teams for stateless people</a>. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?</p>
-<p>This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we found the position abilities of each player using LASSO regression. This time, we’ll geolocate the birthplace of the British players in our dataset to find which county teaam they’d be eligible for.</p>
+<p>This is the complete script for an short article I wrote for <a href="https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961">CityMetric</a> on the topic. It’s split over 5 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we found the position abilities of each player using LASSO regression. This time, we’ll geolocate the birthplace of the British players in our dataset to find which county team they’d be eligible for.</p>
 <pre class="r"><code>library(dplyr)
 library(magrittr)
-library(rvest)
 library(data.table)
 library(ggplot2)
 #use pediarr to query wikipedia to find the birthplace of players
@@ -255,4 +254,5 @@ table(british_player_birthplaces$county)</code></pre>
 ##                          1                          6 
 ##             Worcestershire                  Yorkshire 
 ##                          6                        103</code></pre>
+<p>Obviously not all of these counties can field complete teams of 11 players, but for those who can, in the next post, we’ll start picking teams and seeing how counties and nations stack up against each other.</p>
 </div>

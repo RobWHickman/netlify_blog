@@ -16,7 +16,7 @@ categories: []
 
 Recently, a Yorkshire national football team [appeared in a league of national teams for stateless people](https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples). This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
 
-This is the complete script for an short article I wrote for CityMetric on the topic. It's split over 5 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. In the last post, we located the place and county of birth for British players, which we'll use to pick teams for counties now.
+This is the complete script for an short article I wrote for [CityMetric](https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961) on the topic. It's split over 5 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Now that we've picked the teams for each nation and county, it's finally time to make predictions about the World Cup.
 
 ```{r libraries, warning=FALSE,message=FALSE}
 library(dplyr)
@@ -28,8 +28,17 @@ library(ggplot2)
 #Get County Rankings
 
 ```{r secretly_load_data, warning=FALSE,message=FALSE,echo=FALSE}
-#load teams
+#scraped world rankings from FIFA and world ELO
+#http://www.fifa.com/fifa-world-ranking/ranking-table/men/index.html
+#https://www.eloratings.net/
+#accurate for mid-May
+#have matched country names between world rankings and FIFA player data
 world_rankings <- readRDS("C:/Users/Robert/Desktop/New Coding/March 2018 UK World Cup/national_rankings.rds")
+#load the data to save having to recalculate optimal teams
+optimal_national_teams <- readRDS("C:/Users/Robert/Desktop/New Coding/March 2018 UK World Cup/optimal_national_teams.rds")
+optimal_county_teams <- readRDS("C:/Users/Robert/Desktop/New Coding/March 2018 UK World Cup/optimal_county_teams.rds")
+national_teams <- readRDS("C:/Users/Robert/Desktop/New Coding/March 2018 UK World Cup/national_teams.rds")
+county_teams <- readRDS("C:/Users/Robert/Desktop/New Coding/March 2018 UK World Cup/county_teams.rds")
 
 ```
 
@@ -63,7 +72,7 @@ p <- ggplot(data = world_rankings, aes(x = FIFA, y = ELO)) +
   geom_text(aes(label = nation)) +
   xlab("FIFA Ability") +
   ylab("ELO Rankings") +
-  ggtitle("The FIFA18 Rating and ELO Rankings for Countries")
+  ggtitle("The FIFA World Rankings and ELO Rankings for Countries")
 
 plot(p)
 ```
@@ -80,7 +89,15 @@ national_teams %<>% merge(., world_rankings, by = "nation") %>%
 
 head(national_teams)
 
-plot(data = national_teams, ELO ~ total_ability)
+#plot ELO vs. total_ability
+p <- ggplot(data = national_teams, aes(x = total_ability, y = ELO)) +
+  geom_text(aes(label = nation), colour = "grey60") +
+  xlab("FIFA18 Optimal Team Ability") +
+  ylab("National Team ELO") +
+  ggtitle("FIFA18 ability vs. ELO for National Teams") +
+  theme_minimal()
+
+plot(p)
 ```
 
 We can quanitfy this correlation by creating a linear model using lm() and see that the adjusted R-squared is rather high- 0.7354.
@@ -338,9 +355,8 @@ simulations_results <- rbindlist(lapply(county_team_rankings$nation, simulate_co
 
 ```{r load_simulation_data, include=FALSE}
 #load the simulation data
-simulation_results <- readRDS("simulation_results.rds")
+simulation_results <- readRDS("C:/Users/Robert/Desktop/New Coding/March 2018 UK World Cup/simulation_results.rds")
 
-rm(list = c("simulation", "winner", "winners", "group_matches", "knockout_matches"))
 ```
 
 Once we have that data out, some munging is necessary to get the average chance of winning the World Cup for each nation and label the counties and nations separately.
@@ -394,3 +410,10 @@ p2 <- ggplot(data = filter(simulation_results, nation_status == "county"), aes(x
 plot(p)
 plot(p2)
 ```
+The bad news is, the real-life favourites tend to dominate the simulations. Brazil or Germany were predicted to win the tournament in almost half of all the simulations. On the graph, it;s just possible to make out the red bars of Yorkshire and Lancashire, both of which won 41 out of 10000 simulations (a 0.41 per cent chance of winning any random World Cup).
+
+This seems pretty low – but is comparable to pretty respectable teams like Denmark (0.775 per cent), Senegal (0.217 per cent), and even higher than the Iceland team which knocked england out of Euro2016 (0.339 per cent). It’s way higher than the chances the simulation gives the Russian hosts (0.07 per cent).
+
+Scaling down to just these pretty hopeless nations/counties really shows how little hope the independent British counties would have at an international tournament. However, the best four counties (Lancashire, Yorkshire, Essex, and Surrey) all have about a 0.2 per cent or higher chance, or 500-1 odds, at winning the 2018 World Cup were they to replace England at the last minute. This is an order of magnitude greater than the 5000-1 odds given to Leicester City at the start of 2015-2016 Premier League season, so there’s always a chance.
+
+And that's it! All the code for my article over at [CityMetric](https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961). 

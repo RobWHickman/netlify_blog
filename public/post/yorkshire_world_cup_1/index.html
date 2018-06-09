@@ -328,7 +328,7 @@ MathJax.Hub.Config({
 
       <div class="article-style" itemprop="articleBody">
         <p>Recently, a Yorkshire national football team <a href="https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples">appeared in a league of national teams for stateless people</a>. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?</p>
-<p>This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.</p>
+<p>This is the complete script for an short article I wrote for <a href="https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961">CityMetric</a> on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.</p>
 <p>To start, there are 95 historic counts of Great Britain + the 6 counties of Northern Ireland which I included for completeness. These are of a wide variety of sizes and <a href="https://www.citymetric.com/horizons/which-historic-english-county-has-highest-population-3386">approximate population</a> and demographic, so it’s not clear how each would do simply from inspection.</p>
 <p>The data for this comes from <a href="https://www.ordnancesurvey.co.uk/business-and-government/products/boundary-line.html">Boundary Line</a> and the <a href="https://www.opendatani.gov.uk/dataset?q=boundary">Northern Irish Boundary Database</a>, I’ve put them together already, but its simple enough to do it in sf.</p>
 <pre class="r"><code>library(dplyr)
@@ -451,11 +451,13 @@ head(select(all_players_data, id, name, nationality, overall))</code></pre>
     
     <li><a href="/post/yorkshire_world_cup_2/">Could an Independent Yorkshire Win the World Cup - LASSOs and Player Positions</a></li>
     
+    <li><a href="/post/yorkshire_world_cup_5/">Could an Independent Yorkshire Win the World Cup - Simulate World Cups</a></li>
+    
+    <li><a href="/post/yorkshire_world_cup_4/">Could an Independent Yorkshire Win the World Cup - Picking Teams</a></li>
+    
     <li><a href="/post/yorkshire_world_cup_3/">Could an Independent Yorkshire Win the World Cup - Finding British Player&#39;s Birthplaces</a></li>
     
     <li><a href="/post/riddler-27th-april-2018/">Riddler 27th April 2018</a></li>
-    
-    <li><a href="/post/hello-world-a-small-chess-plotting-package/">Hello World! And A Small Chess Plotting Package</a></li>
     
   </ul>
 </div>
