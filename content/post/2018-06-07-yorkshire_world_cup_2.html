@@ -1,7 +1,7 @@
 ---
 title: "Could an Independent Yorkshire Win the World Cup - LASSOs and Player Positions"
 author: "Robert Hickman"
-date: '2018-06-07'
+date: '2018-06-06'
 output: pdf_document
 header:
   caption: ''
@@ -78,7 +78,7 @@ cv_model &lt;- cv.glmnet(train_matrix, train_ability)
 coef(cv_model, s = &quot;lambda.min&quot;)</code></pre>
 <pre><code>## 36 x 1 sparse Matrix of class &quot;dgCMatrix&quot;
 ##                         1
-## (Intercept)    1.49389960
+## (Intercept)    1.48054668
 ## (Intercept)    .         
 ## ball_control   .         
 ## dribbling      .         
@@ -86,7 +86,7 @@ coef(cv_model, s = &quot;lambda.min&quot;)</code></pre>
 ## slide_tackle   .         
 ## stand_tackle   .         
 ## aggression     .         
-## reactions      0.10555172
+## reactions      0.11010673
 ## positioning    .         
 ## interceptions  .         
 ## vision         .         
@@ -109,11 +109,11 @@ coef(cv_model, s = &quot;lambda.min&quot;)</code></pre>
 ## free_kicks     .         
 ## penalties      .         
 ## volleys        .         
-## gk_positioning 0.21544489
-## gk_diving      0.21175632
-## gk_handling    0.20973593
-## gk_kicking     0.04237876
-## gk_reflexes    0.20706256</code></pre>
+## gk_positioning 0.20822323
+## gk_diving      0.20474961
+## gk_handling    0.20874770
+## gk_kicking     0.05344379
+## gk_reflexes    0.20770553</code></pre>
 <p>The regression selects only variables which have a strong relationship with the outcome (overall ability in the gk position in this case). As expected, it selects only the gk_… skillset and also a players reactions, which makes sense if goalkeepers have to make point blank saves.</p>
 <p>We can validate this by predicting the overall ability of the goalkeepers that aren’t in the training set fairly simply</p>
 <pre class="r"><code>#find non training examples of goalkeepers
@@ -157,12 +157,12 @@ outfield_goalkeepers$predicted_ability &lt;- as.vector(predict(cv_model, newx = 
 
 head(outfield_goalkeepers)</code></pre>
 <pre><code>##                 name predicted_ability
-## 1       Lionel Messi          20.40736
-## 2  Cristiano Ronaldo          21.34585
-## 3             Neymar          20.72092
-## 4        Luis Suárez          38.35577
-## 5    Kevin De Bruyne          21.95462
-## 6 Robert Lewandowski          19.83660</code></pre>
+## 1       Lionel Messi          20.84383
+## 2  Cristiano Ronaldo          21.78181
+## 3             Neymar          21.10118
+## 4        Luis Suárez          38.68063
+## 5    Kevin De Bruyne          22.22474
+## 6 Robert Lewandowski          20.20816</code></pre>
 <p>It is of course, extremely ironic that Luis Suarez scores relatively highly as an outfield player in goal <a href="https://www.youtube.com/watch?v=wn_oYeugGiw">given his history</a>.</p>
 <p>We can use this technique to predict how each player would play in each position using the following function</p>
 <pre class="r"><code>#function to predict how each player would play in each position
@@ -208,18 +208,18 @@ all_players_data &lt;- cbind(all_players_data, position_abilities) %&gt;%
 #show the first 6 rows
 head(select(all_players_data, c(1, 49:60)))</code></pre>
 <pre><code>##                name symmetric_position       CF       WW       ST GK
-## 1      Lionel Messi                 CF 93.39973 91.98654 89.67273  0
-## 2 Cristiano Ronaldo                 WW 92.73293 90.71623 92.64345  0
-## 3            Neymar                 WW 89.52807 89.13606 85.14353  0
-## 4       Luis Suárez                 ST 89.23497 87.18565 88.92543  0
-## 5      Manuel Neuer                 GK 42.45635 39.65024 36.44040 92
-## 6            De Gea                 GK 40.46262 36.85823 34.36129 91
+## 1      Lionel Messi                 CF 93.60706 92.27461 89.70278  0
+## 2 Cristiano Ronaldo                 WW 92.88560 91.16822 92.62438  0
+## 3            Neymar                 WW 89.48736 89.30329 85.17042  0
+## 4       Luis Suárez                 ST 90.48249 87.40918 88.93461  0
+## 5      Manuel Neuer                 GK 43.64828 39.22244 36.55564 92
+## 6            De Gea                 GK 41.70048 36.48414 34.36504 91
 ##        CAM       CM       CB      CDM       WB       WM      WWB
-## 1 93.42688 85.31451 46.09995 60.46322 58.26892 91.24495 63.91045
-## 2 90.39364 83.30774 53.66245 62.87598 62.20207 90.39244 67.90685
-## 3 89.06793 80.78765 47.29903 60.34195 60.14417 88.32455 65.82948
-## 4 87.63452 81.29635 59.84038 66.82377 65.19170 86.46315 68.70411
-## 5 47.79191 49.58086 34.14320 42.91694 35.11637 44.31858 31.22583
-## 6 44.38408 46.45551 34.51197 42.35503 36.24596 41.01124 31.61708</code></pre>
+## 1 93.36468 85.23987 46.02382 60.18700 58.22984 91.18465 62.26366
+## 2 90.39084 83.31839 53.60718 62.65345 62.21724 90.32306 66.13034
+## 3 89.01684 80.80476 47.23479 60.16824 60.11565 88.27848 64.19203
+## 4 87.59322 81.40708 59.77832 66.74543 65.13876 86.44133 67.67849
+## 5 47.58404 49.47508 34.07456 42.88950 35.23432 44.42806 35.91158
+## 6 44.18874 46.37230 34.44230 42.30995 36.35090 41.15741 36.12737</code></pre>
 <p>Now we have the ability of each player to perform in any position we can use it to build teams. First however, we need to sort British players into the county of their birth, which we’ll do in the next post.</p>
 </div>

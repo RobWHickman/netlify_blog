@@ -1,0 +1,196 @@
+---
+title: "Could an Independent Yorkshire Win the World Cup - Rest of the World/UK"
+author: "Robert Hickman"
+date: '2018-06-10'
+output: pdf_document
+header:
+  caption: ''
+  image: ''
+slug: yorkshire_world_cup_6
+tags:
+- rstats
+- world cup
+- football
+categories: []
+---
+
+
+
+<p>Recently, a Yorkshire national football team <a href="https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples">appeared in a league of national teams for stateless people</a>. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?</p>
+<p>I <a href="http://www.robert-hickman.eu/post/yorkshire_world_cup_1/">published</a> the complete code for that article on this blog this week. However, one question which I kept being asked was how a ‘All of the UK’ team would do (i.e. if the country wasn’t split up into England, Wales, Scotland, and Northern Ireland). Listening to the latest <a href="https://twitter.com/doublepivotpod?lang=en">Double Pivot Podcast</a>, drafting plyers not going to the World Cup, I also wondered what a ‘Rest of the World’ 11 would look like/fare.</p>
+<pre class="r"><code>library(dplyr)
+library(magrittr)
+library(data.table)
+library(ggplot2)</code></pre>
+<div id="building-teams" class="section level1">
+<h1>Building Teams</h1>
+<p>To save time, I’m gonig to used saved versions of the datasets I built up over the 5 blog posts.</p>
+<pre class="r"><code>#world rankings
+world_rankings &lt;- readRDS(&quot;national_rankings.rds&quot;)
+
+#player data
+all_players_data &lt;- readRDS(&quot;all_players_position_data.rds&quot;)
+#all British players
+british_player_birthplaces &lt;- readRDS(&quot;british_player_birthplaces.rds&quot;)
+
+#the countries going to the world cup
+world_cup_countries &lt;- c(&quot;Russia&quot;, &quot;Saudi Arabia&quot;, &quot;Egypt&quot;, &quot;Uruguay&quot;,
+                         &quot;Portugal&quot;, &quot;Spain&quot;, &quot;Morocco&quot;, &quot;Iran&quot;,
+                         &quot;France&quot;, &quot;Australia&quot;, &quot;Peru&quot;, &quot;Denmark&quot;,
+                         &quot;Argentina&quot;, &quot;Iceland&quot;, &quot;Croatia&quot;, &quot;Nigeria&quot;,
+                         &quot;Brazil&quot;, &quot;Switzerland&quot;, &quot;Costa Rica&quot;, &quot;Serbia&quot;,
+                         &quot;Germany&quot;, &quot;Mexico&quot;, &quot;Sweden&quot;, &quot;Korea Republic&quot;,
+                         &quot;Belgium&quot;, &quot;Panama&quot;, &quot;Tunisia&quot;, &quot;England&quot;,
+                         &quot;Poland&quot;, &quot;Senegal&quot;, &quot;Colombia&quot;, &quot;Japan&quot;)
+
+#load data to save having to recalculate optimal teams
+optimal_national_teams &lt;- readRDS(&quot;optimal_national_teams.rds&quot;)
+national_teams &lt;- readRDS(&quot;national_teams.rds&quot;)
+
+#the formations for selecting teams
+formations_df &lt;- readRDS(&quot;formations_df.rds&quot;)
+formation_coords &lt;- readRDS(&quot;player_position_coords.rds&quot;)</code></pre>
+<p>I won’t include the functions in this blog post either, but the article uses (at most very slight modified) functions from the previous 5 posts.</p>
+<p>We first need to sort the players into either the UK vs. the rest of the World* and finding the optimal teams for each, as we did prviously.</p>
+<p>*it’s possible Welsh (especially Gareth Bale), Northern Irish, or Scottish players might make the rest of the World team, but I’ll ignore that possibility for simplicity</p>
+<pre class="r"><code>#get the names of each player to merge in
+player_lookup &lt;- all_players_data %&gt;%
+  select(id, name, nationality) %&gt;%
+  mutate(original_nation = as.character(nationality))
+
+#sort the data for finding teams
+nationalised_players &lt;- all_players_data %&gt;%
+  setDT() %&gt;%
+  #convert british players nationality to UK
+  .[id %in% british_player_birthplaces$id, nationality := &quot;UK&quot;] %&gt;%
+  #filter out players from countries at the world cup
+  .[!nationality %in% world_cup_countries] %&gt;%
+  #convert non-UK players nationality to &quot;Rest of World&quot;
+  .[!id %in% british_player_birthplaces$id, nationality := &quot;RoW&quot;]
+
+#find the optimal teams for both these nations
+extranational_teams &lt;- rbindlist(lapply(unique(nationalised_players$nationality), find_optimal_team, 
+                                           select(nationalised_players, id, nationality, 49:60), replicates = 100))</code></pre>
+<p>These can then be plotted to show the teams as before.</p>
+<pre class="r"><code>#select the best 4 county teams by total ability
+extranational_teams %&lt;&gt;%
+  setDT() %&gt;%
+  .[, unique_position := make.unique(as.character(position)), by = &quot;nation&quot;] %&gt;%
+  merge(., formation_coords, by = c(&quot;formation&quot;, &quot;unique_position&quot;)) %&gt;%
+  merge(player_lookup, by = &quot;id&quot;) 
+
+#plot the data
+p &lt;- ggplot(data = extranational_teams)
+p &lt;- p %&gt;%
+  #custom pitch aesthetic function
+  draw_pitch()
+p &lt;- p + 
+  geom_text(aes(x = player_x, y = player_y, label = gsub(&quot; &quot;, &quot;\n&quot;, name), colour = original_nation), fontface = &quot;bold&quot;) +
+  scale_colour_manual(values = c(&quot;darkred&quot;, &quot;white&quot;, &quot;yellow&quot;, &quot;blue&quot;, &quot;darkblue&quot;, &quot;orange&quot;, &quot;blue&quot;, &quot;white&quot;, &quot;red&quot;),
+                      guide = FALSE) +
+  facet_wrap(~nation)
+
+plot(p)</code></pre>
+<p><img src="/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+</div>
+<div id="calculating-ability" class="section level1">
+<h1>Calculating Ability</h1>
+<p>As previously, we can calculate the expected ELO of such teams via linear regression of the FIFA18 ability vs. ELO of actual national teams.</p>
+<p>This time, let’s predict the ability of the extranational teams based on this regression before plotting, just to save on plots/time/code/etc.</p>
+<pre class="r"><code>#merge in the world rankings for each fieldable national team
+national_teams %&lt;&gt;% merge(., world_rankings, by = &quot;nation&quot;) %&gt;%
+  #merge in the optimal team total_ability for each nation
+  merge(., unique(select(optimal_national_teams, nation, total_ability)), by = &quot;nation&quot;)
+
+#regress ELO against total_ability (as judged by selection of FIFA18 players)
+ability_regression &lt;- lm(data = national_teams, ELO ~ total_ability)
+
+#munge the extranational teams df to predict the ELO
+extranational_teams &lt;- data.frame(nation = c(&quot;UK&quot;, &quot;RoW&quot;)) %&gt;%
+  merge(., select(extranational_teams, nation, total_ability), by = &quot;nation&quot;) %&gt;%
+  #predict the ELO of each county using the previous regression
+  mutate(predicted_ELO = predict(ability_regression, .)) %&gt;%
+  unique()</code></pre>
+<p>Then we can plot this regression and see where the RoW and UK fall in terms of actual nations</p>
+<pre class="r"><code>#plot ELO vs. total_ability
+p &lt;- ggplot(data = national_teams, aes(x = total_ability, y = ELO)) +
+  geom_text(aes(label = nation), colour = &quot;grey60&quot;) +
+  #add in the linear regression line + confidence intervals
+  stat_smooth(method = &quot;lm&quot;, colour = &quot;darkred&quot;) +
+  geom_text(data = extranational_teams, aes(label = nation, x = total_ability, y = predicted_ELO), colour = &quot;darkblue&quot;) +
+  xlab(&quot;FIFA18 Optimal Team Ability&quot;) +
+  ylab(&quot;National Team ELO&quot;) +
+  ggtitle(&quot;FIFA18 ability vs. ELO for National Teams&quot;) +
+  theme_minimal()
+
+plot(p)</code></pre>
+<p><img src="/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/plot_regression-1.png" width="672" /></p>
+<p>What’s quite nice about the graph is it shows the limitation of this approach. By definition, a UK team should be <em>at least</em> as good as the English national team, but because England overperform their ‘FIFA ability’, the UK is actually ranked a fair bit lower in terms of ELO</p>
+<pre class="r"><code>#show the ELOs of the English national football team
+#and predicted ELO of a UK team
+national_teams$ELO[national_teams$nation == &quot;England&quot;]</code></pre>
+<pre><code>## [1] 1941</code></pre>
+<pre class="r"><code>extranational_teams$predicted_ELO[extranational_teams$nation == &quot;UK&quot;]</code></pre>
+<pre><code>##       12 
+## 1910.421</code></pre>
+<p>The RoW team is similarly probably undervalued in terms of ELO. FIFA18 ranks the players as a lot better than teams like Germany and Brazil, but with much lower ELO</p>
+<p>We can then run the simulations, swapping the UK/RoW in for countries. The obvious substitute for the UK is England. For the RoW I decided to remove the team with the lowest ELO, which turns out to be Saudi Arabia</p>
+<pre class="r"><code>#merge the ELOs with the world cup draw information
+wc_teams %&lt;&gt;% merge(., select(national_teams, nation, ELO) %&gt;%
+                      rbind(., data.frame(nation = &quot;Panama&quot;, ELO = 1669)), by = &quot;nation&quot;)
+wc_teams$nation &lt;- as.character(wc_teams$nation)
+
+simulate_counties &lt;- function(extranation, simulations, replace_country) {
+  #replace Englands ELO with that of the county team replacing them
+  wc_teams$ELO[wc_teams$nation == replace_country] &lt;- extranational_teams$predicted_ELO[extranational_teams$nation == extranation]
+  wc_teams$nation[wc_teams$nation == replace_country] &lt;- extranation
+  
+  #run x number of simulations
+  for(simulation in 1:simulations) {
+    winner &lt;- simulate_tournament(wc_teams, knockout_matches, group_matches)
+    if(simulation == 1) {
+      winners &lt;- winner
+    } else {
+      winners &lt;- append(winners, winner)
+    }
+  }
+  
+  #spit out a df with each winner and the number of times they win
+  simulation_df &lt;- data.frame(table(winners))
+  names(simulation_df) &lt;- c(&quot;nation&quot;, &quot;championships&quot;)
+  
+  #work out the percentage chane of each nation/county winning
+  simulation_df$percentage &lt;- simulation_df$championships / (simulations/100)
+  return(simulation_df)
+}
+
+#run the simulations
+UK_simulation &lt;- simulate_counties(&quot;UK&quot;, 1000, &quot;England&quot;) %&gt;% 
+  mutate(simulation = &quot;UK&quot;)
+RoW_simulation &lt;- simulate_counties(&quot;RoW&quot;, 1000, wc_teams$nation[which.min(wc_teams$ELO)]) %&gt;%
+  mutate(simulation = &quot;RoW&quot;)</code></pre>
+<pre class="r"><code>simulation_results &lt;- rbind(UK_simulation, RoW_simulation) %&gt;%
+  setDT() %&gt;%
+    .[, perc_chance := mean(percentage), by = &quot;nation&quot;] %&gt;%
+  .[, c(&quot;nation&quot;, &quot;perc_chance&quot;)] %&gt;%
+  unique(.) %&gt;%
+  .[nation %in% c(&quot;RoW&quot;, &quot;UK&quot;), nation_status := &quot;simulation&quot;] %&gt;%
+  .[!nation %in% c(&quot;RoW&quot;, &quot;UK&quot;), nation_status := &quot;nation&quot;] %&gt;%
+  #order by percentage chance of winning the WC
+  .[, nation := factor(nation, levels = nation[order(-.$perc_chance)])]
+
+#plot the results
+p &lt;- ggplot(data = simulation_results, aes(x = nation, y = perc_chance)) +
+  geom_bar(stat = &quot;identity&quot;, aes(fill = nation_status)) +
+  scale_fill_manual(values = c(&quot;darkblue&quot;, &quot;darkred&quot;), name = &quot;Nation Status&quot;) +
+  xlab(&quot;Team&quot;) +
+  ylab(&quot;World Cup Win Percentage Chance&quot;) +
+  ggtitle(&quot;Percetange Chance of Winning the World Cup from 1000 Simulations&quot;,
+          subtitle = &quot;UK/RoW Substituted for England/Saudi Arabia Respectively&quot;) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.2))
+
+plot(p)</code></pre>
+<p><img src="/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/munge_simulation_results-1.png" width="672" /></p>
+<p>The team for the RoW tend to do fairly well. In fact only Brazil, Germany, or Spain (3 of the tournament favourites) tend to win more simulated World Cups than them. The team for the whole of the UK disappoints as much as the English national team, winning about the same as the original, and other similarly ranked nations, such as Colombia, or Peru.</p>
+</div>

@@ -1,7 +1,7 @@
 ---
 title: "Could an Independent Yorkshire Win the World Cup - Simulate World Cups"
 author: "Robert Hickman"
-date: '2018-06-07'
+date: '2018-06-09'
 output: pdf_document
 header:
   caption: ''
@@ -361,7 +361,7 @@ simulation_results <- readRDS("C:/Users/Robert/Desktop/New Coding/March 2018 UK 
 
 Once we have that data out, some munging is necessary to get the average chance of winning the World Cup for each nation and label the counties and nations separately.
 
-```{r}
+```{r munge_results, warning=FALSE,message=FALSE}
 #munge the simulation_results
 simulation_results %<>% setDT() %>%
   #get the average wc winning chance per nation across all simulations
@@ -383,7 +383,7 @@ simulation_results %<>% setDT() %>%
 
 And can then plot the results...
 
-```{r}
+```{r plot_results,warning=FALSE,message=FALSE}
 #plot the results
 p <- ggplot(data = simulation_results, aes(x = nation, y = perc_chance)) +
   geom_bar(stat = "identity", aes(fill = nation_status)) +

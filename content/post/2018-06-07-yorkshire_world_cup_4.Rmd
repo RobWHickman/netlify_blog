@@ -1,7 +1,7 @@
 ---
 title: "Could an Independent Yorkshire Win the World Cup - Picking Teams"
 author: "Robert Hickman"
-date: '2018-06-07'
+date: '2018-06-08'
 output: pdf_document
 header:
   caption: ''
