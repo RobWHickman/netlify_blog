@@ -113,7 +113,7 @@ print(find_chains)</code></pre>
 ## 33: 1920-11-20   Notts County      Leicester City            7
 ##           date  matching_team               other chain_length</code></pre>
 <p>so In fact an identical length chain on matching suffixes has occured twice, with Chesterfield playing a range of cities at the start of 1951 in League Two, and much more recently, Leicester playing 6 different Uniteds in a row at the tail end of the 2008/2009 season. This is also the season that saw them recover from being relegated from the Chmapionship and start moving towards winning the title in 2015-2016 season.</p>
-<p>Some longer chains involving cities happened in the 1920-1921 seasons in the Second Division, but it seems like the schedulnig worked differently then so doesn’t really count.</p>
+<p>Some longer chains involving cities happened in the 1920-1921 seasons in the Second Division, but it seems like the scheduling worked differently then and teams played back to back more, so doesn’t really count.</p>
 <p>Having originally misread the question, I also wanted to find out the longest chain of a team playing teams that matched <em>their own</em> suffix. We can do this using a similar method</p>
 <pre class="r"><code>matching_fixtures &lt;- england_data %&gt;%
   #get only matches between teams with matching prefix/suffixes
@@ -168,7 +168,13 @@ print(find_chains)</code></pre>
 ## 13: 1988-10-04 Carlisle United Colchester United            5
 ## 14: 1988-10-08 Carlisle United   Hereford United            5
 ## 15: 1988-10-15 Carlisle United    Torquay United            5</code></pre>
-<p>So the record for that is only slightly shorter! with Stoke and Hull City playing a range of cities in the 1919-1920 season (but see above for scheduling differences?) and Carlisle United playing 5 other different Uniteds in a row in the old Fourth Division.</p>
+<p>So the record for that is only slightly shorter! with Stoke and Hull City playing a range of cities in the 1919-1920 season (but see above for scheduling differences) and Carlisle United playing 5 other different Uniteds in a row in the old Fourth Division.</p>
+<div id="answer" class="section level2">
+<h2>Answer</h2>
+<p>The record is 7 matches set by Notts County, Leyton Orient, and Fulham in 1920/1921 playing 7 teams with the suffix ‘city’ in a row. The Leyton Orient and Fulham chains stretch over the end of one season and into the next, so only Notts County really satisifies the question. However, the scheduling in these years involved a lot of back to back matches and so is cheating a bit.</p>
+<p>More recently Chesterfield played 6 different teams with the suffix ‘city’ in a row in 1950/1951, and Leceister played 6 different ’united’s in a row in their promotion season from League One in 2008/2009.</p>
+<p>Even more bizarre, Carlisle United played 5 other different United’s at the start of the 1988/1989 old Fourth Division season.</p>
+</div>
 </div>
 <div id="youth-of-the-nation" class="section level1">
 <h1>Youth Of The Nation</h1>
@@ -264,4 +270,83 @@ print(young_players)</code></pre>
 ## 2: 1994 Ronaldo 20 1976-09-22  Brazil 17.78356 Brazil
 ## 3: 2002    Kaká 23 1982-04-22  Brazil 20.20548 Brazil</code></pre>
 <p>So only the great <a href="https://en.wikipedia.org/wiki/%C3%89merson_Le%C3%A3o">Émerson Leão</a>, <a href="https://en.wikipedia.org/wiki/Ronaldo_(Brazilian_footballer)">Ronaldo</a> and <a href="https://en.wikipedia.org/wiki/Kak%C3%A1">Kaka</a> satisfy the question. However, of these only Kaka played any part during the tournament, which only amounted to 25 minutes vs Costa Rica.</p>
+<p>Which players <em>could</em> have satisfied this if they had a larger squad number?</p>
+<pre class="r"><code>youngest_players &lt;- world_cup_squads %&gt;%
+  .[, age := as.numeric(difftime(as.Date(paste0(year, &quot;-07-01&quot;)), dob)) / 365] %&gt;%
+  .[age &lt; 23] %&gt;%
+  .[, country := gsub(&quot;(^\\s+)|(\\s+$)&quot;, &quot;&quot;, country)] %&gt;%
+  .[, year := as.numeric(as.character(year))] %&gt;%
+  merge(., wc_winners, by = &quot;year&quot;) %&gt;%
+  .[winner == country] %&gt;%
+  .[, dob := NULL]
+
+#gives 53 potential results with world cup winners under the age of 23
+print(youngest_players)</code></pre>
+<pre><code>##     year                 name no      country      age       winner
+##  1: 1954          Horst Eckel  6 West Germany 22.40822 West Germany
+##  2: 1954     Ulrich Biesinger 18 West Germany 20.91507 West Germany
+##  3: 1958                 Pelé 10       Brazil 17.69863       Brazil
+##  4: 1958               Moacir 13       Brazil 22.13425       Brazil
+##  5: 1958              Orlando 15       Brazil 22.79452       Brazil
+##  6: 1958              Mazzola 18       Brazil 19.95068       Brazil
+##  7: 1962             Coutinho  9       Brazil 19.06849       Brazil
+##  8: 1962                 Pelé 10       Brazil 21.70137       Brazil
+##  9: 1962             Jurandir 14       Brazil 21.64658       Brazil
+## 10: 1962            Mengálvio 17       Brazil 22.55342       Brazil
+## 11: 1962        Jair da Costa 18       Brazil 21.99178       Brazil
+## 12: 1966            Alan Ball  7      England 21.15068      England
+## 13: 1966        Martin Peters 16      England 22.66027      England
+## 14: 1966        Norman Hunter 18      England 22.68767      England
+## 15: 1970            Clodoaldo  5       Brazil 20.77534       Brazil
+## 16: 1970        Marco Antônio  6       Brazil 19.41096       Brazil
+## 17: 1970          Paulo Cézar 18       Brazil 21.05479       Brazil
+## 18: 1970                  Edu 19       Brazil 20.91507       Brazil
+## 19: 1970             Zé Maria 21       Brazil 21.13425       Brazil
+## 20: 1970                 Leão 22       Brazil 20.98630       Brazil
+## 21: 1974        Paul Breitner  3 West Germany 22.83562 West Germany
+## 22: 1974           Uli Hoeneß 14 West Germany 22.50137 West Germany
+## 23: 1974        Rainer Bonhof 16 West Germany 22.27123 West Germany
+## 24: 1978    Alberto Tarantini 20    Argentina 22.59178    Argentina
+## 25: 1978 José Daniel Valencia 21    Argentina 22.75890    Argentina
+## 26: 1982        Franco Baresi  2        Italy 22.16164        Italy
+## 27: 1982     Giuseppe Bergomi  3        Italy 18.53699        Italy
+## 28: 1982      Daniele Massaro 17        Italy 21.12055        Italy
+## 29: 1986       Claudio Borghi  4    Argentina 21.76986    Argentina
+## 30: 1986           Luis Islas 15    Argentina 20.53699    Argentina
+## 31: 1990       Andreas Möller 17 West Germany 22.84384 West Germany
+## 32: 1994              Ronaldo 20       Brazil 17.78356       Brazil
+## 33: 1998       Patrick Vieira  4       France 22.03562       France
+## 34: 1998        Thierry Henry 12       France 20.88493       France
+## 35: 1998      David Trezeguet 20       France 20.72329       France
+## 36: 2002           Ronaldinho 11       Brazil 22.29315       Brazil
+## 37: 2002                 Kaká 23       Brazil 20.20548       Brazil
+## 38: 2006     Daniele De Rossi  4        Italy 22.95342        Italy
+## 39: 2010            Juan Mata 13        Spain 22.18904        Spain
+## 40: 2010      Sergio Busquets 16        Spain 21.97260        Spain
+## 41: 2010                Pedro 18        Spain 22.94247        Spain
+## 42: 2010        Javi Martínez 20        Spain 21.84110        Spain
+## 43: 2014      Matthias Ginter  3      Germany 20.46027      Germany
+## 44: 2014       Julian Draxler 14      Germany 20.79178      Germany
+## 45: 2014            Erik Durm 15      Germany 22.15068      Germany
+## 46: 2014          Mario Götze 19      Germany 22.09041      Germany
+## 47: 2014     Shkodran Mustafi 21      Germany 22.21918      Germany
+## 48: 2018      Benjamin Pavard  2       France 22.27397       France
+## 49: 2018     Presnel Kimpembe  3       France 22.89863       France
+## 50: 2018         Thomas Lemar  8       France 22.64932       France
+## 51: 2018        Kylian Mbappé 10       France 19.54247       France
+## 52: 2018      Ousmane Dembélé 11       France 21.14247       France
+## 53: 2018      Lucas Hernández 21       France 22.39178       France
+##     year                 name no      country      age       winner</code></pre>
+<pre class="r"><code>#most of these young players actually played at their world cups and many appeared in finals
+youngest_players_appeared &lt;- youngest_players[c(1, 3:6, 8, 12:13, 15:18, 21:23, 24:25, 27, 29, 31, 33:35, 36:37, 38, 39:42, 44, 46:47, 48:53)]
+
+#find nearest matches
+youngest_players_appeared %&lt;&gt;% .[, diff := age - no]</code></pre>
+<p>The closest other players to make it are David Trezeguet (1998, 20.7years no 20), Shkodran Mustafi (2014, 22.2years, no 21) and then Lucas Hernandez (22.4years, no 21). Hernandez is the closest one to actually play in the World Cup final. Alberto Tarantini is his closest competition at 22.6 years old and wearing shirt number 20 in the 1978 final.</p>
+<div id="answer-1" class="section level2">
+<h2>Answer</h2>
+<p>Yes, three winners have appeared in World Cups with an age less than their shirt number. All Brazilians: Émerson Leão in 1970, Ronaldo in 1994, and Kaka in 2002. However only Kaka actually played (for 25 minutes vs. Costa Rica) in the finals.</p>
+<p>Other close calls are David Trezeguet (20.7, no 20 in 1998) and Shkodran Mustafi (22.2, no 21 in 2014).</p>
+<p>Hernandez <em>is</em> the closest to acheiving this having played in the final itself, with only Alberto Tarantini (22.5, no 20 in 1978) and Mario Goetze (22.1, no 19 in 2014) in close competition.</p>
+</div>
 </div>

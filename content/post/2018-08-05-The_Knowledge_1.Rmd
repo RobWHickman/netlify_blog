@@ -88,7 +88,7 @@ print(find_chains)
 
 so In fact an identical length chain on matching suffixes has occured twice, with Chesterfield playing a range of cities at the start of 1951 in League Two, and much more recently, Leicester playing 6 different Uniteds in a row at the tail end of the 2008/2009 season. This is also the season that saw them recover from being relegated from the Chmapionship and start moving towards winning the title in 2015-2016 season.
 
-Some longer chains involving cities happened in the 1920-1921 seasons in the Second Division, but it seems like the schedulnig worked differently then so doesn't really count.
+Some longer chains involving cities happened in the 1920-1921 seasons in the Second Division, but it seems like the scheduling worked differently then and teams played back to back more, so doesn't really count.
 
 Having originally misread the question, I also wanted to find out the longest chain of a team playing teams that matched _their own_ suffix. We can do this using a similar method
 
@@ -132,7 +132,15 @@ find_chains <- rbindlist(lapply(matching_teams, function(team) {
 print(find_chains)
 ```
 
-So the record for that is only slightly shorter! with Stoke and Hull City playing a range of cities in the 1919-1920 season (but see above for scheduling differences?) and Carlisle United playing 5 other different Uniteds in a row in the old Fourth Division.
+So the record for that is only slightly shorter! with Stoke and Hull City playing a range of cities in the 1919-1920 season (but see above for scheduling differences) and Carlisle United playing 5 other different Uniteds in a row in the old Fourth Division.
+
+##Answer
+
+The record is 7 matches set by Notts County, Leyton Orient, and Fulham in 1920/1921 playing 7 teams with the suffix 'city' in a row. The Leyton Orient and Fulham chains stretch over the end of one season and into the next, so only Notts County really satisifies the question. However, the scheduling in these years involved a lot of back to back matches and so is cheating a bit.
+
+More recently Chesterfield played 6 different teams with the suffix 'city' in a row in 1950/1951, and Leceister played 6 different 'united's in a row in their promotion season from League One in 2008/2009.
+
+Even more bizarre, Carlisle United played 5 other different United's at the start of the 1988/1989 old Fourth Division season.
 
 #Youth Of The Nation
 
@@ -225,3 +233,37 @@ print(young_players)
 ```
 
 So only the great [Émerson Leão](https://en.wikipedia.org/wiki/%C3%89merson_Le%C3%A3o), [Ronaldo](https://en.wikipedia.org/wiki/Ronaldo_(Brazilian_footballer)) and [Kaka](https://en.wikipedia.org/wiki/Kak%C3%A1) satisfy the question. However, of these only Kaka played any part during the tournament, which only amounted to 25 minutes vs Costa Rica.
+
+Which players _could_ have satisfied this if they had a larger squad number? 
+
+```{r}
+youngest_players <- world_cup_squads %>%
+  .[, age := as.numeric(difftime(as.Date(paste0(year, "-07-01")), dob)) / 365] %>%
+  .[age < 23] %>%
+  .[, country := gsub("(^\\s+)|(\\s+$)", "", country)] %>%
+  .[, year := as.numeric(as.character(year))] %>%
+  merge(., wc_winners, by = "year") %>%
+  .[winner == country] %>%
+  .[, dob := NULL]
+
+#gives 53 potential results with world cup winners under the age of 23
+print(youngest_players)
+```
+
+```{r}
+#most of these young players actually played at their world cups and many appeared in finals
+youngest_players_appeared <- youngest_players[c(1, 3:6, 8, 12:13, 15:18, 21:23, 24:25, 27, 29, 31, 33:35, 36:37, 38, 39:42, 44, 46:47, 48:53)]
+
+#find nearest matches
+youngest_players_appeared %<>% .[, diff := age - no]
+```
+
+The closest other players to make it are David Trezeguet (1998, 20.7years no 20), Shkodran Mustafi (2014, 22.2years, no 21) and then Lucas Hernandez (22.4years, no 21). Hernandez is the closest one to actually play in the World Cup final. Alberto Tarantini is his closest competition at 22.6 years old and wearing shirt number 20 in the 1978 final. 
+
+##Answer
+
+Yes, three winners have appeared in World Cups with an age less than their shirt number. All Brazilians: Émerson Leão in 1970, Ronaldo in 1994, and Kaka in 2002. However only Kaka actually played (for 25 minutes vs. Costa Rica) in the finals.
+
+Other close calls are David Trezeguet (20.7, no 20 in 1998) and Shkodran Mustafi (22.2, no 21 in 2014).
+
+Hernandez _is_ the closest to acheiving this having played in the final itself, with only Alberto Tarantini (22.5, no 20 in 1978) and Mario Goetze (22.1, no 19 in 2014) in close competition.
