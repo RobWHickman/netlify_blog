@@ -136,7 +136,7 @@ So the record for that is only slightly shorter! with Stoke and Hull City playin
 
 #Youth Of The Nation
 
-“If Lucas Hernández was born a year and a half later, his age would be a lower than his shirt number (21). Have any World Cup winners achieved this?” muses Edward Gibson.
+[“If Lucas Hernández was born a year and a half later, his age would be a lower than his shirt number (21). Have any World Cup winners achieved this?” muses Edward Gibson.](https://www.theguardian.com/football/2018/aug/01/footballers-who-have-backed-out-of-a-transfer-for-another-late-in-the-day)
 
 The easiest way to check this is just to scrape all of the squads off of the wiki pages for the World Cups. I only did from 1954 onwards as before this the squad no and birthdate data is a bit patchy.
 
