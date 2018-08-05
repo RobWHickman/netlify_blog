@@ -11,6 +11,263 @@
     <atom:link href="/" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>The Knowledge 4th August 2018</title>
+      <link>/post/the-knowledge-4th-august-2018/</link>
+      <pubDate>Sat, 04 Aug 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/the-knowledge-4th-august-2018/</guid>
+      <description>&lt;p&gt;The Guardian publish a weekly set of questions and answers on a variety of football minutiae at &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt;. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(rvest)
+library(dplyr)
+library(magrittr)
+library(data.table)
+library(zoo)
+library(ggplot2)
+library(rvest)
+library(stringr)
+
+#jalapic/engsoccerdata
+library(engsoccerdata)&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;we-aint-going-to-the-town..&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;We Ain’t Going To The Town..&lt;/h1&gt;
+&lt;p&gt;&lt;a href=&#34;https://twitter.com/topes_lose/status/1023537060668473344?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E1023537060668473344&amp;amp;ref_url=https%3A%2F%2Fwww.theguardian.com%2Ffootball%2F2018%2Faug%2F01%2Ffootballers-who-have-backed-out-of-a-transfer-for-another-late-in-the-day&#34;&gt;‘This season, Tranmere Rovers return to contest League Two alongside eight teams with the suffix Town, including six successive fixtures against these clubs over the New Year. What is the record for successive fixtures versus clubs with the same (or no) prefix or suffix?’&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;For this question I decided to ignore prefixes as the dataset I’m using doesn’t have any that could be matches between teams except the ‘West’ in West Ham and West Bromwich Albion. That dataset is the excellent engsoccerdata from James Curley found at his github &lt;a href=&#34;https://github.com/jalapic/engsoccerdata&#34;&gt;here&lt;/a&gt; and on CRAN.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#take all of the english soccer data in the package and bind it together
+england_data &amp;lt;- bind_rows(
+    select(engsoccerdata::england,
+           .data$home, .data$visitor, date = .data$Date),
+    select(engsoccerdata::englandplayoffs,
+           .data$home, .data$visitor, date = .data$Date),
+    select(engsoccerdata::england1939,
+           .data$home, .data$visitor, date = .data$Date)) %&amp;gt;%
+  setDT() %&amp;gt;%
+  #convert the date to date class
+  .[, date := as.Date(date)]
+
+#get a list of each unique team in the dataset
+all_teams &amp;lt;- unique(c(as.character(england_data$home),
+                      as.character(england_data$visitor)))
+
+#melt the dataset by each teams matches
+find_chains &amp;lt;- rbindlist(lapply(all_teams, function(team) {
+  england_data %&amp;gt;%
+    .[home == team | visitor == team] %&amp;gt;%
+    .[, matching_team := team]
+  })) %&amp;gt;%
+  .[home == matching_team, other := visitor] %&amp;gt;%
+  .[visitor == matching_team, other := home] %&amp;gt;%
+  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;)] %&amp;gt;%
+  #get the suffixes and prefixes of the other team
+  .[, other_prefix := gsub(&amp;quot; .*&amp;quot;, &amp;quot;&amp;quot;, other)] %&amp;gt;%
+  .[, other_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, other)] %&amp;gt;%
+  #arrange by team and date
+  .[order(matching_team, date)] %&amp;gt;%
+  #convert to an id
+  .[, suffix_id := as.numeric(as.factor(other_suffix))] %&amp;gt;%
+  #if playing consecutively against the same suffix id (ignoring prefixes for now) put in same &amp;#39;chain&amp;#39;
+  .[, match := suffix_id - lead(suffix_id), by = &amp;quot;matching_team&amp;quot;] %&amp;gt;%
+  .[match == 0 &amp;amp; lead(match) != 0, chain_id := 1:.N] %&amp;gt;%
+  .[match == 0] %&amp;gt;%
+  .[, chain_id := na.locf(chain_id, fromLast = TRUE)] %&amp;gt;%
+  .[, chain_length := .N, by = chain_id] %&amp;gt;%
+  #take only chains at least as long as Tranmere&amp;#39;s run (6)
+  .[chain_length &amp;gt; 5] %&amp;gt;%
+  .[order(chain_length)] %&amp;gt;%
+  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;, &amp;quot;chain_length&amp;quot;)]
+
+#print the chains of equal length to Tranmere&amp;#39;s run
+print(find_chains)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##           date  matching_team               other chain_length
+##  1: 1950-12-30   Chesterfield      Leicester City            6
+##  2: 1951-01-13   Chesterfield     Manchester City            6
+##  3: 1951-01-20   Chesterfield       Coventry City            6
+##  4: 1951-02-03   Chesterfield        Cardiff City            6
+##  5: 1951-02-17   Chesterfield     Birmingham City            6
+##  6: 1951-02-24   Chesterfield        Swansea City            6
+##  7: 2009-03-21 Leicester City   Colchester United            6
+##  8: 2009-03-28 Leicester City Peterborough United            6
+##  9: 2009-04-04 Leicester City     Carlisle United            6
+## 10: 2009-04-11 Leicester City     Hereford United            6
+## 11: 2009-04-13 Leicester City        Leeds United            6
+## 12: 2009-04-18 Leicester City     Southend United            6
+## 13: 1921-05-02         Fulham           Hull City            7
+## 14: 1921-05-07         Fulham           Hull City            7
+## 15: 1921-08-27         Fulham       Coventry City            7
+## 16: 1921-08-29         Fulham      Leicester City            7
+## 17: 1921-09-03         Fulham       Coventry City            7
+## 18: 1921-09-05         Fulham      Leicester City            7
+## 19: 1921-09-10         Fulham           Hull City            7
+## 20: 1920-04-17  Leyton Orient     Birmingham City            7
+## 21: 1920-04-24  Leyton Orient     Birmingham City            7
+## 22: 1920-04-26  Leyton Orient      Leicester City            7
+## 23: 1920-05-01  Leyton Orient      Leicester City            7
+## 24: 1920-08-28  Leyton Orient      Leicester City            7
+## 25: 1920-08-30  Leyton Orient        Cardiff City            7
+## 26: 1920-09-04  Leyton Orient      Leicester City            7
+## 27: 1920-10-09   Notts County          Stoke City            7
+## 28: 1920-10-16   Notts County          Stoke City            7
+## 29: 1920-10-23   Notts County        Cardiff City            7
+## 30: 1920-10-30   Notts County        Cardiff City            7
+## 31: 1920-11-06   Notts County       Coventry City            7
+## 32: 1920-11-13   Notts County       Coventry City            7
+## 33: 1920-11-20   Notts County      Leicester City            7
+##           date  matching_team               other chain_length&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;so In fact an identical length chain on matching suffixes has occured twice, with Chesterfield playing a range of cities at the start of 1951 in League Two, and much more recently, Leicester playing 6 different Uniteds in a row at the tail end of the 2008/2009 season. This is also the season that saw them recover from being relegated from the Chmapionship and start moving towards winning the title in 2015-2016 season.&lt;/p&gt;
+&lt;p&gt;Some longer chains involving cities happened in the 1920-1921 seasons in the Second Division, but it seems like the schedulnig worked differently then so doesn’t really count.&lt;/p&gt;
+&lt;p&gt;Having originally misread the question, I also wanted to find out the longest chain of a team playing teams that matched &lt;em&gt;their own&lt;/em&gt; suffix. We can do this using a similar method&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;matching_fixtures &amp;lt;- england_data %&amp;gt;%
+  #get only matches between teams with matching prefix/suffixes
+  .[, home_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, home)] %&amp;gt;%
+  .[, away_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, visitor)] %&amp;gt;%
+  .[home_suffix == away_suffix, match := home_suffix] %&amp;gt;%
+  .[!is.na(match)] %&amp;gt;%
+  #remove matches where teams from the same city play each other
+  .[!match %in% c(&amp;quot;Bradford&amp;quot;, &amp;quot;Bristol&amp;quot;, &amp;quot;Burton&amp;quot;, &amp;quot;Manchester&amp;quot;, &amp;quot;Sheffield&amp;quot;)]
+
+#get all the teams that have played teams with matching suffixes
+matching_teams &amp;lt;- unique(c(as.character(matching_fixtures$home),
+                           as.character(matching_fixtures$visitor)))
+
+#elongate the data and look for chains
+find_chains &amp;lt;- rbindlist(lapply(matching_teams, function(team) {
+  england_data %&amp;gt;%
+    .[home == team | visitor == team] %&amp;gt;%
+    .[order(date)] %&amp;gt;%
+    .[, matching_team := team]
+  })) %&amp;gt;%
+  .[home == matching_team, other := visitor] %&amp;gt;%
+  .[visitor == matching_team, other := home] %&amp;gt;%
+  #id matches and remove matches not involving teams with identical suffixes
+  .[, match_id := 1:.N, by = matching_team] %&amp;gt;%
+  .[!is.na(match)] %&amp;gt;%
+  #find chains of identical suffixed matches
+  .[, chain := match_id - lag(match_id)] %&amp;gt;%
+  .[chain == 1 &amp;amp; lag(chain) != 1, chain_id := 1:.N] %&amp;gt;%
+  .[chain == 1] %&amp;gt;%
+  .[, chain_id := na.locf(chain_id)] %&amp;gt;%
+    .[, chain_length := .N, by = chain_id] %&amp;gt;%
+  #take only chains at least as long as Tranmere&amp;#39;s run (6)
+  .[chain_length &amp;gt; 4] %&amp;gt;%
+  .[order(chain_length)] %&amp;gt;%
+  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;, &amp;quot;chain_length&amp;quot;)]
+
+print(find_chains)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##           date   matching_team             other chain_length
+##  1: 1919-12-13      Stoke City   Birmingham City            5
+##  2: 1919-12-20      Stoke City    Leicester City            5
+##  3: 1919-12-25      Stoke City     Coventry City            5
+##  4: 1919-12-26      Stoke City     Coventry City            5
+##  5: 1919-12-27      Stoke City    Leicester City            5
+##  6: 1919-09-01       Hull City        Stoke City            5
+##  7: 1919-09-06       Hull City   Birmingham City            5
+##  8: 1919-09-08       Hull City        Stoke City            5
+##  9: 1919-09-13       Hull City        Leeds City            5
+## 10: 1919-09-20       Hull City        Leeds City            5
+## 11: 1988-09-24 Carlisle United  Rotherham United            5
+## 12: 1988-09-30 Carlisle United  Cambridge United            5
+## 13: 1988-10-04 Carlisle United Colchester United            5
+## 14: 1988-10-08 Carlisle United   Hereford United            5
+## 15: 1988-10-15 Carlisle United    Torquay United            5&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So the record for that is only slightly shorter! with Stoke and Hull City playing a range of cities in the 1919-1920 season (but see above for scheduling differences?) and Carlisle United playing 5 other different Uniteds in a row in the old Fourth Division.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;youth-of-the-nation&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Youth Of The Nation&lt;/h1&gt;
+&lt;p&gt;“If Lucas Hernández was born a year and a half later, his age would be a lower than his shirt number (21). Have any World Cup winners achieved this?” muses Edward Gibson.&lt;/p&gt;
+&lt;p&gt;The easiest way to check this is just to scrape all of the squads off of the wiki pages for the World Cups. I only did from 1954 onwards as before this the squad no and birthdate data is a bit patchy.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#links to the world cup squads pages
+wiki_cup_squads &amp;lt;- sprintf(&amp;quot;https://en.wikipedia.org/wiki/%s_FIFA_World_Cup_squads&amp;quot;,
+                           seq(1954, 2018, by = 4))
+
+#scrape all the player data we need
+world_cup_squads &amp;lt;- rbindlist(lapply(wiki_cup_squads[1:17], function(link) {
+  year &amp;lt;- gsub(&amp;quot;.*\\/wiki\\/&amp;quot;, &amp;quot;&amp;quot;, gsub(&amp;quot;_FIFA_World.*&amp;quot;, &amp;quot;&amp;quot;, link))
+  read &amp;lt;- read_html(link)
+  
+  sq_no &amp;lt;- read %&amp;gt;% 
+    html_nodes(&amp;quot;.plainrowheaders td:nth-child(1)&amp;quot;) %&amp;gt;%
+    html_text() %&amp;gt;%
+    as.numeric()
+  sq_names &amp;lt;- read %&amp;gt;%
+    html_nodes(&amp;quot;.plainrowheaders a:nth-child(1)&amp;quot;) %&amp;gt;% 
+    html_text() %&amp;gt;%
+    .[. != &amp;quot;&amp;quot;] %&amp;gt;%
+    .[!grepl(&amp;quot;^\\[&amp;quot;, .)] %&amp;gt;%
+    .[. != &amp;quot;Unattached&amp;quot;] %&amp;gt;% 
+    .[!grepl(&amp;quot;captain&amp;quot;, .)]
+  sq_dobs &amp;lt;- read %&amp;gt;% 
+    html_nodes(&amp;quot;.plainrowheaders td:nth-child(4)&amp;quot;) %&amp;gt;%
+    html_text() %&amp;gt;%
+    str_extract(., &amp;quot;[0-9]{4}-[0-9]{2}-[0-9]{2}&amp;quot;) %&amp;gt;% 
+    as.Date()
+  countries &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;h3 .mw-headline&amp;quot;) %&amp;gt;% 
+    html_text() %&amp;gt;% 
+    trimws()
+
+  if(year &amp;gt; 2006) countries &amp;lt;- countries[1:32]
+  
+  squad_data &amp;lt;- data.frame(name = sq_names,
+                           no = sq_no,
+                           dob = sq_dobs,
+                           year= year) %&amp;gt;%
+    setDT() %&amp;gt;%
+    .[!grepl(&amp;quot;Nery Pumpido&amp;quot;, name)] %&amp;gt;%
+    .[no == 1, country := countries] %&amp;gt;%
+    .[, country := na.locf(country)] %&amp;gt;%
+    .[, c(&amp;quot;name&amp;quot;, &amp;quot;no&amp;quot;, &amp;quot;dob&amp;quot;, &amp;quot;year&amp;quot;, &amp;quot;country&amp;quot;)]
+}))
+
+#find all world cup squad players with shirt numbers greater than their age in years
+young_players &amp;lt;- world_cup_squads %&amp;gt;%
+  .[, age := as.numeric(difftime(as.Date(paste0(year, &amp;quot;-07-01&amp;quot;)), dob)) / 365] %&amp;gt;%
+  .[age &amp;lt; no]
+
+print(young_players)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##                        name no        dob year    country      age
+##   1:   Aleksandar Petakovic 22 1932-08-06 1954 Yugoslavia 21.91507
+##   2:         Ranulfo Cortés 22 1934-07-09 1954     Mexico 19.99178
+##   3:             Coskun Tas 22 1935-04-23 1954     Turkey 19.20274
+##   4:            Omar Méndez 20 1934-08-07 1954    Uruguay 19.91233
+##   5:          Johnny Haynes 21 1934-10-17 1954    England 19.71781
+##  ---                                                              
+## 110: Trent Alexander-Arnold 22 1998-10-07 2018    England 19.74521
+## 111:    José Luis Rodríguez 21 1998-06-19 2018     Panama 20.04658
+## 112:       Dávinson Sánchez 23 1996-06-12 2018   Colombia 22.06575
+## 113:         Dawid Kownacki 23 1997-03-14 2018     Poland 21.31233
+## 114:           Moussa Wagué 22 1998-10-04 2018    Senegal 19.75342&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Overall 114 players are found. England actually have the most players with shirt numbers higher than their age with 9: Haynes, Hooper, Owen, Ferdinand, Carson, Walcott, Barkeley, Shaw, Alexander-Arnold. Surprisingly, most of these are pretty recent.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p &amp;lt;- ggplot(data = young_players, aes(year)) +
+  geom_bar() +
+  ggtitle(&amp;quot;Number of Players in World Cup Squads With Nos &amp;gt; Age&amp;quot;) +
+  xlab(&amp;quot;World Cup Year&amp;quot;) +
+  ylab(&amp;quot;Number&amp;quot;)
+
+print(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-08-05-The_Knowledge_1_files/figure-html/unnamed-chunk-4-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;It seems that the real high point for this was the turn of the century with young players being given a shot at the tail end of squads, which is returning to pre-1998 levels by 2018.&lt;/p&gt;
+&lt;p&gt;The data on these squad players is then merged with the data on the winning teams to find those who played for nations who went on to winthe world cup.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;wc_winners &amp;lt;- data.frame(winner = c(&amp;quot;West Germany&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;England&amp;quot;,&amp;quot;Brazil&amp;quot;,
+                                    &amp;quot;West Germany&amp;quot;,&amp;quot;Argentina&amp;quot;,&amp;quot;Italy&amp;quot;,&amp;quot;Argentina&amp;quot;,&amp;quot;West Germany&amp;quot;,
+                                    &amp;quot;Brazil&amp;quot;,&amp;quot;France&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;Italy&amp;quot;,&amp;quot;Spain&amp;quot;,&amp;quot;Germany&amp;quot;,&amp;quot;France&amp;quot;),
+                         year = seq(1954, 2018, 4))
+
+#merge data with winners and find matches
+young_players %&amp;lt;&amp;gt;% .[, year := as.numeric(as.character(year))] %&amp;gt;%
+  .[, country := gsub(&amp;quot;(^\\s+)|(\\s+$)&amp;quot;, &amp;quot;&amp;quot;, country)] %&amp;gt;%
+  merge(., wc_winners, by = &amp;quot;year&amp;quot;) %&amp;gt;%
+  .[winner == country]
+
+#kaka only one to have played as per https://en.wikipedia.org/wiki/List_of_FIFA_World_Cup_winners#By_year
+print(young_players)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##    year    name no        dob country      age winner
+## 1: 1970    Leão 22 1949-07-11  Brazil 20.98630 Brazil
+## 2: 1994 Ronaldo 20 1976-09-22  Brazil 17.78356 Brazil
+## 3: 2002    Kaká 23 1982-04-22  Brazil 20.20548 Brazil&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So only the great &lt;a href=&#34;https://en.wikipedia.org/wiki/%C3%89merson_Le%C3%A3o&#34;&gt;Émerson Leão&lt;/a&gt;, &lt;a href=&#34;https://en.wikipedia.org/wiki/Ronaldo_(Brazilian_footballer)&#34;&gt;Ronaldo&lt;/a&gt; and &lt;a href=&#34;https://en.wikipedia.org/wiki/Kak%C3%A1&#34;&gt;Kaka&lt;/a&gt; satisfy the question. However, of these only Kaka played any part during the tournament, which only amounted to 25 minutes vs Costa Rica.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Could an Independent Yorkshire Win the World Cup - Rest of the World/UK</title>
       <link>/post/yorkshire_world_cup_6/</link>
       <pubDate>Sun, 10 Jun 2018 00:00:00 +0000</pubDate>

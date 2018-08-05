@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme" content="hugo-academic">
+  <meta name="generator" content="Hugo 0.32.2" />
+  <meta name="author" content="Robert Hickman">
+
+  
+  
+  
+  
+    
+      
+    
+  
+  <meta name="description" content="The Guardian publish a weekly set of questions and answers on a variety of football minutiae at The Knowledge. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.
+library(rvest)library(dplyr)library(magrittr)library(data.table)library(zoo)library(ggplot2)library(rvest)library(stringr)#jalapic/engsoccerdatalibrary(engsoccerdata)We Ain’t Going To The Town..‘This season, Tranmere Rovers return to contest League Two alongside eight teams with the suffix Town, including six successive fixtures against these clubs over the New Year.">
+
+  
+  <link rel="alternate" hreflang="en-us" href="/post/the-knowledge-4th-august-2018/">
+
+  
+
+
+  
+
+  
+  
+  <meta name="theme-color" content="#0095eb">
+  
+  
+  
+  
+    
+  
+  
+    
+    
+      
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+      
+    
+  
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha512-6MXa8B6uaO18Hid6blRMetEIoPqHf7Ux1tnyIQdpt9qI5OACx7C+O3IVTr98vwGnlcg0LOLa02i9Y1HpVhlfiw==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.1/css/academicons.min.css" integrity="sha512-NThgw3XKQ1absAahW6to7Ey42uycrVvfNfyjqcFNgCmOCQ5AR4AO0SiXrN+8ZtYeappp56lk1WtvjVmEa+VR6A==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous">
+  
+  
+  
+  
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Montserrat:400,700%7cRoboto:400,400italic,700%7cRoboto&#43;Mono">
+  
+  <link rel="stylesheet" href="/styles.css">
+  
+
+  
+
+  
+  <link rel="alternate" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="feed" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  
+
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" href="/img/icon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
+
+  <link rel="canonical" href="/post/the-knowledge-4th-august-2018/">
+
+  <meta property="twitter:card" content="summary_large_image">
+  
+  <meta property="twitter:site" content="@robert_squared">
+  <meta property="twitter:creator" content="@robert_squared">
+  
+  <meta property="og:site_name" content="Robert Hickman">
+  <meta property="og:url" content="/post/the-knowledge-4th-august-2018/">
+  <meta property="og:title" content="The Knowledge 4th August 2018 | Robert Hickman">
+  <meta property="og:description" content="The Guardian publish a weekly set of questions and answers on a variety of football minutiae at The Knowledge. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.
+library(rvest)library(dplyr)library(magrittr)library(data.table)library(zoo)library(ggplot2)library(rvest)library(stringr)#jalapic/engsoccerdatalibrary(engsoccerdata)We Ain’t Going To The Town..‘This season, Tranmere Rovers return to contest League Two alongside eight teams with the suffix Town, including six successive fixtures against these clubs over the New Year.">
+  <meta property="og:locale" content="en-us">
+  
+  <meta property="article:published_time" content="2018-08-04T00:00:00&#43;00:00">
+  
+  <meta property="article:modified_time" content="2018-08-04T00:00:00&#43;00:00">
+  
+
+  <script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+</script>
+<script async type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <title>The Knowledge 4th August 2018 | Robert Hickman</title>
+
+</head>
+<body id="top" data-spy="scroll" data-target="#toc" data-offset="71" >
+
+<nav class="navbar navbar-default navbar-fixed-top" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="navbar-header">
+      
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+              data-target=".navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      
+      <a class="navbar-brand" href="/">Robert Hickman</a>
+    </div>
+
+    
+    <div class="collapse navbar-collapse">
+
+      
+      
+      <ul class="nav navbar-nav navbar-right">
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#about">
+            
+            <span>Home</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#publications_selected">
+            
+            <span>Publications</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#posts">
+            
+            <span>Posts</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#projects">
+            
+            <span>Projects</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#writing">
+            
+            <span>Writing</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#contact">
+            
+            <span>Contact</span>
+            
+          </a>
+        </li>
+
+        
+        
+      
+
+      
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+
+<article class="article" itemscope itemtype="http://schema.org/Article">
+
+  
+
+
+  <div class="article-container">
+    <div class="article-inner">
+      <h1 itemprop="name">The Knowledge 4th August 2018</h1>
+
+      
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2018-08-04 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Aug 4, 2018
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    9 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+  
+<div class="share-box" aria-hidden="true">
+  <ul class="share">
+    <li>
+      <a class="twitter"
+         href="https://twitter.com/intent/tweet?text=The%20Knowledge%204th%20August%202018&amp;url=%2fpost%2fthe-knowledge-4th-august-2018%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-twitter"></i>
+      </a>
+    </li>
+    <li>
+      <a class="facebook"
+         href="https://www.facebook.com/sharer.php?u=%2fpost%2fthe-knowledge-4th-august-2018%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-facebook"></i>
+      </a>
+    </li>
+    <li>
+      <a class="linkedin"
+         href="https://www.linkedin.com/shareArticle?mini=true&amp;url=%2fpost%2fthe-knowledge-4th-august-2018%2f&amp;title=The%20Knowledge%204th%20August%202018"
+         target="_blank" rel="noopener">
+        <i class="fa fa-linkedin"></i>
+      </a>
+    </li>
+    <li>
+      <a class="weibo"
+         href="http://service.weibo.com/share/share.php?url=%2fpost%2fthe-knowledge-4th-august-2018%2f&amp;title=The%20Knowledge%204th%20August%202018"
+         target="_blank" rel="noopener">
+        <i class="fa fa-weibo"></i>
+      </a>
+    </li>
+    <li>
+      <a class="email"
+         href="mailto:?subject=The%20Knowledge%204th%20August%202018&amp;body=%2fpost%2fthe-knowledge-4th-august-2018%2f">
+        <i class="fa fa-envelope"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+  
+
+</div>
+
+
+      <div class="article-style" itemprop="articleBody">
+        <p>The Guardian publish a weekly set of questions and answers on a variety of football minutiae at <a href="https://www.theguardian.com/football/series/theknowledge">The Knowledge</a>. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.</p>
+<pre class="r"><code>library(rvest)
+library(dplyr)
+library(magrittr)
+library(data.table)
+library(zoo)
+library(ggplot2)
+library(rvest)
+library(stringr)
+
+#jalapic/engsoccerdata
+library(engsoccerdata)</code></pre>
+<div id="we-aint-going-to-the-town.." class="section level1">
+<h1>We Ain’t Going To The Town..</h1>
+<p><a href="https://twitter.com/topes_lose/status/1023537060668473344?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E1023537060668473344&amp;ref_url=https%3A%2F%2Fwww.theguardian.com%2Ffootball%2F2018%2Faug%2F01%2Ffootballers-who-have-backed-out-of-a-transfer-for-another-late-in-the-day">‘This season, Tranmere Rovers return to contest League Two alongside eight teams with the suffix Town, including six successive fixtures against these clubs over the New Year. What is the record for successive fixtures versus clubs with the same (or no) prefix or suffix?’</a></p>
+<p>For this question I decided to ignore prefixes as the dataset I’m using doesn’t have any that could be matches between teams except the ‘West’ in West Ham and West Bromwich Albion. That dataset is the excellent engsoccerdata from James Curley found at his github <a href="https://github.com/jalapic/engsoccerdata">here</a> and on CRAN.</p>
+<pre class="r"><code>#take all of the english soccer data in the package and bind it together
+england_data &lt;- bind_rows(
+    select(engsoccerdata::england,
+           .data$home, .data$visitor, date = .data$Date),
+    select(engsoccerdata::englandplayoffs,
+           .data$home, .data$visitor, date = .data$Date),
+    select(engsoccerdata::england1939,
+           .data$home, .data$visitor, date = .data$Date)) %&gt;%
+  setDT() %&gt;%
+  #convert the date to date class
+  .[, date := as.Date(date)]
+
+#get a list of each unique team in the dataset
+all_teams &lt;- unique(c(as.character(england_data$home),
+                      as.character(england_data$visitor)))
+
+#melt the dataset by each teams matches
+find_chains &lt;- rbindlist(lapply(all_teams, function(team) {
+  england_data %&gt;%
+    .[home == team | visitor == team] %&gt;%
+    .[, matching_team := team]
+  })) %&gt;%
+  .[home == matching_team, other := visitor] %&gt;%
+  .[visitor == matching_team, other := home] %&gt;%
+  .[, c(&quot;date&quot;, &quot;matching_team&quot;, &quot;other&quot;)] %&gt;%
+  #get the suffixes and prefixes of the other team
+  .[, other_prefix := gsub(&quot; .*&quot;, &quot;&quot;, other)] %&gt;%
+  .[, other_suffix := gsub(&quot;.* &quot;, &quot;&quot;, other)] %&gt;%
+  #arrange by team and date
+  .[order(matching_team, date)] %&gt;%
+  #convert to an id
+  .[, suffix_id := as.numeric(as.factor(other_suffix))] %&gt;%
+  #if playing consecutively against the same suffix id (ignoring prefixes for now) put in same &#39;chain&#39;
+  .[, match := suffix_id - lead(suffix_id), by = &quot;matching_team&quot;] %&gt;%
+  .[match == 0 &amp; lead(match) != 0, chain_id := 1:.N] %&gt;%
+  .[match == 0] %&gt;%
+  .[, chain_id := na.locf(chain_id, fromLast = TRUE)] %&gt;%
+  .[, chain_length := .N, by = chain_id] %&gt;%
+  #take only chains at least as long as Tranmere&#39;s run (6)
+  .[chain_length &gt; 5] %&gt;%
+  .[order(chain_length)] %&gt;%
+  .[, c(&quot;date&quot;, &quot;matching_team&quot;, &quot;other&quot;, &quot;chain_length&quot;)]
+
+#print the chains of equal length to Tranmere&#39;s run
+print(find_chains)</code></pre>
+<pre><code>##           date  matching_team               other chain_length
+##  1: 1950-12-30   Chesterfield      Leicester City            6
+##  2: 1951-01-13   Chesterfield     Manchester City            6
+##  3: 1951-01-20   Chesterfield       Coventry City            6
+##  4: 1951-02-03   Chesterfield        Cardiff City            6
+##  5: 1951-02-17   Chesterfield     Birmingham City            6
+##  6: 1951-02-24   Chesterfield        Swansea City            6
+##  7: 2009-03-21 Leicester City   Colchester United            6
+##  8: 2009-03-28 Leicester City Peterborough United            6
+##  9: 2009-04-04 Leicester City     Carlisle United            6
+## 10: 2009-04-11 Leicester City     Hereford United            6
+## 11: 2009-04-13 Leicester City        Leeds United            6
+## 12: 2009-04-18 Leicester City     Southend United            6
+## 13: 1921-05-02         Fulham           Hull City            7
+## 14: 1921-05-07         Fulham           Hull City            7
+## 15: 1921-08-27         Fulham       Coventry City            7
+## 16: 1921-08-29         Fulham      Leicester City            7
+## 17: 1921-09-03         Fulham       Coventry City            7
+## 18: 1921-09-05         Fulham      Leicester City            7
+## 19: 1921-09-10         Fulham           Hull City            7
+## 20: 1920-04-17  Leyton Orient     Birmingham City            7
+## 21: 1920-04-24  Leyton Orient     Birmingham City            7
+## 22: 1920-04-26  Leyton Orient      Leicester City            7
+## 23: 1920-05-01  Leyton Orient      Leicester City            7
+## 24: 1920-08-28  Leyton Orient      Leicester City            7
+## 25: 1920-08-30  Leyton Orient        Cardiff City            7
+## 26: 1920-09-04  Leyton Orient      Leicester City            7
+## 27: 1920-10-09   Notts County          Stoke City            7
+## 28: 1920-10-16   Notts County          Stoke City            7
+## 29: 1920-10-23   Notts County        Cardiff City            7
+## 30: 1920-10-30   Notts County        Cardiff City            7
+## 31: 1920-11-06   Notts County       Coventry City            7
+## 32: 1920-11-13   Notts County       Coventry City            7
+## 33: 1920-11-20   Notts County      Leicester City            7
+##           date  matching_team               other chain_length</code></pre>
+<p>so In fact an identical length chain on matching suffixes has occured twice, with Chesterfield playing a range of cities at the start of 1951 in League Two, and much more recently, Leicester playing 6 different Uniteds in a row at the tail end of the 2008/2009 season. This is also the season that saw them recover from being relegated from the Chmapionship and start moving towards winning the title in 2015-2016 season.</p>
+<p>Some longer chains involving cities happened in the 1920-1921 seasons in the Second Division, but it seems like the schedulnig worked differently then so doesn’t really count.</p>
+<p>Having originally misread the question, I also wanted to find out the longest chain of a team playing teams that matched <em>their own</em> suffix. We can do this using a similar method</p>
+<pre class="r"><code>matching_fixtures &lt;- england_data %&gt;%
+  #get only matches between teams with matching prefix/suffixes
+  .[, home_suffix := gsub(&quot;.* &quot;, &quot;&quot;, home)] %&gt;%
+  .[, away_suffix := gsub(&quot;.* &quot;, &quot;&quot;, visitor)] %&gt;%
+  .[home_suffix == away_suffix, match := home_suffix] %&gt;%
+  .[!is.na(match)] %&gt;%
+  #remove matches where teams from the same city play each other
+  .[!match %in% c(&quot;Bradford&quot;, &quot;Bristol&quot;, &quot;Burton&quot;, &quot;Manchester&quot;, &quot;Sheffield&quot;)]
+
+#get all the teams that have played teams with matching suffixes
+matching_teams &lt;- unique(c(as.character(matching_fixtures$home),
+                           as.character(matching_fixtures$visitor)))
+
+#elongate the data and look for chains
+find_chains &lt;- rbindlist(lapply(matching_teams, function(team) {
+  england_data %&gt;%
+    .[home == team | visitor == team] %&gt;%
+    .[order(date)] %&gt;%
+    .[, matching_team := team]
+  })) %&gt;%
+  .[home == matching_team, other := visitor] %&gt;%
+  .[visitor == matching_team, other := home] %&gt;%
+  #id matches and remove matches not involving teams with identical suffixes
+  .[, match_id := 1:.N, by = matching_team] %&gt;%
+  .[!is.na(match)] %&gt;%
+  #find chains of identical suffixed matches
+  .[, chain := match_id - lag(match_id)] %&gt;%
+  .[chain == 1 &amp; lag(chain) != 1, chain_id := 1:.N] %&gt;%
+  .[chain == 1] %&gt;%
+  .[, chain_id := na.locf(chain_id)] %&gt;%
+    .[, chain_length := .N, by = chain_id] %&gt;%
+  #take only chains at least as long as Tranmere&#39;s run (6)
+  .[chain_length &gt; 4] %&gt;%
+  .[order(chain_length)] %&gt;%
+  .[, c(&quot;date&quot;, &quot;matching_team&quot;, &quot;other&quot;, &quot;chain_length&quot;)]
+
+print(find_chains)</code></pre>
+<pre><code>##           date   matching_team             other chain_length
+##  1: 1919-12-13      Stoke City   Birmingham City            5
+##  2: 1919-12-20      Stoke City    Leicester City            5
+##  3: 1919-12-25      Stoke City     Coventry City            5
+##  4: 1919-12-26      Stoke City     Coventry City            5
+##  5: 1919-12-27      Stoke City    Leicester City            5
+##  6: 1919-09-01       Hull City        Stoke City            5
+##  7: 1919-09-06       Hull City   Birmingham City            5
+##  8: 1919-09-08       Hull City        Stoke City            5
+##  9: 1919-09-13       Hull City        Leeds City            5
+## 10: 1919-09-20       Hull City        Leeds City            5
+## 11: 1988-09-24 Carlisle United  Rotherham United            5
+## 12: 1988-09-30 Carlisle United  Cambridge United            5
+## 13: 1988-10-04 Carlisle United Colchester United            5
+## 14: 1988-10-08 Carlisle United   Hereford United            5
+## 15: 1988-10-15 Carlisle United    Torquay United            5</code></pre>
+<p>So the record for that is only slightly shorter! with Stoke and Hull City playing a range of cities in the 1919-1920 season (but see above for scheduling differences?) and Carlisle United playing 5 other different Uniteds in a row in the old Fourth Division.</p>
+</div>
+<div id="youth-of-the-nation" class="section level1">
+<h1>Youth Of The Nation</h1>
+<p>“If Lucas Hernández was born a year and a half later, his age would be a lower than his shirt number (21). Have any World Cup winners achieved this?” muses Edward Gibson.</p>
+<p>The easiest way to check this is just to scrape all of the squads off of the wiki pages for the World Cups. I only did from 1954 onwards as before this the squad no and birthdate data is a bit patchy.</p>
+<pre class="r"><code>#links to the world cup squads pages
+wiki_cup_squads &lt;- sprintf(&quot;https://en.wikipedia.org/wiki/%s_FIFA_World_Cup_squads&quot;,
+                           seq(1954, 2018, by = 4))
+
+#scrape all the player data we need
+world_cup_squads &lt;- rbindlist(lapply(wiki_cup_squads[1:17], function(link) {
+  year &lt;- gsub(&quot;.*\\/wiki\\/&quot;, &quot;&quot;, gsub(&quot;_FIFA_World.*&quot;, &quot;&quot;, link))
+  read &lt;- read_html(link)
+  
+  sq_no &lt;- read %&gt;% 
+    html_nodes(&quot;.plainrowheaders td:nth-child(1)&quot;) %&gt;%
+    html_text() %&gt;%
+    as.numeric()
+  sq_names &lt;- read %&gt;%
+    html_nodes(&quot;.plainrowheaders a:nth-child(1)&quot;) %&gt;% 
+    html_text() %&gt;%
+    .[. != &quot;&quot;] %&gt;%
+    .[!grepl(&quot;^\\[&quot;, .)] %&gt;%
+    .[. != &quot;Unattached&quot;] %&gt;% 
+    .[!grepl(&quot;captain&quot;, .)]
+  sq_dobs &lt;- read %&gt;% 
+    html_nodes(&quot;.plainrowheaders td:nth-child(4)&quot;) %&gt;%
+    html_text() %&gt;%
+    str_extract(., &quot;[0-9]{4}-[0-9]{2}-[0-9]{2}&quot;) %&gt;% 
+    as.Date()
+  countries &lt;- read %&gt;% html_nodes(&quot;h3 .mw-headline&quot;) %&gt;% 
+    html_text() %&gt;% 
+    trimws()
+
+  if(year &gt; 2006) countries &lt;- countries[1:32]
+  
+  squad_data &lt;- data.frame(name = sq_names,
+                           no = sq_no,
+                           dob = sq_dobs,
+                           year= year) %&gt;%
+    setDT() %&gt;%
+    .[!grepl(&quot;Nery Pumpido&quot;, name)] %&gt;%
+    .[no == 1, country := countries] %&gt;%
+    .[, country := na.locf(country)] %&gt;%
+    .[, c(&quot;name&quot;, &quot;no&quot;, &quot;dob&quot;, &quot;year&quot;, &quot;country&quot;)]
+}))
+
+#find all world cup squad players with shirt numbers greater than their age in years
+young_players &lt;- world_cup_squads %&gt;%
+  .[, age := as.numeric(difftime(as.Date(paste0(year, &quot;-07-01&quot;)), dob)) / 365] %&gt;%
+  .[age &lt; no]
+
+print(young_players)</code></pre>
+<pre><code>##                        name no        dob year    country      age
+##   1:   Aleksandar Petakovic 22 1932-08-06 1954 Yugoslavia 21.91507
+##   2:         Ranulfo Cortés 22 1934-07-09 1954     Mexico 19.99178
+##   3:             Coskun Tas 22 1935-04-23 1954     Turkey 19.20274
+##   4:            Omar Méndez 20 1934-08-07 1954    Uruguay 19.91233
+##   5:          Johnny Haynes 21 1934-10-17 1954    England 19.71781
+##  ---                                                              
+## 110: Trent Alexander-Arnold 22 1998-10-07 2018    England 19.74521
+## 111:    José Luis Rodríguez 21 1998-06-19 2018     Panama 20.04658
+## 112:       Dávinson Sánchez 23 1996-06-12 2018   Colombia 22.06575
+## 113:         Dawid Kownacki 23 1997-03-14 2018     Poland 21.31233
+## 114:           Moussa Wagué 22 1998-10-04 2018    Senegal 19.75342</code></pre>
+<p>Overall 114 players are found. England actually have the most players with shirt numbers higher than their age with 9: Haynes, Hooper, Owen, Ferdinand, Carson, Walcott, Barkeley, Shaw, Alexander-Arnold. Surprisingly, most of these are pretty recent.</p>
+<pre class="r"><code>p &lt;- ggplot(data = young_players, aes(year)) +
+  geom_bar() +
+  ggtitle(&quot;Number of Players in World Cup Squads With Nos &gt; Age&quot;) +
+  xlab(&quot;World Cup Year&quot;) +
+  ylab(&quot;Number&quot;)
+
+print(p)</code></pre>
+<p><img src="/post/2018-08-05-The_Knowledge_1_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>It seems that the real high point for this was the turn of the century with young players being given a shot at the tail end of squads, which is returning to pre-1998 levels by 2018.</p>
+<p>The data on these squad players is then merged with the data on the winning teams to find those who played for nations who went on to winthe world cup.</p>
+<pre class="r"><code>wc_winners &lt;- data.frame(winner = c(&quot;West Germany&quot;,&quot;Brazil&quot;,&quot;Brazil&quot;,&quot;England&quot;,&quot;Brazil&quot;,
+                                    &quot;West Germany&quot;,&quot;Argentina&quot;,&quot;Italy&quot;,&quot;Argentina&quot;,&quot;West Germany&quot;,
+                                    &quot;Brazil&quot;,&quot;France&quot;,&quot;Brazil&quot;,&quot;Italy&quot;,&quot;Spain&quot;,&quot;Germany&quot;,&quot;France&quot;),
+                         year = seq(1954, 2018, 4))
+
+#merge data with winners and find matches
+young_players %&lt;&gt;% .[, year := as.numeric(as.character(year))] %&gt;%
+  .[, country := gsub(&quot;(^\\s+)|(\\s+$)&quot;, &quot;&quot;, country)] %&gt;%
+  merge(., wc_winners, by = &quot;year&quot;) %&gt;%
+  .[winner == country]
+
+#kaka only one to have played as per https://en.wikipedia.org/wiki/List_of_FIFA_World_Cup_winners#By_year
+print(young_players)</code></pre>
+<pre><code>##    year    name no        dob country      age winner
+## 1: 1970    Leão 22 1949-07-11  Brazil 20.98630 Brazil
+## 2: 1994 Ronaldo 20 1976-09-22  Brazil 17.78356 Brazil
+## 3: 2002    Kaká 23 1982-04-22  Brazil 20.20548 Brazil</code></pre>
+<p>So only the great <a href="https://en.wikipedia.org/wiki/%C3%89merson_Le%C3%A3o">Émerson Leão</a>, <a href="https://en.wikipedia.org/wiki/Ronaldo_(Brazilian_footballer)">Ronaldo</a> and <a href="https://en.wikipedia.org/wiki/Kak%C3%A1">Kaka</a> satisfy the question. However, of these only Kaka played any part during the tournament, which only amounted to 25 minutes vs Costa Rica.</p>
+</div>
+
+      </div>
+
+      
+
+
+<div class="article-tags">
+  
+  <a class="btn btn-primary btn-outline" href="/tags/rstats">rstats</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/football">football</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/the_knowledge">the_knowledge</a>
+  
+</div>
+
+
+
+    </div>
+  </div>
+
+</article>
+
+
+
+<div class="article-container article-widget">
+  <div class="hr-light"></div>
+  <h3>Related</h3>
+  <ul>
+    
+    <li><a href="/post/yorkshire_world_cup_6/">Could an Independent Yorkshire Win the World Cup - Rest of the World/UK</a></li>
+    
+    <li><a href="/post/yorkshire_world_cup_5/">Could an Independent Yorkshire Win the World Cup - Simulate World Cups</a></li>
+    
+    <li><a href="/post/yorkshire_world_cup_4/">Could an Independent Yorkshire Win the World Cup - Picking Teams</a></li>
+    
+    <li><a href="/post/yorkshire_world_cup_3/">Could an Independent Yorkshire Win the World Cup - Finding British Player&#39;s Birthplaces</a></li>
+    
+    <li><a href="/post/yorkshire_world_cup_2/">Could an Independent Yorkshire Win the World Cup - LASSOs and Player Positions</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="article-container">
+  
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="powered-by">
+
+      &copy; 2018 &middot; 
+
+      Powered by the
+      <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+      <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+      <span class="pull-right" aria-hidden="true">
+        <a href="#" id="back_to_top">
+          <span class="button_icon">
+            <i class="fa fa-chevron-up fa-2x"></i>
+          </span>
+        </a>
+      </span>
+
+    </p>
+  </div>
+</footer>
+
+
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close btn-large" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Cite</h4>
+      </div>
+      <div>
+        <pre><code class="modal-body tex"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-primary btn-outline js-copy-cite" href="#" target="_blank">
+          <i class="fa fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-primary btn-outline js-download-cite" href="#" target="_blank">
+          <i class="fa fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+    
+
+    
+
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.3/imagesloaded.pkgd.min.js" integrity="sha512-umsR78NN0D23AzgoZ11K7raBD+R6hqKojyBZs1w8WvYlsI+QuKRGBx3LFCwhatzBunCjDuJpDHwxD13sLMbpRA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha512-iztkobsvnjKfAtTNdHkGVjAYTrrtlC7mGp/54c40wowO7LhURYl3gVzzcEqGl/qKXQltJ2HwMrdLcNUdo+N/RQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.4/isotope.pkgd.min.js" integrity="sha512-VDBOIlDbuC4VWxGJNmuFRQ0Li0SKkDpmGyuhAG5LTDLd/dJ/S0WMVxriR2Y+CyPL5gzjpN4f/6iqWVBJlht0tQ==" crossorigin="anonymous"></script>
+    
+    
+    <script src="/js/hugo-academic.js"></script>
+    
+
+    
+    
+      
+      
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+      
+
+      
+
+      
+
+      <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    
+    
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_CHTML" integrity="sha512-tOav5w1OjvsSJzePRtt2uQPFwBoHt1VZcUq8l8nm5284LEKE9FSJBQryzMBzHxY5P0zRdNqEcpLIRVYFNgu1jw==" crossorigin="anonymous"></script>
+    
+    
+
+  </body>
+</html>
+
