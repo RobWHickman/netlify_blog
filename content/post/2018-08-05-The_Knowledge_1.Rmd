@@ -191,7 +191,7 @@ young_players <- world_cup_squads %>%
 print(young_players)
 ```
 
-Overall 114 players are found. England actually have the most players with shirt numbers higher than their age with 9: Haynes, Hooper, Owen, Ferdinand, Carson, Walcott, Barkeley, Shaw, Alexander-Arnold. Surprisingly, most of these are pretty recent.
+Overall 114 players are found. England actually have the most players with shirt numbers higher than their age with 9: Haynes, Hooper, Owen, Ferdinand, Carson, Walcott, Barkeley, Shaw, Alexander-Arnold. Surprisingly, most of these young English callups are pretty recent.
 
 ```{r}
 p <- ggplot(data = young_players, aes(year)) +
@@ -205,12 +205,13 @@ print(p)
 
 It seems that the real high point for this was the turn of the century with young players being given a shot at the tail end of squads, which is returning to pre-1998 levels by 2018.
 
-The data on these squad players is then merged with the data on the winning teams to find those who played for nations who went on to winthe world cup.
+The data on these squad players is then merged with the data on the winning teams to find those who played for nations who went on to win the world cup.
 
 ```{r}
-wc_winners <- data.frame(winner = c("West Germany","Brazil","Brazil","England","Brazil",
-                                    "West Germany","Argentina","Italy","Argentina","West Germany",
-                                    "Brazil","France","Brazil","Italy","Spain","Germany","France"),
+wc_winners <- data.frame(winner = c("West Germany","Brazil","Brazil","England",
+                                    "Brazil","West Germany","Argentina","Italy",
+                                    "Argentina","West Germany","Brazil","France",
+                                    "Brazil","Italy","Spain","Germany","France"),
                          year = seq(1954, 2018, 4))
 
 #merge data with winners and find matches

@@ -234,7 +234,7 @@ print(young_players)</code></pre>
 ## 112:       Dávinson Sánchez 23 1996-06-12 2018   Colombia 22.06575
 ## 113:         Dawid Kownacki 23 1997-03-14 2018     Poland 21.31233
 ## 114:           Moussa Wagué 22 1998-10-04 2018    Senegal 19.75342</code></pre>
-<p>Overall 114 players are found. England actually have the most players with shirt numbers higher than their age with 9: Haynes, Hooper, Owen, Ferdinand, Carson, Walcott, Barkeley, Shaw, Alexander-Arnold. Surprisingly, most of these are pretty recent.</p>
+<p>Overall 114 players are found. England actually have the most players with shirt numbers higher than their age with 9: Haynes, Hooper, Owen, Ferdinand, Carson, Walcott, Barkeley, Shaw, Alexander-Arnold. Surprisingly, most of these young English callups are pretty recent.</p>
 <pre class="r"><code>p &lt;- ggplot(data = young_players, aes(year)) +
   geom_bar() +
   ggtitle(&quot;Number of Players in World Cup Squads With Nos &gt; Age&quot;) +
@@ -244,10 +244,11 @@ print(young_players)</code></pre>
 print(p)</code></pre>
 <p><img src="/post/2018-08-05-The_Knowledge_1_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
 <p>It seems that the real high point for this was the turn of the century with young players being given a shot at the tail end of squads, which is returning to pre-1998 levels by 2018.</p>
-<p>The data on these squad players is then merged with the data on the winning teams to find those who played for nations who went on to winthe world cup.</p>
-<pre class="r"><code>wc_winners &lt;- data.frame(winner = c(&quot;West Germany&quot;,&quot;Brazil&quot;,&quot;Brazil&quot;,&quot;England&quot;,&quot;Brazil&quot;,
-                                    &quot;West Germany&quot;,&quot;Argentina&quot;,&quot;Italy&quot;,&quot;Argentina&quot;,&quot;West Germany&quot;,
-                                    &quot;Brazil&quot;,&quot;France&quot;,&quot;Brazil&quot;,&quot;Italy&quot;,&quot;Spain&quot;,&quot;Germany&quot;,&quot;France&quot;),
+<p>The data on these squad players is then merged with the data on the winning teams to find those who played for nations who went on to win the world cup.</p>
+<pre class="r"><code>wc_winners &lt;- data.frame(winner = c(&quot;West Germany&quot;,&quot;Brazil&quot;,&quot;Brazil&quot;,&quot;England&quot;,
+                                    &quot;Brazil&quot;,&quot;West Germany&quot;,&quot;Argentina&quot;,&quot;Italy&quot;,
+                                    &quot;Argentina&quot;,&quot;West Germany&quot;,&quot;Brazil&quot;,&quot;France&quot;,
+                                    &quot;Brazil&quot;,&quot;Italy&quot;,&quot;Spain&quot;,&quot;Germany&quot;,&quot;France&quot;),
                          year = seq(1954, 2018, 4))
 
 #merge data with winners and find matches
