@@ -114,10 +114,7 @@ p &amp;lt;- ggplot() +
         legend.text=element_text(size=12),
         plot.title = element_text(size = 20),
         plot.margin = margin(1, 1, 1, 1, &amp;quot;cm&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
-&lt;div class=&#34;figure&#34;&gt;
-&lt;img src=&#34;../../static/img/south_africa.png&#34; alt=&#34;South Africa&#34; /&gt;
-&lt;p class=&#34;caption&#34;&gt;South Africa&lt;/p&gt;
-&lt;/div&gt;
+&lt;p&gt;&lt;img src=&#34;../../img/south_africa.png&#34; alt=&#34;chlorodot map of South African languages&#34; /&gt;&lt;/p&gt;
 &lt;p&gt;Enjoy!&lt;/p&gt;
 </description>
     </item>

@@ -36,7 +36,7 @@ library(sf.chlordot)
 
 Next, download and scrape the data for the map
 
-```{r get_data, warning=FALSE,message=FALSE}
+```{r get_data, warning=FALSE,message=FALSE,eval=FALSE}
 #download the South African shapefile fom gadm
 admin_url <- "https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_ZAF_3_sf.rds"
 download.file(admin_url, destfile = "shapefiles.rds", mode = "wb")
@@ -89,7 +89,7 @@ language_data <- rbindlist(lapply(south_africa_data, function(x) {
 
 the lanaguage data then needs to be transformed before the dot position is calculated. It must be in 'short' format with variables as column names. At the same time we can do some cleaning in order to match the shape areas with the region names from the census and remove data we don't want to plot
 
-```{r transform_data, warning=FALSE,message=FALSE}
+```{r transform_data, warning=FALSE,message=FALSE,eval=FALSE}
 language_data %<>%
   #convert number of speakers to numeric
   mutate(primary_speakers = as.numeric(as.character(primary_speakers))) %>%
@@ -111,13 +111,19 @@ language_data %<>%
 
 then we can calculate the random dot position using calc_dots() from the sf.chlorodot package. This takes three arguments. The first is the df to take the data from (language_data). The second is which variables to calculate positions for. The easiest way to do this is to use names(df) and select from there, though a character vector can also be passed. Finally, n_per_dot is the number of observations (speakers of language x) for each dot on the map. This will affect the look of the map, but also the processing time (lower n_per_dot = greater time) so play around with it a bit.
 
-```{r calc_dots, warning=FALSE,message=FALSE}
+```{r calc_dots, warning=FALSE,message=FALSE,eval=FALSE}
 #calculate the dot positions using calc_dots from the sf.chlorodot package
 sf_dots <- calc_dots(df = language_data, col_names = names(language_data)[2:14], n_per_dot = 1000)
 
 ```
 
 Finally, we can plot the output of this
+```{r, load_data, message=FALSE,warning=FALSE,include=FALSE}
+south_africa = readRDS("C:/Users/Robert/Desktop/New Coding/sf.chlorodot/data/extra/sa.rds")
+language_data = readRDS("C:/Users/Robert/Desktop/New Coding/sf.chlorodot/data/extra/sa_languages.rds")
+sf_dots = readRDS("C:/Users/Robert/Desktop/New Coding/sf.chlorodot/data/extra/sa_dots.rds")
+```
+
 
 ```{r, plot_sa, warning=FALSE,message=FALSE}
 #stolen the background colour scheme from Paul Campbell's blog
@@ -140,6 +146,7 @@ p <- ggplot() +
 
 ```
 
-![South Africa](../../static/img/south_africa.png)
+<img src="../../img/south_africa.png" alt="chlorodot map of South African languages" />
+
 
 Enjoy!
