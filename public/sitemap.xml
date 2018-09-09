@@ -5,6 +5,15 @@
     
     <url>
     
+      <loc>/post/sf.schlorodot/</loc>
+      <lastmod>2018-09-09T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/the-knowledge-4th-august-2018/</loc>
       <lastmod>2018-08-04T00:00:00+00:00</lastmod>
     </url>
@@ -198,8 +207,18 @@
     
     <url>
     
+      <loc>/tags/maps/</loc>
+      <lastmod>2018-09-09T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/tags/package/</loc>
-      <lastmod>2018-05-01T00:00:00+00:00</lastmod>
+      <lastmod>2018-09-09T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -240,6 +259,16 @@
     
       <loc>/tags/rstats/</loc>
       <lastmod>2018-08-04T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/sf/</loc>
+      <lastmod>2018-09-09T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     

@@ -27,6 +27,7 @@ library(sf)
 library(ggplot2)
 library(tidyverse)
 library(data.table)
+library(rvest)
 
 devtools::install_github('RobWHickman/sf.chlorodot')
 library(sf.chlordot)
