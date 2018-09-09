@@ -1,0 +1,110 @@
+---
+title: "Could an Independent Yorkshire Win the World Cup - Data & Scraping"
+author: "Robert Hickman"
+date: '2018-06-05'
+output: pdf_document
+header:
+  caption: ''
+  image: ''
+slug: yorkshire_world_cup_1
+tags:
+- rstats
+- world cup
+- football
+categories: []
+---
+
+
+
+<p>Recently, a Yorkshire national football team <a href="https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples">appeared in a league of national teams for stateless people</a>. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?</p>
+<p>This is the complete script for an short article I wrote for <a href="https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961">CityMetric</a> on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.</p>
+<p>To start, there are 95 historic counts of Great Britain + the 6 counties of Northern Ireland which I included for completeness. These are of a wide variety of sizes and <a href="https://www.citymetric.com/horizons/which-historic-english-county-has-highest-population-3386">approximate population</a> and demographic, so it’s not clear how each would do simply from inspection.</p>
+<p>The data for this comes from <a href="https://www.ordnancesurvey.co.uk/business-and-government/products/boundary-line.html">Boundary Line</a> and the <a href="https://www.opendatani.gov.uk/dataset?q=boundary">Northern Irish Boundary Database</a>, I’ve put them together already, but its simple enough to do it in sf.</p>
+<pre class="r"><code>library(dplyr)
+library(rvest)
+library(data.table)
+library(ggplot2)</code></pre>
+<pre class="r"><code>p &lt;- ggplot(data = uk_counties) +
+  geom_sf() +
+  theme_void()
+
+plot(p)</code></pre>
+<p><img src="/post/2018-06-07-yorkshire_world_cup_1_files/figure-html/historic_counties-1.png" width="672" /></p>
+<p>In order to calculate how good each county team would be, I needed a measure of the ability of all of the players they could field. For this I turned to the FIFA18 video game which rates players along a variety of scales.</p>
+<div id="scrape-player-data" class="section level1">
+<h1>Scrape Player Data</h1>
+<p>To get data on every player in the game I wrote a quick scraping function. This finds the links to every player on all 602 pages of <a href="https://www.fifaindex.com/players/" class="uri">https://www.fifaindex.com/players/</a> and then downloads all the data required on each player.</p>
+<pre class="r"><code>#both steps here take a fair amount of time
+#about 10mins and an hour respectively
+
+#get the links to each players page
+all_player_links &lt;- unlist(lapply(paste0(&quot;https://www.fifaindex.com/players/&quot;, 1:602), function(x) {
+  player_link &lt;- read_html(x) %&gt;%
+    html_nodes(&quot;td:nth-child(4) a&quot;) %&gt;%
+    html_attr(&quot;href&quot;)
+  })) %&gt;%
+  paste0(&quot;https://www.fifaindex.com/&quot;, .)
+
+#big function to scrape every piece of data we could want of each players page
+get_player_data &lt;- function(link) {
+  #read the players web page
+  read &lt;- read_html(link)
+  
+  #basic data
+  name &lt;- read %&gt;%html_nodes(&quot;.big&quot;) %&gt;% html_text()
+  club &lt;- read %&gt;% html_nodes(&quot;.panel-title a+ a&quot;) %&gt;% html_text() %&gt;% .[length(.)]
+  if(length(club) == 0) {
+    club &lt;- NA
+  }
+  nationality &lt;- read %&gt;% html_nodes(&quot;.subtitle a&quot;) %&gt;% html_text()
+  
+  #general info on the player
+  height &lt;- read %&gt;% html_nodes(&quot;.col-lg-5 p:nth-child(1) .pull-right&quot;) %&gt;% html_text() %&gt;%
+    gsub(&quot; cm&quot;, &quot;&quot;, .) %&gt;% as.numeric()
+  weight &lt;- read %&gt;% html_nodes(&quot;.col-lg-5 p:nth-child(2) .pull-right&quot;) %&gt;% html_text() %&gt;%
+    gsub(&quot; kg&quot;, &quot;&quot;, .) %&gt;% as.numeric()
+  foot &lt;- read %&gt;% html_nodes(&quot;.col-lg-5 p:nth-child(3) .pull-right&quot;) %&gt;% html_text()
+  birthdate &lt;- read %&gt;% html_nodes(&quot;.col-lg-5 p:nth-child(4) .pull-right&quot;) %&gt;% html_text() %&gt;%
+    as.Date(&quot;%m/%d/%Y&quot;)
+  age &lt;- read %&gt;% html_nodes(&quot;.col-lg-5 p:nth-child(5) .pull-right&quot;) %&gt;% html_text() %&gt;%
+    as.numeric()
+  main_position &lt;- read %&gt;% html_nodes(&quot;body &gt; div.container.main &gt; div:nth-child(3) &gt; div.col-md-8 &gt; div:nth-child(3) &gt; div.col-lg-5.col-sm-6 &gt; div &gt; div.panel-body &gt; p:nth-child(6) &gt; span &gt; a&quot;) %&gt;% 
+    .[1] %&gt;% html_attr(&quot;title&quot;)
+  work_rate &lt;- read %&gt;% html_nodes(&quot;.col-lg-5 p:nth-child(7) .pull-right&quot;) %&gt;% html_text() %&gt;% 
+    str_split(., &quot; / &quot;) %&gt;% unlist()
+  
+  #the players rating for each skill
+  ratings &lt;- read %&gt;% html_nodes(&quot;.rating&quot;) %&gt;% html_text() %&gt;% as.numeric() %&gt;%
+    as.matrix() %&gt;% t() %&gt;% as.data.frame()
+  names(ratings) &lt;- c(&quot;overall&quot;,&quot;specific&quot;,&quot;ball_control&quot;,&quot;dribbling&quot;,&quot;marking&quot;,&quot;slide_tackle&quot;,&quot;stand_tackle&quot;,
+                      &quot;aggression&quot;,&quot;reactions&quot;,&quot;positioning&quot;,&quot;interceptions&quot;,&quot;vision&quot;,&quot;composure&quot;,&quot;crossing&quot;,
+                      &quot;short_pass&quot;,&quot;long_pass&quot;,&quot;acceleration&quot;,&quot;stamina&quot;,&quot;strength&quot;,&quot;balance&quot;,&quot;sprint_speed&quot;,
+                      &quot;agility&quot;,&quot;jumping&quot;,&quot;heading&quot;,&quot;shot_power&quot;,&quot;finishing&quot;,&quot;long_shots&quot;,&quot;curve&quot;,&quot;free_kicks&quot;,
+                      &quot;penalties&quot;,&quot;volleys&quot;,&quot;gk_positioning&quot;,&quot;gk_diving&quot;,&quot;gk_handling&quot;,&quot;gk_kicking&quot;,&quot;gk_reflexes&quot;)
+  
+  #stick everything into a dataframe to be output
+  df &lt;- data.frame(name = name, club = club, nationality = nationality,
+                   height = height, weight = weight, foot = foot, birthdate = birthdate, age = age,
+                   main_position = main_position, work_rate1 = work_rate[1], work_rate2 = work_rate[2]) %&gt;%
+    cbind(ratings)
+  return(df)
+}
+
+#scrape the info on all players
+all_players_data &lt;- rbindlist(lapply(all_player_links, get_player_data)) %&gt;%
+  setDT() %&gt;%
+  #add an id column for each player
+  .[, id := 1:.N]</code></pre>
+<p>Once that’s scraped and bound we can take a peek at the data. There’s 18k players in total and 48 variables for each so we’ll just look at a few for now.</p>
+<pre class="r"><code>#show a selection of the some key info for each player
+#the id we gave them, their name, nationality, and their overall ability
+head(select(all_players_data, id, name, nationality, overall))</code></pre>
+<pre><code>##    id              name nationality overall
+## 1:  1      Lionel Messi   Argentina      94
+## 2:  2 Cristiano Ronaldo    Portugal      94
+## 3:  3            Neymar      Brazil      92
+## 4:  4       Luis Suárez     Uruguay      92
+## 5:  5      Manuel Neuer     Germany      92
+## 6:  6            De Gea       Spain      91</code></pre>
+<p>Over the course of the next posts, we’ll use this data to calculate a player’s ability in any position on the field. This will then be used to select optimal teams for each nation (or each historic British county). Finally we’ll take the average ability of these optimal teams and use them to simulate the World Cup to get the chance each team has to win the tournament.</p>
+</div>
