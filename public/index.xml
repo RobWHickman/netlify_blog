@@ -16,9 +16,7 @@
       <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/getis-ord-heatmaps-tutorial/</guid>
-      <description>&lt;iframe width=&#34;560&#34; height=&#34;315&#34; src=&#34;https://www.youtube.com/watch?v=G7N4uBZLe1Q&#34; frameborder=&#34;0&#34; allowfullscreen&gt;
-&lt;/iframe&gt;
-&lt;p&gt;Whilst &lt;del&gt;getting some work done&lt;/del&gt; browsing twitter at work today, I came across &lt;a href=&#34;https://twitter.com/jburnmurdoch/status/1047470445459644416&#34;&gt;this tweet&lt;/a&gt; from the always excellent John Burn-Murdoch on the scourge of heatmaps.
+      <description>&lt;p&gt;Whilst &lt;del&gt;getting some work done&lt;/del&gt; browsing twitter at work today, I came across &lt;a href=&#34;https://twitter.com/jburnmurdoch/status/1047470445459644416&#34;&gt;this tweet&lt;/a&gt; from the always excellent John Burn-Murdoch on the scourge of heatmaps.
 What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.&lt;/p&gt;
 &lt;p&gt;For instance, lets load some mapping libraries&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
