@@ -1,0 +1,17 @@
+---
+title: Planning a Pub Crawl Using R
+author: Robert Hickman
+date: '2018-11-22'
+slug: cambridge_pub_crawl
+output: pdf_document
+categories: []
+tags:
+  - maps
+  - pubs
+  - cambridge
+header:
+  caption: ''
+  image: ''
+---
+
+
