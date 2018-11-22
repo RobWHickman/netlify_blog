@@ -16,8 +16,7 @@ header:
 
 
 
-<p>Whilst <del>getting some work done</del> browsing twitter at work today, I came across <a href="https://twitter.com/jburnmurdoch/status/1047470445459644416">this tweet</a> from the always excellent John Burn-Murdoch on the scourge of heatmaps.
-What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.</p>
+<p>Whilst <del>getting some work done</del> browsing twitter at work today, I came across <a href="https://twitter.com/jburnmurdoch/status/1047470445459644416">this tweet</a> from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.</p>
 <p>For instance, lets load some mapping libraries</p>
 <pre class="r"><code>library(tidyverse)
 library(sf)
@@ -98,8 +97,7 @@ p2 &lt;- ggplot(hex_polygons) +
 plot(p2)</code></pre>
 <p><img src="/post/2018-10-04-getis-ord-tutorial_files/figure-html/bin_stops-1.png" width="672" /></p>
 <p>However, this is still pretty confusing. It seems like bus stops are fairly randomly distributed as by chance one hexagon may contain multiple stops at its edges, whereas a neighbour may be juuuust missing out on these.</p>
-<p>To mitigate this effect, we can study the spatial autocorrelation of each hexagon to it’s neighbours. There are multiple ways to do this, but the one I was first introduced to and have used most is the Getis-Ord local statistic. In this example I will include.self()
-which means we are using the Gi* variant of the statistic.</p>
+<p>To mitigate this effect, we can study the spatial autocorrelation of each hexagon to it’s neighbours. There are multiple ways to do this, but the one I was first introduced to and have used most is the Getis-Ord local statistic. In this example I will include.self() which means we are using the Gi* variant of the statistic.</p>
 <p>Basically- we tell R to find all the nearest neighbours of any bin (hexagon- though not necessarily so, we could e.g. use wards, but I think it looks messier). It then calculates the ratio of values within the bin and it’s neighbours, to the total number of points (bus stops). The reported Gi* value is a z statistic- it can be positive (more clustering) or negative (less) and used to find significant clusters. I’m not going to do any of that here- just accept for now that a high Getis_Ord Gi* value means a greater cluster of bus stops in that region.</p>
 <pre class="r"><code>library(spdep)
 

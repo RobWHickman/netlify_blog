@@ -1,0 +1,594 @@
+---
+title: Planning a Pub Crawl Using R
+author: Robert Hickman
+date: '2018-11-22'
+slug: cambridge_pub_crawl
+output: pdf_document
+categories: []
+tags:
+  - maps
+  - pubs
+  - cambridge
+header:
+  caption: ''
+  image: ''
+---
+
+A few weeks ago I went on the first pub crawl I'd been on in years around my city of Cambridge. Around the same time I had also been visiting [4 very good pubs within ~200m of each other](https://www.google.co.uk/maps/@52.2046202,0.1289874,18z) tucked away in a quiet neighbourhood of the town. Together, I wondered if it was possible with freely avaiable data to plan an optimal pub crawl around any town/area of the UK, and also, if it would be feasbile to visit every pub within the city in a single day if travelling optimally.
+
+Once again, I found that the simple features library (sf) for R basically can do all of this pretty simply, with igraph picking up most of the networking slack. In fact, overall it was much much simpler than I thought it would be. In total, I only needed 9 libraries (though granted tidyverse is one).
+
+```{r libraries, warning=FALSE,message=FALSE}
+#data munging
+library(tidyverse)
+library(magrittr)
+
+#scrape pub data
+library(rvest)
+library(googleway)
+
+#spatial manipulation
+#almost all done in sf
+library(sf)
+library(rgdal)
+
+#networking the pubs
+library(igraph)
+library(TSP)
+library(geosphere)
+
+rm(list=ls())
+```
+
+For the data, I was able to get by using [Ordnance Survey data](https://www.ordnancesurvey.co.uk/opendatadownload/products.html#BDLINE) data for the spatial work. I used Boundary Line for the city boundaries (taking the Cambridge Boro Westminster constituency limits as the city boundaries), and OS OpenRoads for all the road work. These are freely avaiable via email using the link above.
+
+For reproducibility, these are both presented as if saved in path/to/os/data with folders called ./roads and ./boundary containing the extracted files from both of these.
+
+```{r real_data_loading, warning=FALSE,message=FALSE,echo=FALSE}
+file_path <- "C:/Users/Alaa/Desktop/geo_data/pub_salesman"
+
+cambridge <- readRDS(file.path(file_path, "cambridge.rds"))
+nodes <- readRDS(file.path(file_path, "cambridge_nodes.rds"))
+roads <- readRDS(file.path(file_path, "cambridge_roads.rds"))
+```
+
+```{r fake_data_loading, warning=FALSE,message=FALSE,eval=FALSE}
+file_path <- "path/to/os/data"
+
+#load the westminster constituency boundaries
+cambridge <- readOGR(dsn = file.path(file_path, "boundary/Data/GB"), 
+                     layer = "westminster_const_region") %>%
+  #convert to sf
+  st_as_sf() %>%
+  #select only the cambridge constituency
+  filter(NAME == "Cambridge Boro Const") %>%
+  #get rid of associated data for cleanness
+  select()
+
+#load the road link and node data
+#uses the uk national grid to partion road files
+#https://en.wikivoyage.org/wiki/National_Grid_(Britain)
+#cambridge is in grid TL
+roads <- readOGR(dsn = file.path(file_path, "roads/data"), 
+                     layer = "TL_RoadLink") %>%
+  st_as_sf() %>%
+  #transform to the crs of the city boundary
+  st_transform(st_crs(cambridge)) %>%
+  #take only the roads which cross into the city
+  .[unlist(st_intersects(cambridge, .)),]
+
+nodes <- readOGR(dsn = file.path(file_path, "roads/data"), 
+                     layer = "TL_RoadNode")
+#converting straight to sf gives an error so munge data manually
+nodes <- cbind(nodes@data, nodes@coords) %>%
+  st_as_sf(coords = c("coords.x1", "coords.x2"),
+           crs = st_crs("+init=epsg:27700")) %>%
+  st_transform(st_crs(cambridge)) %>%
+  #take only nodes which are related to the roads we previously selected
+  .[which(.$identifier %in% c(as.character(roads$startNode), 
+                              as.character(roads$endNode))),]
+
+```
+
+Once we have these we can make a quick plot of the layout of the city
+
+```{r roads_plot, warning=FALSE,message=FALSE}
+#quickly plot the roads and nodes data
+(p1 <- ggplot(cambridge) +
+   geom_sf() +
+   geom_sf(data = roads, colour = "black") +
+   geom_sf(data = nodes, colour = "red", alpha = 0.5, size = 0.5) +
+   theme_minimal())
+
+```
+
+Next we need point locations for all the pubs in Cambridge. Fortunately [pubsgalore.co.uk](www.pubsgalore.co.uk) has us covered with a pretty extensive list. It doesn't contain the college bars of the University which is a bit of a shame, but is still a pretty good sample of 199 pubs in/around Cambridge.
+
+We want the name and address of every open pub which this will scrape.
+
+```{r get_pub_data, warning=FALSE,message=FALSE,eval=FALSE}
+#page with every pub in cambridge
+pub_page <- "https://www.pubsgalore.co.uk/towns/cambridge/cambridgeshire/" %>%
+  read_html()
+
+
+open_pubs <- pub_page %>%
+  html_nodes(".pubicons .pubclosed") %>%
+  html_attr("src") %>%
+  grep("grey", .)
+
+pub_info <- pub_page %>%
+  html_nodes("#pagelist a") %>%
+  html_attr("href") %>%
+  .[open_pubs] %>%
+  paste0("https://www.pubsgalore.co.uk", .) %>%
+  lapply(., function(single_pub) {
+    pub_page_read <- single_pub %>%
+      read_html()
+    
+    #get the name of the pub
+    pub_name <- pub_page_read %>%
+      html_nodes(".pubname") %>%
+      html_text()
+    
+    #get the address of the pub 
+    line1 <- pub_page_read %>% html_nodes(".address") %>% html_text()
+    line2 <- pub_page_read %>% html_nodes(".town") %>% html_text()
+    line3 <- pub_page_read %>% html_nodes(".postcode") %>% html_text()
+    
+    pub_address <- paste0(line1, ", ", line2, ", ", line3)
+    
+    #put together into data.frame
+    pub_data <- data.frame(name = pub_name, address = pub_address)
+    return(pub_data)
+  }) %>%
+  #rbind the lapply results
+  do.call(rbind, .) %>%
+  #remove duplicated pub addresses
+  filter(!duplicated(address))
+
+```
+
+```{r google_api_key, warning=FALSE,message=FALSE,echo=FALSE}
+key <- "AIzaSyDu83XT3CQ-O1xfx-QZvOjgnC6Iq4tk0Qo"
+pubs <- readRDS(file.path(file_path, "cambridge_pubs.rds"))
+```
+
+We then need to geocode these adresses into coordinates. Because ggmap has been playing up for me, I tend to use the googleway package with a Google API key which you can get for free [here](https://developers.google.com/maps/documentation/javascript/get-api-key). My key isn't in the code published here for obvious reasons.
+
+These coordinates are then bound back onto the pub df and we filter out only the pubs which are located within the city limits (103).
+
+```{r get_pub_locations, warning=FALSE,message=FALSE,eval=FALSE}
+pubs <- pub_info$address %>%
+  #convert to character
+  as.character() %>%
+  #find the coords of every pub address using googleway
+  lapply(., function(address) {
+    #get the coords
+    coords <- google_geocode(address, key = key) %>%
+      .$results %>%
+      .$geometry %>%
+      .$location %>%
+      #covert to df and add the address back
+      data.frame() %>%
+      mutate(address = address)
+  }) %>%
+  #rbind the results
+  do.call(rbind, .) %>%
+  #merge back in the pub names
+  merge(pub_info, by = "address") %>%
+  #convert to sf
+  st_as_sf(coords = c("lng", "lat"),
+           crs = st_crs("+init=epsg:4326"),
+           remove = FALSE) %>%
+  #convert to the same crs as the city shapefile
+  st_transform(crs = st_crs(cambridge)) %>%
+  #only take those which fall within the city shapefile
+  #the postal district is a little large and extends into Cambridgeshire
+  .[unlist(st_contains(cambridge, .)),]
+```
+
+If we plot these we can see that most are in the very centre of the city, with some sparsely distributed out in Trumpington (south), Cherry Hinton (east), and Arbury (north).
+
+```{r pubs_plot, warning=FALSE,message=FALSE}
+#quickly plot the roads and nodes data
+(p2 <- ggplot(cambridge) +
+   geom_sf() +
+   geom_sf(data = roads, colour = "black") +
+   #pubs in blue
+   geom_sf(data = pubs, colour = "blue", size = 1.5) +
+   theme_minimal())
+
+```
+
+We could just take the nearest roads to each pub and then easily create a node graph using the lookup between the roads and nodes in the OS data. However, I wanted to play around with manipulating the spatial data (this is a learning exercise after all) and so decided to see how 'accurate' I could get the distance on the optimal pub crawl path. In reality, the point locations given by google are probably slightly off anyway, but I'm going to ignore that.
+
+In order to include 'half-roads' (i.e. when the pub is halfway down a road you don't want to walk the full length of the road), I need to first find the nearest point on _any_ road to each pub. dist2Line from the geosphere package does this nicely, though it does require turning our sf objects back into SpatialDataFrames.
+
+(this is by far the longest step in the script btw)
+
+```{r load_pub_distances, warning=FALSE,message=FALSE,echo=FALSE}
+road_distances <- readRDS(file.path(file_path, "cambridge_road_distances.rds"))
+```
+
+
+```{r road_pub_distances, warning=FALSE,message=FALSE,eval = FALSE}
+#convert to spatial for dist2Line
+pubs_spatial <- st_transform(pubs, crs = st_crs("+init=epsg:4326")) %>%
+  as_Spatial()
+roads_spatial <- st_transform(roads, crs = st_crs("+init=epsg:4326")) %>%
+  as_Spatial()
+
+#finds the distance to each nearest line and that point
+road_distances <- suppressWarnings(dist2Line(pubs_spatial, roads_spatial)) %>%
+  as.data.frame() %>%
+  #convert to sf
+  st_as_sf(coords = c("lon", "lat"),
+           crs = st_crs("+init=epsg:4326"),
+           remove = FALSE) %>%
+  st_transform(crs = st_crs(cambridge))
+```
+
+Taking a peek at these reveals the distance of each pub the nearest road, and the ID of that road and the point on the road nearest the pub.
+
+```{r peek_road_distances, warning=FALSE,message=FALSE}
+#display the first few of these
+head(road_distances)
+```
+
+I then want to break up the roads that these point lie on. To illustrate this, I'll use the 3rd pub in the dataset, which is The Robin Hood in Cherry Hinton (as the plots look better and make more sense than the first two in my opinion).
+
+First we take the pub, and all roads and their nodes within 100m of the pub:
+
+```{r splitting_roads1, warning=FALSE,message=FALSE}
+#take the first pub
+x_pub <- pubs[3,]
+#get all roads within 100m and their nodes
+x_roads <- roads %>%
+  .[unlist(st_intersects(st_buffer(x_pub, 100), .)),]
+x_nodes <- nodes %>%
+  .[which(.$nodeid %in% c(as.character(x_roads$start), 
+                          as.character(x_roads$end))),]
+
+#plot the roads local to this pub
+(p3 <- ggplot() +
+  geom_sf(data = x_roads) +
+  geom_sf(data = x_nodes, colour = "red", alpha = 0.5) +
+  geom_sf(data = x_pub, colour = "blue") +
+  theme_minimal())
+
+```
+
+We then use the point on any road nearest to this pub (green) as the 'entrance' of the pub (this may not strictly be the case and it might be possible to instead match road names to the address, but whatever). 
+
+Using this point, we split up the road it lies on into two new separate roads (in orange and purple). To get to this pub you would have to travel down one of these to the green point.
+
+```{r splitting_roads2, warning=FALSE,message=FALSE}
+#find the nearest point that lies on a road
+x_nearest_road_point <- road_distances[3,]
+
+#split that road into two over that point
+x_split_roads <- roads %>%
+  .[which(.$id == x_nearest_road_point$ID),] %>%
+  st_difference(., st_buffer(x_nearest_road_point, 0.2)) %>%
+    st_cast("LINESTRING") 
+
+#add to the plot
+(p3 <- p3 + 
+    geom_sf(data = x_split_roads[1,], colour = "purple", size = 1.5, alpha = 0.5) +
+    geom_sf(data = x_split_roads[2,], colour = "goldenrod", size = 1.5, alpha = 0.5) +
+    geom_sf(data = x_nearest_road_point, colour = "darkgreen", size = 2))
+```
+I could have used the green 'entrance' nodes for the travelling salesman part of the problem, but decided also to create roads from this 'entrance' to the geocoded location of the pub (blue). This is probably the equivalent of travelling from the pavement to the bar of each pub and worthy of consideration*.
+
+These roads are created by binding the green and blue points together from each pub, grouping them, and then casting a line between them.
+
+*another reason to take this into account is that some pubs may appear far away from roads. One example that I visit fairly often is [Fort St George](https://www.google.co.uk/maps/place/Fort+St+George/@52.2123057,0.1272911,18.75z/data=!4m5!3m4!1s0x47d870ecb4e8556d:0x3bfb0ff82c243075!8m2!3d52.2124367!4d0.1278073) which is on a river footpath and does not have direct road access.
+
+```{r splitting_roads3, warning=FALSE,message=FALSE}
+#combine the green point on the roads with the point for the pub
+x_pub_entrance <- select(x_nearest_road_point) %>%
+  rbind(., select(x_pub)) %>%
+  group_by("pub road") %>%
+  summarise() %>%
+  #cast to a line (for a new road)
+  st_cast('LINESTRING')
+
+#plot the pub entrance
+(p3 <- p3 +
+    geom_sf(data = x_pub_entrance, colour = "lightblue", size = 1.5))
+
+#remove all the extra objects we created in the example
+rm(list=ls()[grep("x_", ls())])
+```
+First we create all the new nodes (the green pub entrances, and the blue pub locations)
+
+```{r new_nodes, warning=FALSE,message=FALSE}
+#add information to the pubs df
+pubs <- pubs %>%
+  mutate(pub = 1:nrow(.), 
+         id = (max(nodes$id)+1):(max(nodes$id) + nrow(.)),
+         nodeid = NA,
+         class = "pubnode")
+
+#bind the pubs to the nodes data frame
+nodes <- rbind(nodes, select(pubs, pub, nodeid, id, class))
+
+#add the nodes found as the nearest road point to each pub to the nodes df
+new_nodes <- road_distances %>%
+  select() %>%
+  mutate(pub = pubs$pub, 
+         id = (max(nodes$id)+1):(max(nodes$id)+nrow(.)),
+         nodeid = NA,
+         class = "entrancenode")
+nodes <- rbind(nodes, new_nodes)
+
+```
+
+Then we create all of the split roads in a for loop and all of the roads from the green to the blue points. These are bound back into the original roads data frame.
+```{r new_roads, warning=FALSE,message=FALSE}
+#split up the roads that have a new node for the netrance of a pub
+roads_2_split <- roads %>%
+  slice(unique(road_distances$ID))
+#leave the rest alone
+roads <- roads %>%
+  slice(-unique(road_distances$ID))
+
+#for each new node split up the road that it bisects it 
+#as we did in the example
+for(node in seq(nrow(new_nodes))) {
+  #find the road that the pub is nearest to
+  split_road <- st_intersects(st_buffer(new_nodes[node,], .2),
+                              roads_2_split) %>%
+    unlist() %>%
+    roads_2_split[.,]
+  
+  #split this road up
+  split_roads <- st_difference(split_road, st_buffer(new_nodes[node,], .2)) %>%
+    st_cast("LINESTRING") %>%
+    select(start_id, end_id, id)
+
+  #keep hold of the old id
+  old_id <- unique(split_roads$id)
+  
+  #get rid of this road from the df
+  roads_2_split <- roads_2_split %>%
+    slice(-which(roads_2_split$id == old_id))
+
+  #get the nodes for the old road
+  old_nodes <- filter(nodes, id %in% c(unique(split_roads$start_id),
+                                       unique(split_roads$end_id)))
+  
+  #add the correct nodes to the newly split road
+  split_roads$start_id <- old_nodes$id[
+      unlist(st_contains(st_buffer(split_roads, .2), old_nodes))
+    ]
+  split_roads$end_id <- new_nodes$id[node]
+  
+  #add in new information for the new road
+  split_roads %<>%
+    mutate(id = max(roads_2_split$id) + seq(nrow(split_roads)),
+           class = "split road",
+           start = NA, 
+           end = NA)
+  #bind back to the original df
+  roads_2_split <- rbind(roads_2_split, split_roads)
+}
+
+#bind the split roads to the original roads df
+roads <- rbind(roads, roads_2_split)
+
+#generate paths from the nearest point on a road to the pub gecoded location
+#i.e. walking from the pavement to the bar itself
+pub_roads <- select(road_distances) %>%
+  #add in information and bind to equivalent pub points
+  mutate(name = pubs$name, start_id = pubs$id, end_id = new_nodes$id) %>%
+  rbind(., mutate(select(pubs, name, start_id = id), end_id = new_nodes$id)) %>%
+  #group each pub together
+  group_by(name, start_id, end_id) %>%
+  summarise() %>%
+  #cast to a line
+  st_cast('LINESTRING') %>%
+  ungroup() %>%
+  #munge required information
+  mutate(id = max(roads$id)+1 + seq(nrow(.)),
+         start = NA,
+         end = NA,
+         class = "pub road") %>%
+  select(class, id, start_id, end_id, start, end)
+
+#bind these into the original road df
+roads <- rbind(roads, pub_roads)
+```
+
+Now that I have all the pubs and roads I want to traverse, I can move onto the [travelling salesman](https://en.wikipedia.org/wiki/Travelling_salesman_problem) portion of the problem- what is the shortest journey between all of them.
+
+For this, I need to use the igraph package and convert my df of roads (which contains the node at each end of every road) into a weighted node graph. Once I have this, I iterate through every combination of pubs and find the shortest path between the two and the vertices that comprise it.
+
+```{r prepare_node_graph, warning=FALSE,message=FALSE}
+#add in the length between each pair of nodes using st_length
+nodes_df <- roads %>%
+  mutate(length = as.numeric(st_length(.))) %>%
+  #select only the node ids and length between them
+  select(start_id, end_id, length)
+#get rid of the geometry
+st_geometry(nodes_df) = NULL
+
+#create a node graph from this df
+#uses graph.data.frame from the igraph package
+node_graph <- graph.data.frame(nodes_df, directed=FALSE)
+
+#to get the shortest distance between every pair of pubs
+#need to create each combination of pub id number
+combinations <- combn(1:nrow(pubs), 2)
+```
+
+```{r load_journey_data, warning=FALSE,message=FALSE,echo=FALSE}
+journeys <- readRDS(file.path(file_path, "cambridge_journeys.rds"))
+```
+ 
+The shortest path between any two pubs is found using igraph::get.shortest.paths() and then extracting the path of nodes. Each vertex of the path is then found by using pairwise combinations of the nodes, and the travelled vertices for each pub->pub journey are saved into a (large) df.
+
+The whole thing is pretty quick but obviously the number of combinations grows quickly. For 103 pubs in Cambridge, it takes ~20mins on my machine.
+
+```{r find_shortest_paths, message=FALSE,warning=FALSE,eval=FALSE}
+#go through each of these pairs
+journeys <- lapply(seq(length(combinations)/2), function(combination) {
+  #the two pubs we'll test
+  pub1 <- combinations[1,][combination]
+  pub2 <- combinations[2,][combination]
+  
+  #get the shortest path (node-node) between these two pubs
+  travel_nodes <- get.shortest.paths(node_graph,
+                                     from = as.character(pubs$id[pub1]),
+                                     to = as.character(pubs$id[pub2]),
+                                     weights = E(node_graph)$length) %>%
+    .$vpath %>%
+    unlist() %>%
+    names() %>%
+    as.numeric()
+  
+  #find the vertices that connect between these nodes
+  connecting_vertices <- lapply(seq(length(travel_nodes)-1), function(node_pair) {
+    between_nodes <- travel_nodes[c(node_pair:(node_pair+1))]
+    connecting_vertex <- which(roads$start_id %in% between_nodes &
+                                 roads$end_id %in% between_nodes)
+    #if more than one potential vertex, take the shorter one
+    if(length(connecting_vertex) > 1) {
+      connecting_vertex <- connecting_vertex[
+        which.min(st_length(roads[connecting_vertex,]))
+      ]
+    }
+    
+  return(connecting_vertex)
+  }) %>%
+    unlist() %>%
+    roads[.,] %>%
+    #id this journey between pubs
+    mutate(journey = paste0(pub1, "-", pub2))
+  
+  return(connecting_vertices)
+}) %>%
+  #rbind it all together
+  do.call(rbind, .)
+
+```
+
+It's possible to check a journey between two pubs easily using this df, and show that it does seem like igraph is finding the shortest route between the two
+
+```{r check_shortest_paths, warning=FALSE,message=FALSE}
+#get only the journey between two random pubs
+set.seed(3459)
+x_random_numbers <- sample(nrow(pubs), 2)
+x_journey <- journeys %>%
+  filter(journey == paste0(x_random_numbers[1], "-", x_random_numbers[2]))
+
+#get the nodes of this journey
+x_journey_nodes <- nodes %>%
+  filter(id %in% c(as.character(x_journey$start_id),
+                   as.character(x_journey$end_id)))
+
+#find the pubs at the start and end of this journey
+#first and sixty-ninth as defined earlier
+x_journey_pubs <- pubs[x_random_numbers,]
+
+#get all roads within the crow-distance btween each pub
+x_local_roads <- roads[unlist(st_intersects(
+  st_buffer(x_journey_pubs, max(as.numeric(st_distance(x_journey_pubs)))),
+  roads
+  )),]
+
+#plot the shortest path between these two pubs
+(p4 <- ggplot() +
+    geom_sf(data = x_local_roads, colour = "grey") +
+    geom_sf(data = x_journey_nodes, colour = "black") +
+    geom_sf(data = x_journey, colour = "black") +
+    geom_sf(data = x_journey_pubs, colour = "blue", alpha = 0.5, size = 2) +
+    theme_minimal())
+
+#remove all the extra objects we created in the example
+rm(list=ls()[grep("x_", ls())])
+
+```
+
+Finally, I have to find the shortest combination of these journeys which visits every pub at least once. For this I find the shortest distances between each pub and every other pub and bind it into a matrix.
+
+If you just wanted to find the distance of a pub crawl (and not the path) you could just skip to here and save a lot of time.
+
+This matrix of 103x103 is then converted into TSP object using TSP::TSP() and converted to a Hamtiltonian path problem by inserting a dummy variable. The TSP is then solved given the order of nodes (in this case, just pubs) to visit.
+
+A lot of help in doing this came from the StackOverflow answer [here](https://stackoverflow.com/questions/27363653/find-shortest-path-from-x-y-coordinates-with-start-%E2%89%A0-end)
+
+```{r}
+#get the distances 
+distances <- lapply(seq(nrow(pubs)), function(node) {
+  distance <- shortest.paths(node_graph, 
+                             v = as.character(pubs$id[node]),
+                             to = as.character(pubs$id[seq(nrow(pubs))]), 
+                             weights = E(node_graph)$length)
+}) %>%
+  do.call(rbind, .) %>%
+  as.dist() %>%
+  TSP()
+
+#insert a dummy city to turn this into a Hamiltonian path question
+#i.e. we do not need to return to the start at the end
+tsp <- insert_dummy(distances, label = "cut")
+
+#solve the shortest Hamiltonian tour of each pub in Cambridge
+#get the total distance ()
+tour <- solve_TSP(tsp, method="2-opt", control=list(rep=10))
+tour
+
+#find the order of pubs to visit in an optimal Hamtilonian path
+tour <-  unname(cut_tour(tour, "cut"))
+tour
+
+```
+So to visit every pub, you'd expect to walk just under 41km, which fits with eye-testing the size of Cambridge (approx 10km diameter).
+
+In order to plot this, the pub order is converted into strings in the format we've used for journeys between pubs (e.g. "1-2") and each journey is then extracted from the df of shortest journeys between all pubs.
+
+```{r get_shortest_tour, warning=FALSE,message=FALSE}
+#it might be possible that doing some journeys in 'reverse' is faster
+#when considering the tour of all pubs
+#e.g. from pub2 -> pub1 rather than the other way round
+rev_journeys <- journeys
+rev_journeys$journey <- strsplit(journeys$journey, "-") %>%
+  #reverse the journey tag
+  lapply(., rev) %>%
+  lapply(., paste, collapse = "-")
+
+#bind these together in a df of all journeys
+journeys <- rbind(journeys, rev_journeys) %>%
+  mutate(journey = as.character(journey))
+
+#take the nodes from the shortest tour and arrange them as in
+#the journeys tag for each path between two pubs
+tour_strings <- paste0(tour, "-", lead(tour)) %>%
+  .[-grep("NA", .)] %>%
+  data.frame(journey = .,
+             order = 1:length(.))
+
+#use this to find each vertex that needs traversing in order to complete
+#the shortest tour of all pubs
+#subset this from the df of all shortest journeys between any two pubs
+shortest_tour <- journeys[which(journeys$journey %in% tour_strings$journey),] %>%
+  merge(., tour_strings,  by = "journey")
+```
+
+All that's left to do is plot this shortest pub crawl
+
+```{r plot_shortest_tour, warning=FALSE,message=FALSE}
+(p5 <- ggplot(data = shortest_tour) +
+  geom_sf(data = cambridge) +
+  geom_sf(data = roads, size = 0.5) + 
+  geom_sf(colour = "red", size = 1.5, alpha = 0.7) +
+  geom_sf(data = pubs, colour = "blue", size = 1.5) +
+  theme_minimal() +
+  ggtitle("Hamiltonian Path of Every Pub in the City of Cambridge"))
+
+```
+
+As it turns out, you'd want to start in Trumpington at The Lord Byron Inn and then get into central Cambridge where you dart around a lot before heading out to the north and finally the east at The Red Lion in Cherry Hinton. All together this script calculates a distances of 40km (to be 'exact') to visit every pub, which is actually kind of doable in a single day (if you forgo the drinking).
+

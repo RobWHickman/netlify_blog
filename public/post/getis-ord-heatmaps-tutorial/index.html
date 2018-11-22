@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="theme" content="hugo-academic">
-  <meta name="generator" content="Hugo 0.37.1" />
+  <meta name="generator" content="Hugo 0.32.2" />
   <meta name="author" content="Robert Hickman">
 
   
@@ -17,7 +17,7 @@
       
     
   
-  <meta name="description" content="Whilst getting some work done browsing twitter at work today, I came across this tweet from the always excellent John Burn-Murdoch on the scourge of heatmaps.What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.
+  <meta name="description" content="Whilst getting some work done browsing twitter at work today, I came across this tweet from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.
 For instance, lets load some mapping libraries
 library(tidyverse)library(sf)library(rgdal)For this blog I’m going to use data of bus stops in London, because there’s an absolute ton of them and because I love the London Datastore and it was the first public, heavy, point data file I came across.">
 
@@ -80,7 +80,7 @@ library(tidyverse)library(sf)library(rgdal)For this blog I’m going to use d
   <meta property="og:site_name" content="Robert Hickman">
   <meta property="og:url" content="/post/getis-ord-heatmaps-tutorial/">
   <meta property="og:title" content="How I Learned To Stop Worrying and Love Heatmaps | Robert Hickman">
-  <meta property="og:description" content="Whilst getting some work done browsing twitter at work today, I came across this tweet from the always excellent John Burn-Murdoch on the scourge of heatmaps.What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.
+  <meta property="og:description" content="Whilst getting some work done browsing twitter at work today, I came across this tweet from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.
 For instance, lets load some mapping libraries
 library(tidyverse)library(sf)library(rgdal)For this blog I’m going to use data of bus stops in London, because there’s an absolute ton of them and because I love the London Datastore and it was the first public, heavy, point data file I came across.">
   <meta property="og:locale" content="en-us">
@@ -329,8 +329,7 @@ MathJax.Hub.Config({
 
 
       <div class="article-style" itemprop="articleBody">
-        <p>Whilst <del>getting some work done</del> browsing twitter at work today, I came across <a href="https://twitter.com/jburnmurdoch/status/1047470445459644416">this tweet</a> from the always excellent John Burn-Murdoch on the scourge of heatmaps.
-What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.</p>
+        <p>Whilst <del>getting some work done</del> browsing twitter at work today, I came across <a href="https://twitter.com/jburnmurdoch/status/1047470445459644416">this tweet</a> from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.</p>
 <p>For instance, lets load some mapping libraries</p>
 <pre class="r"><code>library(tidyverse)
 library(sf)
@@ -411,8 +410,7 @@ p2 &lt;- ggplot(hex_polygons) +
 plot(p2)</code></pre>
 <p><img src="/post/2018-10-04-getis-ord-tutorial_files/figure-html/bin_stops-1.png" width="672" /></p>
 <p>However, this is still pretty confusing. It seems like bus stops are fairly randomly distributed as by chance one hexagon may contain multiple stops at its edges, whereas a neighbour may be juuuust missing out on these.</p>
-<p>To mitigate this effect, we can study the spatial autocorrelation of each hexagon to it’s neighbours. There are multiple ways to do this, but the one I was first introduced to and have used most is the Getis-Ord local statistic. In this example I will include.self()
-which means we are using the Gi* variant of the statistic.</p>
+<p>To mitigate this effect, we can study the spatial autocorrelation of each hexagon to it’s neighbours. There are multiple ways to do this, but the one I was first introduced to and have used most is the Getis-Ord local statistic. In this example I will include.self() which means we are using the Gi* variant of the statistic.</p>
 <p>Basically- we tell R to find all the nearest neighbours of any bin (hexagon- though not necessarily so, we could e.g. use wards, but I think it looks messier). It then calculates the ratio of values within the bin and it’s neighbours, to the total number of points (bus stops). The reported Gi* value is a z statistic- it can be positive (more clustering) or negative (less) and used to find significant clusters. I’m not going to do any of that here- just accept for now that a high Getis_Ord Gi* value means a greater cluster of bus stops in that region.</p>
 <pre class="r"><code>library(spdep)
 
