@@ -397,7 +397,8 @@ journeys &amp;lt;- lapply(seq(length(combinations)/2), function(combination) {
 &lt;p&gt;It’s possible to check a journey between two pubs easily using this df, and show that it does seem like igraph is finding the shortest route between the two&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get only the journey between two random pubs
 set.seed(3459)
-x_random_numbers &amp;lt;- sample(nrow(pubs), 2)
+x_random_numbers &amp;lt;- sample(nrow(pubs), 2) %&amp;gt;%
+  sort()
 x_journey &amp;lt;- journeys %&amp;gt;%
   filter(journey == paste0(x_random_numbers[1], &amp;quot;-&amp;quot;, x_random_numbers[2]))
 
@@ -407,21 +408,22 @@ x_journey_nodes &amp;lt;- nodes %&amp;gt;%
                    as.character(x_journey$end_id)))
 
 #find the pubs at the start and end of this journey
-#first and sixty-ninth as defined earlier
+#random pubs as defined earlier
 x_journey_pubs &amp;lt;- pubs[x_random_numbers,]
 
-#get all roads within the crow-distance btween each pub
-x_local_roads &amp;lt;- roads[unlist(st_intersects(
-  st_buffer(x_journey_pubs, max(as.numeric(st_distance(x_journey_pubs)))),
-  roads
-  )),]
+#get all roads within a kilometer of each pub
+x_local_roads &amp;lt;- roads %&amp;gt;%
+  .[unlist(st_intersects(
+    #select all roads that at least will be between the two pubs
+    st_buffer(x_journey_pubs, max(st_distance(x_journey_pubs)/1.5)
+  ), .)),]
 
 #plot the shortest path between these two pubs
 (p4 &amp;lt;- ggplot() +
     geom_sf(data = x_local_roads, colour = &amp;quot;grey&amp;quot;) +
     geom_sf(data = x_journey_nodes, colour = &amp;quot;black&amp;quot;) +
     geom_sf(data = x_journey, colour = &amp;quot;black&amp;quot;) +
-    geom_sf(data = x_journey_pubs, colour = &amp;quot;blue&amp;quot;, alpha = 0.5, size = 2) +
+    geom_sf(data = x_journey_pubs, colour = &amp;quot;blue&amp;quot;, alpha = 0.5, size = 3) +
     theme_minimal())&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;/post/2018-11-22-cambridge_pub_crawl_files/figure-html/check_shortest_paths-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#remove all the extra objects we created in the example
@@ -483,7 +485,7 @@ journeys &amp;lt;- rbind(journeys, rev_journeys) %&amp;gt;%
 tour_strings &amp;lt;- paste0(tour, &amp;quot;-&amp;quot;, lead(tour)) %&amp;gt;%
   .[-grep(&amp;quot;NA&amp;quot;, .)] %&amp;gt;%
   data.frame(journey = .,
-             order = 1:length(.))
+             journey_order = 1:length(.))
 
 #use this to find each vertex that needs traversing in order to complete
 #the shortest tour of all pubs
@@ -494,12 +496,15 @@ shortest_tour &amp;lt;- journeys[which(journeys$journey %in% tour_strings$journe
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;(p5 &amp;lt;- ggplot(data = shortest_tour) +
   geom_sf(data = cambridge) +
   geom_sf(data = roads, size = 0.5) + 
-  geom_sf(colour = &amp;quot;red&amp;quot;, size = 1.5, alpha = 0.7) +
+  geom_sf(aes(colour = journey_order), size = 1.5, alpha = 0.7) +
+  scale_colour_gradient(high = &amp;quot;darkred&amp;quot;, low = &amp;quot;orange&amp;quot;, name = &amp;quot;journey order&amp;quot;) +
   geom_sf(data = pubs, colour = &amp;quot;blue&amp;quot;, size = 1.5) +
   theme_minimal() +
   ggtitle(&amp;quot;Hamiltonian Path of Every Pub in the City of Cambridge&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;/post/2018-11-22-cambridge_pub_crawl_files/figure-html/plot_shortest_tour-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;As it turns out, you’d want to start in Trumpington at The Lord Byron Inn and then get into central Cambridge where you dart around a lot before heading out to the north and finally the east at The Red Lion in Cherry Hinton. All together this script calculates a distances of 40km (to be ‘exact’) to visit every pub, which is actually kind of doable in a single day (if you forgo the drinking).&lt;/p&gt;
+&lt;p&gt;As it turns out, you’d want to start in Trumpington at The Lord Byron Inn and then get into central Cambridge where you dart around a lot before heading out to the north and finally the east at The Red Lion in Cherry Hinton.&lt;/p&gt;
+&lt;p&gt;A bigger image of the above can be found at imgure &lt;a href=&#34;https://i.imgur.com/r18SG2B.png&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;All together this script calculates a distances of ~41km (give or take probably quite a bit) to visit every pub, which is actually kind of doable in a single day (if you forgo [at least some of] the drinking).&lt;/p&gt;
 </description>
     </item>
     

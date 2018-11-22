@@ -397,7 +397,8 @@ journeys &lt;- lapply(seq(length(combinations)/2), function(combination) {
 <p>It’s possible to check a journey between two pubs easily using this df, and show that it does seem like igraph is finding the shortest route between the two</p>
 <pre class="r"><code>#get only the journey between two random pubs
 set.seed(3459)
-x_random_numbers &lt;- sample(nrow(pubs), 2)
+x_random_numbers &lt;- sample(nrow(pubs), 2) %&gt;%
+  sort()
 x_journey &lt;- journeys %&gt;%
   filter(journey == paste0(x_random_numbers[1], &quot;-&quot;, x_random_numbers[2]))
 
@@ -407,21 +408,22 @@ x_journey_nodes &lt;- nodes %&gt;%
                    as.character(x_journey$end_id)))
 
 #find the pubs at the start and end of this journey
-#first and sixty-ninth as defined earlier
+#random pubs as defined earlier
 x_journey_pubs &lt;- pubs[x_random_numbers,]
 
-#get all roads within the crow-distance btween each pub
-x_local_roads &lt;- roads[unlist(st_intersects(
-  st_buffer(x_journey_pubs, max(as.numeric(st_distance(x_journey_pubs)))),
-  roads
-  )),]
+#get all roads within a kilometer of each pub
+x_local_roads &lt;- roads %&gt;%
+  .[unlist(st_intersects(
+    #select all roads that at least will be between the two pubs
+    st_buffer(x_journey_pubs, max(st_distance(x_journey_pubs)/1.5)
+  ), .)),]
 
 #plot the shortest path between these two pubs
 (p4 &lt;- ggplot() +
     geom_sf(data = x_local_roads, colour = &quot;grey&quot;) +
     geom_sf(data = x_journey_nodes, colour = &quot;black&quot;) +
     geom_sf(data = x_journey, colour = &quot;black&quot;) +
-    geom_sf(data = x_journey_pubs, colour = &quot;blue&quot;, alpha = 0.5, size = 2) +
+    geom_sf(data = x_journey_pubs, colour = &quot;blue&quot;, alpha = 0.5, size = 3) +
     theme_minimal())</code></pre>
 <p><img src="/post/2018-11-22-cambridge_pub_crawl_files/figure-html/check_shortest_paths-1.png" width="672" /></p>
 <pre class="r"><code>#remove all the extra objects we created in the example
@@ -483,7 +485,7 @@ journeys &lt;- rbind(journeys, rev_journeys) %&gt;%
 tour_strings &lt;- paste0(tour, &quot;-&quot;, lead(tour)) %&gt;%
   .[-grep(&quot;NA&quot;, .)] %&gt;%
   data.frame(journey = .,
-             order = 1:length(.))
+             journey_order = 1:length(.))
 
 #use this to find each vertex that needs traversing in order to complete
 #the shortest tour of all pubs
@@ -494,9 +496,12 @@ shortest_tour &lt;- journeys[which(journeys$journey %in% tour_strings$journey),]
 <pre class="r"><code>(p5 &lt;- ggplot(data = shortest_tour) +
   geom_sf(data = cambridge) +
   geom_sf(data = roads, size = 0.5) + 
-  geom_sf(colour = &quot;red&quot;, size = 1.5, alpha = 0.7) +
+  geom_sf(aes(colour = journey_order), size = 1.5, alpha = 0.7) +
+  scale_colour_gradient(high = &quot;darkred&quot;, low = &quot;orange&quot;, name = &quot;journey order&quot;) +
   geom_sf(data = pubs, colour = &quot;blue&quot;, size = 1.5) +
   theme_minimal() +
   ggtitle(&quot;Hamiltonian Path of Every Pub in the City of Cambridge&quot;))</code></pre>
 <p><img src="/post/2018-11-22-cambridge_pub_crawl_files/figure-html/plot_shortest_tour-1.png" width="672" /></p>
-<p>As it turns out, you’d want to start in Trumpington at The Lord Byron Inn and then get into central Cambridge where you dart around a lot before heading out to the north and finally the east at The Red Lion in Cherry Hinton. All together this script calculates a distances of 40km (to be ‘exact’) to visit every pub, which is actually kind of doable in a single day (if you forgo the drinking).</p>
+<p>As it turns out, you’d want to start in Trumpington at The Lord Byron Inn and then get into central Cambridge where you dart around a lot before heading out to the north and finally the east at The Red Lion in Cherry Hinton.</p>
+<p>A bigger image of the above can be found at imgure <a href="https://i.imgur.com/r18SG2B.png">here</a></p>
+<p>All together this script calculates a distances of ~41km (give or take probably quite a bit) to visit every pub, which is actually kind of doable in a single day (if you forgo [at least some of] the drinking).</p>
