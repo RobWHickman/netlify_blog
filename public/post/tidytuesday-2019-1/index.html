@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme" content="hugo-academic">
+  <meta name="generator" content="Hugo 0.32.2" />
+  <meta name="author" content="Robert Hickman">
+
+  
+  
+  
+  
+    
+      
+    
+  
+  <meta name="description" content="Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).
+A quick way to get something to work with that can be published unpolished is #TidyTuesday on twitter which (as far as I know/can tell) is organised by Thomas Mock from RStudio.
+This week, the data comes in the form of a massive corpus of every tweet using the #rstats hashtag, curated by rtweet package creator Mike Kearney.">
+
+  
+  <link rel="alternate" hreflang="en-us" href="/post/tidytuesday-2019-1/">
+
+  
+
+
+  
+
+  
+  
+  <meta name="theme-color" content="#0095eb">
+  
+  
+  
+  
+    
+  
+  
+    
+    
+      
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+      
+    
+  
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha512-6MXa8B6uaO18Hid6blRMetEIoPqHf7Ux1tnyIQdpt9qI5OACx7C+O3IVTr98vwGnlcg0LOLa02i9Y1HpVhlfiw==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.1/css/academicons.min.css" integrity="sha512-NThgw3XKQ1absAahW6to7Ey42uycrVvfNfyjqcFNgCmOCQ5AR4AO0SiXrN+8ZtYeappp56lk1WtvjVmEa+VR6A==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous">
+  
+  
+  
+  
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Montserrat:400,700%7cRoboto:400,400italic,700%7cRoboto&#43;Mono">
+  
+  <link rel="stylesheet" href="/styles.css">
+  
+
+  
+
+  
+  <link rel="alternate" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="feed" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  
+
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" href="/img/icon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
+
+  <link rel="canonical" href="/post/tidytuesday-2019-1/">
+
+  <meta property="twitter:card" content="summary_large_image">
+  
+  <meta property="twitter:site" content="@robert_squared">
+  <meta property="twitter:creator" content="@robert_squared">
+  
+  <meta property="og:site_name" content="Robert Hickman">
+  <meta property="og:url" content="/post/tidytuesday-2019-1/">
+  <meta property="og:title" content="TidyTuesday Week One | Robert Hickman">
+  <meta property="og:description" content="Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).
+A quick way to get something to work with that can be published unpolished is #TidyTuesday on twitter which (as far as I know/can tell) is organised by Thomas Mock from RStudio.
+This week, the data comes in the form of a massive corpus of every tweet using the #rstats hashtag, curated by rtweet package creator Mike Kearney.">
+  <meta property="og:locale" content="en-us">
+  
+  <meta property="article:published_time" content="2019-01-02T00:00:00&#43;00:00">
+  
+  <meta property="article:modified_time" content="2019-01-02T00:00:00&#43;00:00">
+  
+
+  <script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+</script>
+<script async type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <title>TidyTuesday Week One | Robert Hickman</title>
+
+</head>
+<body id="top" data-spy="scroll" data-target="#toc" data-offset="71" >
+
+<nav class="navbar navbar-default navbar-fixed-top" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="navbar-header">
+      
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+              data-target=".navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      
+      <a class="navbar-brand" href="/">Robert Hickman</a>
+    </div>
+
+    
+    <div class="collapse navbar-collapse">
+
+      
+      
+      <ul class="nav navbar-nav navbar-right">
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#about">
+            
+            <span>Home</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#publications_selected">
+            
+            <span>Publications</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#posts">
+            
+            <span>Posts</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#projects">
+            
+            <span>Projects</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#writing">
+            
+            <span>Writing</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#contact">
+            
+            <span>Contact</span>
+            
+          </a>
+        </li>
+
+        
+        
+      
+
+      
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+
+<article class="article" itemscope itemtype="http://schema.org/Article">
+
+  
+
+
+  <div class="article-container">
+    <div class="article-inner">
+      <h1 itemprop="name">TidyTuesday Week One</h1>
+
+      
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2019-01-02 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Jan 2, 2019
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    8 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+  
+<div class="share-box" aria-hidden="true">
+  <ul class="share">
+    <li>
+      <a class="twitter"
+         href="https://twitter.com/intent/tweet?text=TidyTuesday%20Week%20One&amp;url=%2fpost%2ftidytuesday-2019-1%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-twitter"></i>
+      </a>
+    </li>
+    <li>
+      <a class="facebook"
+         href="https://www.facebook.com/sharer.php?u=%2fpost%2ftidytuesday-2019-1%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-facebook"></i>
+      </a>
+    </li>
+    <li>
+      <a class="linkedin"
+         href="https://www.linkedin.com/shareArticle?mini=true&amp;url=%2fpost%2ftidytuesday-2019-1%2f&amp;title=TidyTuesday%20Week%20One"
+         target="_blank" rel="noopener">
+        <i class="fa fa-linkedin"></i>
+      </a>
+    </li>
+    <li>
+      <a class="weibo"
+         href="http://service.weibo.com/share/share.php?url=%2fpost%2ftidytuesday-2019-1%2f&amp;title=TidyTuesday%20Week%20One"
+         target="_blank" rel="noopener">
+        <i class="fa fa-weibo"></i>
+      </a>
+    </li>
+    <li>
+      <a class="email"
+         href="mailto:?subject=TidyTuesday%20Week%20One&amp;body=%2fpost%2ftidytuesday-2019-1%2f">
+        <i class="fa fa-envelope"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+  
+
+</div>
+
+
+      <div class="article-style" itemprop="articleBody">
+        <p>Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).</p>
+<p>A quick way to get something to work with that can be published unpolished is <a href="https://github.com/rfordatascience/tidytuesday">#TidyTuesday</a> on twitter which (as far as I know/can tell) is organised by <a href="https://twitter.com/thomas_mock">Thomas Mock</a> from RStudio.</p>
+<p>This week, the data comes in the form of a massive corpus of every tweet using the #rstats hashtag, curated by rtweet package creator Mike Kearney.</p>
+<p>I’m only going to leave sparse notes as this is just a post from some lunchtime work cleaned up and published after. I probably won’t fully spellcheck it either.</p>
+<p>First, libraries:</p>
+<pre class="r"><code>#for data #tidytuesday data manipulation
+library(tidyverse)
+#used for clustering later
+library(lsa)
+library(e1071)
+
+rm(list=ls())</code></pre>
+<p>When loading the data, the first thing I decided to look at was the evolution of the hashtags use over time. As far as I can tell, first used in spring 2009 by <a href="https://twitter.com/gappy3000">Giuseppe Paleologo</a>. Since then, it’s grown pretty exponentially.</p>
+<pre class="r"><code>#data at https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-01-01
+#rstats_data &lt;- readRDS(&quot;../../Downloads/rstats_tweets.rds&quot;)
+
+#quickly plot tweets over time
+p &lt;- rstats_data %&gt;%
+  select(created_at) %&gt;%
+  arrange(created_at) %&gt;%
+  mutate(total_tweets = row_number()) %&gt;%
+  ggplot(., aes(x = created_at, y = total_tweets)) +
+  geom_line() +
+  xlab(&quot;Date&quot;) +
+  ylab(&quot;Total #rstats Tweets&quot;) +
+  ggtitle(&quot;#rstats Tweets Over Time&quot;) +
+  theme_minimal()
+
+p</code></pre>
+<p><img src="/post/2019-01-02-tidytuesday1_files/figure-html/peek_data-1.png" width="672" /> I decided only to work with the most prolific #rstats tweeters, mostly to save space in plots as the corpus contains over 26k unique persons and 430k tweets</p>
+<pre class="r"><code>#filter out people who tweet about rstats &gt;=500 times
+rstats_data %&lt;&gt;% 
+  group_by(user_id) %&gt;%
+  mutate(tweet_count = n()) %&gt;%
+  filter(tweet_count &gt; 499) %&gt;%
+  ungroup() %&gt;%
+  arrange(-tweet_count) %&gt;%
+  #also filter out feeds
+  filter(!screen_name %in% c(&quot;CRANberriesFeed&quot;, &quot;Rbloggers&quot;, &quot;rweekly_live&quot;, &quot;tidyversetweets&quot;))
+
+#plot the number of tweets per person
+p2 &lt;- rstats_data %&gt;%
+  ggplot(., aes(x = reorder(user_id, tweet_count))) +
+  geom_bar(stat = &quot;count&quot;) +
+  ggtitle(&quot;Rstats Tweets By Person&quot;) +
+  xlab(&quot;User&quot;) +
+  ylab(&quot;Tweets&quot;) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank())
+
+p2</code></pre>
+<p><img src="/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-1-1.png" width="672" /> Lets see the most prolific tweeters</p>
+<pre class="r"><code>#show the most prolific retweeters
+rstats_users &lt;- rstats_data %&gt;%
+  select(screen_name, tweet_count) %&gt;%
+  unique()
+
+head(rstats_users)</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   screen_name tweet_count
+##   &lt;chr&gt;             &lt;int&gt;
+## 1 AndySugs           8216
+## 2 dataandme          4113
+## 3 gp_pulipaka        3237
+## 4 DerFredo           3091
+## 5 revodavid          2640
+## 6 MangoTheCat        2523</code></pre>
+<p>I had been interested in recreating some analyses from <a href="https://www.jtimm.net/2018/11/03/twitter-political-ideology-and-the-115-us-senate/" class="uri">https://www.jtimm.net/2018/11/03/twitter-political-ideology-and-the-115-us-senate/</a> recently, and thought this gave a good oppurtunity.</p>
+<p>First I needed the top levels domains of links in #rstats tweets</p>
+<pre class="r"><code>#try to find only top level domains for grouping
+domain_patterns &lt;- &quot;\\.com.*|\\.org.*|\\.me.*|\\.gl.*|\\.li.*|\\..appspot|\\.blogspot|\\.io.*&quot;
+links &lt;- data.frame(url = unlist(rstats_data$urls_url)) %&gt;%
+  mutate(domain = gsub(domain_patterns, &quot;&quot;, url)) %&gt;%
+  filter(!is.na(domain)) %&gt;%
+  group_by(domain) %&gt;%
+  mutate(share_count = n()) %&gt;%
+  ungroup()
+
+#which are the most tweeted links by the top tweeters
+head(links %&gt;% select(-url) %&gt;% unique() %&gt;% arrange(-share_count))</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   domain         share_count
+##   &lt;chr&gt;                &lt;int&gt;
+## 1 goo                   4724
+## 2 wp                    4110
+## 3 github                3430
+## 4 twitter               3201
+## 5 cran.r-project        2878
+## 6 r-bloggers            2708</code></pre>
+<p>some of these (e.g. the google/wp/fb/bit.ly) ones seem a bit more to be quick links to pictures and so were removed. I also cut out links to amazon, google, facebook, and youtube, which I was less certain about doing and would probably analyse in a deeper cut.</p>
+<pre class="r"><code>#remove non-data sciencey links
+links %&gt;%
+  filter(!grepl(&quot;goo|wp|tweetedtimes|fb|htl|facebook|youtube|amazon|google&quot;, domain)) %&gt;%
+  filter(!grepl(&quot;activevoice.us|ift.tt|rviv.ly|bit.ly&quot;, domain)) %&gt;%
+  select(-url) %&gt;%
+  unique() %&gt;%
+  arrange(-share_count) %&gt;%
+  head()</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   domain                   share_count
+##   &lt;chr&gt;                          &lt;int&gt;
+## 1 github                          3430
+## 2 twitter                         3201
+## 3 cran.r-project                  2878
+## 4 r-bloggers                      2708
+## 5 link.rweekly                    2415
+## 6 blog.revolutionanalytics        1225</code></pre>
+<p>Then we need to create a matrix of each domain vs. each user with a value of how many tweets from that user link to that domain.</p>
+<p>I selected 3 users to illustrate the finished matrix (from here on out I’m freely stealing code from the blogpost <a href="https://www.jtimm.net/2018/11/03/twitter-political-ideology-and-the-115-us-senate/">linked above</a>)</p>
+<pre class="r"><code>#find which domains each tweeted link belong to
+rstats_domains_shared &lt;- rstats_data %&gt;%
+  select(user_id, screen_name, url = urls_url, date = created_at) %&gt;%
+  #remove tweets without links
+  filter(!is.na(url)) %&gt;%
+  #unlist the links
+  #can be multiple per tweet
+  splitstackshape::listCol_l(., listcol = &quot;url&quot;) %&gt;%
+  #merge with domain information
+  merge(., unique(select(links, domain, url_ul = url, domain_shares = share_count)), by = &quot;url_ul&quot;) %&gt;%
+  #select only domains shared 100 or more times
+  filter(domain_shares &gt; 99) %&gt;%
+  #remove uninteresting domains
+  filter(!grepl(&quot;goo|wp|tweetedtimes|fb|htl|facebook|youtube|amazon|google&quot;, domain)) %&gt;%
+  filter(!grepl(&quot;activevoice.us|ift.tt|rviv.ly|bit.ly&quot;, domain)) %&gt;%
+  #limit to only frequent tweeters
+  filter(screen_name %in% rstats_users$screen_name)
+
+#get a matrix of domains shared vs. users
+rstats_shares_by_user &lt;- rstats_domains_shared %&gt;%
+  #find the number of times each user tweets a link to a domain
+  group_by(screen_name, domain) %&gt;%
+  summarize(share_count = n()) %&gt;%
+  #filter out those that are untweets
+  filter(share_count &gt; 0) %&gt;%
+  spread(screen_name, share_count) %&gt;%
+  replace(is.na(.), 0)  %&gt;%
+  ungroup()
+
+#quickly glance at this
+#has many columns so selecting only a few users
+users &lt;- c(&quot;hadleywickham&quot;, &quot;drob&quot;, &quot;JennyBryan&quot;)
+rstats_shares_by_user %&gt;%
+  .[c(1, which(names(rstats_shares_by_user) %in% users))] %&gt;%
+  .[1:10,]</code></pre>
+<pre><code>## # A tibble: 10 x 4
+##    domain                    drob hadleywickham JennyBryan
+##    &lt;chr&gt;                    &lt;dbl&gt;         &lt;dbl&gt;      &lt;dbl&gt;
+##  1 analyticsvidhya              0             0          0
+##  2 andrewgelman                 0             0          0
+##  3 arilamstein                  0             0          0
+##  4 asbcllc                      0             0          0
+##  5 bl.ocks                      0             0          0
+##  6 blog.revolutionanalytics     0             5          0
+##  7 blog.rstudio                 1           115          6
+##  8 cran.r-project               6            12         21
+##  9 cran.rstudio                 0             1          1
+## 10 datasciencecentral           0             0          0</code></pre>
+<p>Next we use cosine from the lsa package to get a matrix of user-user similarity. This is then crushed down to two dimensions X1 and X2</p>
+<pre class="r"><code>#find the cosine similarity between all users
+cosine_rstats &lt;- rstats_shares_by_user %&gt;%
+  select(2:ncol(.)) %&gt;%
+  data.matrix() %&gt;%
+  lsa::cosine(.)
+
+#sort this into two dimensions
+#X1 and X2
+rstats_clustering &lt;- cmdscale(1-cosine_rstats, eig = TRUE, k = 2)$points %&gt;% 
+  data.frame() %&gt;%
+  mutate(screen_name = rownames(cosine_rstats)) %&gt;%
+  merge(rstats_users, by = &quot;screen_name&quot;)
+
+head(rstats_clustering)</code></pre>
+<pre><code>##       screen_name         X1         X2 tweet_count
+## 1       _ColinFay -0.1192867 -0.2821199         989
+## 2        abresler -0.1712703 -0.3224543        1443
+## 3     AnalyticsFr -0.3210288  0.4201589        1386
+## 4 AnalyticsFrance -0.3210288  0.4201589        1989
+## 5 AnalyticsVidhya -0.2969805  0.4152374        1814
+## 6        AndySugs  0.1371950  0.2465780        8216</code></pre>
+<p>If we plot this we get a nice graph of the top #rstats users qhich fall neatly into two dimensions. The first X1 seems to be ‘social’ vs. ‘professional’. People further to the left are users I recognise off the top of my head for sharing amateur data analyses/package building (e.g. JennyBryan) whereas those on those on the right seem to be more industrial users (e.g. MangoTheCat).</p>
+<p>The second dimension is a bit harder to gauge but strikes me as sort of software vs. data science divide with more package creators/rstudio employees towards the bottom and people doing analysis of data towards the top (but this is only a gut feeling).</p>
+<pre class="r"><code>#plot the users by their cosine similarity and number of tweets
+rstats_clustering %&gt;%
+  ggplot(aes(X1,X2)) +
+  geom_text(aes(label= screen_name, size = tweet_count), alpha = 0.3) +
+  scale_size_continuous(range = c(2,5), guide = FALSE) +
+  xlab(&quot;Dimension X1&quot;) +
+  ylab(&quot;Dimension X2&quot;) +
+  ggtitle(&quot;#rstats Tweeters Arranged by Links Shared&quot;,
+          subtitle = &quot;position based on cosine similarity between users&quot;) +
+  theme_minimal()</code></pre>
+<p><img src="/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>To investigate a bit further I decided to see what each person was sharing. First I used c-means clustering as it’s something else I was working on in a separate project recently to cluster each use based on their cosine similarity (mostly just to have something to order the final plot by).</p>
+<p>I then used geom_tile to show how often each user was sending links from which domains. Roughly, I would say that the ‘industrial’ (green) cluster makes shows a concentration of links to sites such as <a href="https://www.r-bloggers.com/">r-bloggers</a> and <a href="https://blog.revolutionanalytics.com/">revolutionanalytics’ blog</a>, whereas the ‘social data science’ cluster (blue) links much more to twitter itself, github, and CRAN. The red (‘software’) cluster links to these too, but especially much more to the r-project blog in particular.</p>
+<pre class="r"><code>set.seed(22081992)
+#use fuzzy c means to find clusters based on cosine similarity
+#chose 3 as seems to be 3 clear nodes
+c_grouping &lt;- cmeans(select(rstats_clustering, X1, X2) %&gt;% as.matrix(), 3, iter.max = 1000)
+
+#merge this data in
+rstats_clustering %&lt;&gt;%
+  mutate(cluster = c_grouping$cluster) %&gt;%
+  cbind(as.data.frame(c_grouping$membership)) %&gt;%
+  mutate(cluster_membership = apply(.[, (ncol(.)-(max(.$cluster)-1)):ncol(.)], 1, max))
+
+#plot a heatmap of links shared vs. cluster grouping
+#remember cluster grouping is related to cosine similarity
+rstats_shares_by_user %&gt;%
+  reshape2::melt(id.vars = &quot;domain&quot;, variable.name = &quot;screen_name&quot;, value.name = &quot;shares&quot;) %&gt;%
+  merge(rstats_clustering, by = &quot;screen_name&quot;) %&gt;%
+  filter(shares &gt; 0) %&gt;%
+  ggplot(., aes(x = domain, y = reorder(screen_name, cluster + cluster_membership))) +
+  geom_tile(aes(fill = log(shares), colour = factor(cluster)), size = 0.5) +
+  scale_fill_viridis_c(option = &quot;plasma&quot;, guide = FALSE) +
+  scale_colour_manual(values = c(&quot;red&quot;, &quot;blue&quot;, &quot;green&quot;, &quot;purple&quot;), guide = FALSE) +
+  xlab(&quot;Domain Shared&quot;) +
+  ylab(&quot;Screen Name&quot;) +
+  ggtitle(&quot;Domains Shared by #rstats Tweeters Coloured by User Cluster&quot;) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))</code></pre>
+<p><img src="/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>Finally, I wanted to recreate the previous cosine similarity graph but with the clusters highlighted just because I think it makes a pretty graph.</p>
+<pre class="r"><code>#replot our initial plot of cosine similarity with the cluster information
+#alpha of screen_name indicates group membership strength
+rstats_clustering %&gt;%
+  ggplot(aes(X1, X2)) +
+  geom_label(aes(label= screen_name, fill = factor(cluster), colour = cluster_membership, size = tweet_count), alpha = 0.3) +
+  scale_colour_gradient(high = &quot;black&quot;, low = &quot;white&quot;, guide = FALSE) +
+  scale_fill_manual(values = c(&quot;red&quot;, &quot;blue&quot;, &quot;green&quot;, &quot;purple&quot;), guide = FALSE) +
+  scale_size_continuous(range = c(2,5), guide = FALSE) +
+  xlab(&quot;Dimension X1&quot;) +
+  ylab(&quot;Dimension X2&quot;) +
+  ggtitle(&quot;#rstats Tweeters Grouped by Links Shared&quot;,
+          subtitle = &quot;grouping based on cosine similarity between users&quot;) +
+  theme_minimal()</code></pre>
+<p><img src="/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>That’s all for this post. I think I’ll keep on throwing up quick #TidyTuesday posts throughout the year which will be as sparse as this, but hopefully be interesting to one or two people</p>
+
+      </div>
+
+      
+
+
+<div class="article-tags">
+  
+  <a class="btn btn-primary btn-outline" href="/tags/tidytuesday">tidytuesday</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/twitter">twitter</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/clustering">clustering</a>
+  
+</div>
+
+
+
+    </div>
+  </div>
+
+</article>
+
+
+
+
+
+
+<div class="article-container">
+  
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="powered-by">
+
+      &copy; 2018 &middot; 
+
+      Powered by the
+      <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+      <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+      <span class="pull-right" aria-hidden="true">
+        <a href="#" id="back_to_top">
+          <span class="button_icon">
+            <i class="fa fa-chevron-up fa-2x"></i>
+          </span>
+        </a>
+      </span>
+
+    </p>
+  </div>
+</footer>
+
+
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close btn-large" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Cite</h4>
+      </div>
+      <div>
+        <pre><code class="modal-body tex"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-primary btn-outline js-copy-cite" href="#" target="_blank">
+          <i class="fa fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-primary btn-outline js-download-cite" href="#" target="_blank">
+          <i class="fa fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+    
+
+    
+
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.3/imagesloaded.pkgd.min.js" integrity="sha512-umsR78NN0D23AzgoZ11K7raBD+R6hqKojyBZs1w8WvYlsI+QuKRGBx3LFCwhatzBunCjDuJpDHwxD13sLMbpRA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha512-iztkobsvnjKfAtTNdHkGVjAYTrrtlC7mGp/54c40wowO7LhURYl3gVzzcEqGl/qKXQltJ2HwMrdLcNUdo+N/RQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.4/isotope.pkgd.min.js" integrity="sha512-VDBOIlDbuC4VWxGJNmuFRQ0Li0SKkDpmGyuhAG5LTDLd/dJ/S0WMVxriR2Y+CyPL5gzjpN4f/6iqWVBJlht0tQ==" crossorigin="anonymous"></script>
+    
+    
+    <script src="/js/hugo-academic.js"></script>
+    
+
+    
+    
+      
+      
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+      
+
+      
+
+      
+
+      <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    
+    
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_CHTML" integrity="sha512-tOav5w1OjvsSJzePRtt2uQPFwBoHt1VZcUq8l8nm5284LEKE9FSJBQryzMBzHxY5P0zRdNqEcpLIRVYFNgu1jw==" crossorigin="anonymous"></script>
+    
+    
+
+  </body>
+</html>
+

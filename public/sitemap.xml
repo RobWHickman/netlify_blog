@@ -5,6 +5,15 @@
     
     <url>
     
+      <loc>/post/tidytuesday-2019-1/</loc>
+      <lastmod>2019-01-02T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/cambridge_pub_crawl/</loc>
       <lastmod>2018-11-22T00:00:00+00:00</lastmod>
     </url>
@@ -225,6 +234,16 @@
     
     <url>
     
+      <loc>/tags/clustering/</loc>
+      <lastmod>2019-01-02T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/tags/demo/</loc>
       <lastmod>2018-01-05T00:00:00+00:00</lastmod>
       <priority>0</priority>
@@ -347,6 +366,26 @@
     
       <loc>/tags/the_knowledge/</loc>
       <lastmod>2018-08-04T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/tidytuesday/</loc>
+      <lastmod>2019-01-02T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/twitter/</loc>
+      <lastmod>2019-01-02T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
