@@ -97,14 +97,15 @@ For every rerun we want to load this data again. I also got rid of the LFC/WFC s
 ```{r load_saved_data, warning=FALSE,message=FALSE,eval=FALSE}
 #load saved data
 wsl_matches <- readRDS("./saved_wsl_matches.rds") %>%
-  mutate(home = gsub(" WFC| LFC", "", home), away = gsub(" WFC| LFC", "", away)) %>%
+  mutate(home = gsub(" WFC| LFC", "", home),
+         away = gsub(" WFC| LFC", "", away)) %>%
   mutate(home = factor(home), away = factor(away))
 
 #peek at what data we have
 head(wsl_matches)
 ```
 
-```{r actual_load_saved_data, warning=FALSE,message=FALSE}
+```{r actual_load_saved_data, warning=FALSE,message=FALSE,echo=FALSE}
 #load saved data
 wsl_matches <- readRDS("C:/Users/Alaa/Documents/R_coding/regista/saved_wsl_matches.rds") %>%
   mutate(home = gsub(" WFC| LFC", "", home), away = gsub(" WFC| LFC", "", away)) %>%

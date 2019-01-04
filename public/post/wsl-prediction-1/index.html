@@ -267,7 +267,7 @@ MathJax.Hub.Config({
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    12 min read
+    11 min read
   </span>
   
 
@@ -391,14 +391,8 @@ saveRDS(wsl_matches, &quot;saved_wsl_matches.rds&quot;)</code></pre>
 <p>For every rerun we want to load this data again. I also got rid of the LFC/WFC suffixes from each team as it’s a bit redundant and changed the team name columns to factors, which will be required when modelling later.</p>
 <pre class="r"><code>#load saved data
 wsl_matches &lt;- readRDS(&quot;./saved_wsl_matches.rds&quot;) %&gt;%
-  mutate(home = gsub(&quot; WFC| LFC&quot;, &quot;&quot;, home), away = gsub(&quot; WFC| LFC&quot;, &quot;&quot;, away)) %&gt;%
-  mutate(home = factor(home), away = factor(away))
-
-#peek at what data we have
-head(wsl_matches)</code></pre>
-<pre class="r"><code>#load saved data
-wsl_matches &lt;- readRDS(&quot;C:/Users/Alaa/Documents/R_coding/regista/saved_wsl_matches.rds&quot;) %&gt;%
-  mutate(home = gsub(&quot; WFC| LFC&quot;, &quot;&quot;, home), away = gsub(&quot; WFC| LFC&quot;, &quot;&quot;, away)) %&gt;%
+  mutate(home = gsub(&quot; WFC| LFC&quot;, &quot;&quot;, home),
+         away = gsub(&quot; WFC| LFC&quot;, &quot;&quot;, away)) %&gt;%
   mutate(home = factor(home), away = factor(away))
 
 #peek at what data we have
@@ -639,16 +633,16 @@ simulated_tables</code></pre>
 <pre><code>## # A tibble: 22,000 x 11
 ##    simulation_id team      w     d     l    gf    ga    gd points position
 ##  * &lt;chr&gt;         &lt;fct&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;dbl&gt;    &lt;int&gt;
-##  1 1             Manc~    17     3     0    65    11    54     54        1
-##  2 1             Arse~    17     0     3   100    14    86     51        2
-##  3 1             Chel~    11     6     3    22     7    15     39        3
-##  4 1             Birm~    11     3     6    31    19    12     36        4
-##  5 1             Read~    10     3     7    31    30     1     33        5
-##  6 1             West~     9     2     9    26    35    -9     29        6
-##  7 1             Ever~     5     3    12    18    39   -21     18        7
-##  8 1             Live~     5     1    14    17    40   -23     16        8
-##  9 1             Bris~     4     4    12    10    33   -23     16        9
-## 10 1             Brig~     4     3    13    24    57   -33     15       10
+##  1 1             Arse~    17     0     3    81    14    67     51        1
+##  2 1             Manc~    15     4     1    67     9    58     49        2
+##  3 1             Chel~    12     7     1    33     5    28     43        3
+##  4 1             Birm~    14     1     5    35    15    20     43        4
+##  5 1             Read~    10     4     6    30    24     6     34        5
+##  6 1             West~     7     2    11    28    42   -14     23        6
+##  7 1             Bris~     7     2    11    17    36   -19     23        7
+##  8 1             Brig~     5     1    14    15    46   -31     16        8
+##  9 1             Ever~     4     3    13    15    43   -28     15        9
+## 10 1             Live~     4     2    14    13    36   -23     14       10
 ## # ... with 21,990 more rows, and 1 more variable: model &lt;chr&gt;</code></pre>
 <p>Finally we can see how many points each team is predicted to achieve at the end of the season for each model:</p>
 <pre class="r"><code>plot_colour &lt;- &quot;#1a4990&quot;
@@ -679,12 +673,12 @@ simulated_tables %&gt;%
 ## # Groups:   team [3]
 ##   team                   model              p_rel
 ##   &lt;fct&gt;                  &lt;chr&gt;              &lt;dbl&gt;
-## 1 Yeovil Town            expected goals     0.899
-## 2 Yeovil Town            accomplished goals 0.845
-## 3 Brighton &amp; Hove Albion accomplished goals 0.139
-## 4 Brighton &amp; Hove Albion expected goals     0.072
-## 5 Everton                expected goals     0.022
-## 6 Everton                accomplished goals 0.015</code></pre>
+## 1 Yeovil Town            expected goals     0.898
+## 2 Yeovil Town            accomplished goals 0.818
+## 3 Brighton &amp; Hove Albion accomplished goals 0.17 
+## 4 Brighton &amp; Hove Albion expected goals     0.064
+## 5 Everton                expected goals     0.034
+## 6 Everton                accomplished goals 0.012</code></pre>
 <p>Which shows broad agreement between the two models. Yeovil are in real trouble. The expected goals model might give some relief to Brighton fans though.</p>
 <p>Doing the same for the eventual champion:</p>
 <pre class="r"><code>simulated_tables %&gt;%
@@ -692,15 +686,14 @@ simulated_tables %&gt;%
   summarise(p_rel = mean(position == 1)) %&gt;%
   filter(p_rel &gt; 0.01) %&gt;%
   arrange(desc(p_rel))</code></pre>
-<pre><code>## # A tibble: 5 x 3
-## # Groups:   team [3]
+<pre><code>## # A tibble: 4 x 3
+## # Groups:   team [2]
 ##   team            model              p_rel
 ##   &lt;fct&gt;           &lt;chr&gt;              &lt;dbl&gt;
-## 1 Arsenal         expected goals     0.895
-## 2 Arsenal         accomplished goals 0.772
-## 3 Manchester City accomplished goals 0.228
-## 4 Manchester City expected goals     0.089
-## 5 Chelsea         expected goals     0.015</code></pre>
+## 1 Arsenal         expected goals     0.891
+## 2 Arsenal         accomplished goals 0.801
+## 3 Manchester City accomplished goals 0.199
+## 4 Manchester City expected goals     0.099</code></pre>
 <p>Chelsea only sneak into the mix for the expected goals model but it doesn’t look likely they’ll win the league. In the accomplished goals model there may be a slight title race (3/4 that Arsenal win, 1/4 that Man City overtake them), but using expected goals, Arsenal should be pretty confident of winning the league this season.</p>
 <p>That’s all for now. Will hopefully do a lot more football analysis in the coming year(s) first to expand on this post then look at other stuff.</p>
 

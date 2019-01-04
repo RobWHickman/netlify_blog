@@ -80,14 +80,8 @@ saveRDS(wsl_matches, &amp;quot;saved_wsl_matches.rds&amp;quot;)&lt;/code&gt;&lt;
 &lt;p&gt;For every rerun we want to load this data again. I also got rid of the LFC/WFC suffixes from each team as it’s a bit redundant and changed the team name columns to factors, which will be required when modelling later.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load saved data
 wsl_matches &amp;lt;- readRDS(&amp;quot;./saved_wsl_matches.rds&amp;quot;) %&amp;gt;%
-  mutate(home = gsub(&amp;quot; WFC| LFC&amp;quot;, &amp;quot;&amp;quot;, home), away = gsub(&amp;quot; WFC| LFC&amp;quot;, &amp;quot;&amp;quot;, away)) %&amp;gt;%
-  mutate(home = factor(home), away = factor(away))
-
-#peek at what data we have
-head(wsl_matches)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load saved data
-wsl_matches &amp;lt;- readRDS(&amp;quot;C:/Users/Alaa/Documents/R_coding/regista/saved_wsl_matches.rds&amp;quot;) %&amp;gt;%
-  mutate(home = gsub(&amp;quot; WFC| LFC&amp;quot;, &amp;quot;&amp;quot;, home), away = gsub(&amp;quot; WFC| LFC&amp;quot;, &amp;quot;&amp;quot;, away)) %&amp;gt;%
+  mutate(home = gsub(&amp;quot; WFC| LFC&amp;quot;, &amp;quot;&amp;quot;, home),
+         away = gsub(&amp;quot; WFC| LFC&amp;quot;, &amp;quot;&amp;quot;, away)) %&amp;gt;%
   mutate(home = factor(home), away = factor(away))
 
 #peek at what data we have
@@ -328,16 +322,16 @@ simulated_tables&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## # A tibble: 22,000 x 11
 ##    simulation_id team      w     d     l    gf    ga    gd points position
 ##  * &amp;lt;chr&amp;gt;         &amp;lt;fct&amp;gt; &amp;lt;int&amp;gt; &amp;lt;int&amp;gt; &amp;lt;int&amp;gt; &amp;lt;int&amp;gt; &amp;lt;int&amp;gt; &amp;lt;int&amp;gt;  &amp;lt;dbl&amp;gt;    &amp;lt;int&amp;gt;
-##  1 1             Manc~    17     3     0    65    11    54     54        1
-##  2 1             Arse~    17     0     3   100    14    86     51        2
-##  3 1             Chel~    11     6     3    22     7    15     39        3
-##  4 1             Birm~    11     3     6    31    19    12     36        4
-##  5 1             Read~    10     3     7    31    30     1     33        5
-##  6 1             West~     9     2     9    26    35    -9     29        6
-##  7 1             Ever~     5     3    12    18    39   -21     18        7
-##  8 1             Live~     5     1    14    17    40   -23     16        8
-##  9 1             Bris~     4     4    12    10    33   -23     16        9
-## 10 1             Brig~     4     3    13    24    57   -33     15       10
+##  1 1             Arse~    17     0     3    81    14    67     51        1
+##  2 1             Manc~    15     4     1    67     9    58     49        2
+##  3 1             Chel~    12     7     1    33     5    28     43        3
+##  4 1             Birm~    14     1     5    35    15    20     43        4
+##  5 1             Read~    10     4     6    30    24     6     34        5
+##  6 1             West~     7     2    11    28    42   -14     23        6
+##  7 1             Bris~     7     2    11    17    36   -19     23        7
+##  8 1             Brig~     5     1    14    15    46   -31     16        8
+##  9 1             Ever~     4     3    13    15    43   -28     15        9
+## 10 1             Live~     4     2    14    13    36   -23     14       10
 ## # ... with 21,990 more rows, and 1 more variable: model &amp;lt;chr&amp;gt;&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Finally we can see how many points each team is predicted to achieve at the end of the season for each model:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;plot_colour &amp;lt;- &amp;quot;#1a4990&amp;quot;
@@ -368,12 +362,12 @@ simulated_tables %&amp;gt;%
 ## # Groups:   team [3]
 ##   team                   model              p_rel
 ##   &amp;lt;fct&amp;gt;                  &amp;lt;chr&amp;gt;              &amp;lt;dbl&amp;gt;
-## 1 Yeovil Town            expected goals     0.899
-## 2 Yeovil Town            accomplished goals 0.845
-## 3 Brighton &amp;amp; Hove Albion accomplished goals 0.139
-## 4 Brighton &amp;amp; Hove Albion expected goals     0.072
-## 5 Everton                expected goals     0.022
-## 6 Everton                accomplished goals 0.015&lt;/code&gt;&lt;/pre&gt;
+## 1 Yeovil Town            expected goals     0.898
+## 2 Yeovil Town            accomplished goals 0.818
+## 3 Brighton &amp;amp; Hove Albion accomplished goals 0.17 
+## 4 Brighton &amp;amp; Hove Albion expected goals     0.064
+## 5 Everton                expected goals     0.034
+## 6 Everton                accomplished goals 0.012&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Which shows broad agreement between the two models. Yeovil are in real trouble. The expected goals model might give some relief to Brighton fans though.&lt;/p&gt;
 &lt;p&gt;Doing the same for the eventual champion:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;simulated_tables %&amp;gt;%
@@ -381,15 +375,14 @@ simulated_tables %&amp;gt;%
   summarise(p_rel = mean(position == 1)) %&amp;gt;%
   filter(p_rel &amp;gt; 0.01) %&amp;gt;%
   arrange(desc(p_rel))&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 5 x 3
-## # Groups:   team [3]
+&lt;pre&gt;&lt;code&gt;## # A tibble: 4 x 3
+## # Groups:   team [2]
 ##   team            model              p_rel
 ##   &amp;lt;fct&amp;gt;           &amp;lt;chr&amp;gt;              &amp;lt;dbl&amp;gt;
-## 1 Arsenal         expected goals     0.895
-## 2 Arsenal         accomplished goals 0.772
-## 3 Manchester City accomplished goals 0.228
-## 4 Manchester City expected goals     0.089
-## 5 Chelsea         expected goals     0.015&lt;/code&gt;&lt;/pre&gt;
+## 1 Arsenal         expected goals     0.891
+## 2 Arsenal         accomplished goals 0.801
+## 3 Manchester City accomplished goals 0.199
+## 4 Manchester City expected goals     0.099&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Chelsea only sneak into the mix for the expected goals model but it doesn’t look likely they’ll win the league. In the accomplished goals model there may be a slight title race (3/4 that Arsenal win, 1/4 that Man City overtake them), but using expected goals, Arsenal should be pretty confident of winning the league this season.&lt;/p&gt;
 &lt;p&gt;That’s all for now. Will hopefully do a lot more football analysis in the coming year(s) first to expand on this post then look at other stuff.&lt;/p&gt;
 </description>
