@@ -31,7 +31,6 @@ library(tidyverse)
 library(lsa)
 library(e1071)
 
-rm(list=ls())
 ```
 
 When loading the data, the first thing I decided to look at was the evolution of the hashtags use over time. As far as I can tell, first used in spring 2009 by [Giuseppe Paleologo](https://twitter.com/gappy3000). Since then, it's grown pretty exponentially.

@@ -1,0 +1,394 @@
+---
+title: Predicting the 2018-19 Women's Super League Using xG and Dixon-Coles
+author: Robert Hickman
+date: '2019-01-04'
+slug: WSL-prediction-1
+output: pdf_document
+categories: []
+tags:
+  - football
+  - xG
+  - Dixon-Coles
+header:
+  caption: ''
+  image: ''
+---
+
+
+
+<p>Over the last few years since I started coding I’d always been interested in how data science could help predict football results/ identify footballing talents, and just generally ‘solve’ football.</p>
+<p>One of the major problems with analysing football had been the availability of data. Though there’s a lot of great published stuff freely available to read, a lot of the cutting edge work revolves around <a href="https://www.optasports.com/services/analytics/advanced-metrics/">advanced metrics</a>, such as expected goals, which it’s hard to get the data for.</p>
+<p>Over the summer StatsBomb committed to sharing <a href="https://statsbomb.com/resource-centre/">free data</a> on (amongst others) the <a href="http://www.fawsl.com/index.html">Women’s Super League</a> (the top women’s competition in England), and I’d been interested in looking into this since then.</p>
+<p>This post is basically just a reproduction of two blogs by the excellent <a href="https://twitter.com/torvaney?lang=en">Ben Torvaney</a>, using the <a href="https://dashee87.github.io/football/python/predicting-football-results-with-statistical-modelling-dixon-coles-and-time-weighting/">Dixon-Coles method</a> to predict the the final positions of teams at the end of a football season.</p>
+<p>The <a href="http://www.statsandsnakeoil.com/2018/06/22/dixon-coles-and-xg-together-at-last/">first of these</a> published over the summer combines this method with xG data and the <a href="http://www.statsandsnakeoil.com/2019/01/01/predicting-the-premier-league-with-dixon-coles/">second</a> from this week is a simple and fully reproducible tutorial on implementing Dixon-Coles.</p>
+<p><em>(as both of these posts are pretty comprehensive I’m going to be sparse with commenting/explaining for this post- any questions will probably be answered by the above two articles)</em></p>
+<p>First, loading the libraries needed:</p>
+<pre class="r"><code>library(tidyverse)
+
+#Ben Torvaney&#39;s soccer analysis packages
+#devtools::install_github(&quot;torvaney/footballdatr&quot;)
+library(footballdatr)
+#devtools::install_github(&quot;torvaney/regista&quot;)
+library(regista)
+
+#women&#39;s football data
+#devtools::install_github(statsbomb/StatsBombR)
+library(StatsBombR)</code></pre>
+<p>Then we can use the StatsBombR package to download the data we need. First we grab a tibble of every match so far in the WSL season, and then use this to get another tibble of every shot from every game which we bind to the original as a new column.</p>
+<p>At the end, we save this, so we don’t have to bombard the API every time we want to rerun the script</p>
+<pre class="r"><code>#only want to run this once to avoid overloading the API
+#save data after pulling and set chunk eval = FALSE
+
+#get free match info from the StatsBombR package
+wsl_matches &lt;- StatsBombR::FreeCompetitions() %&gt;%
+  #only interested in WSL
+  filter(competition_name == &quot;FA Women&#39;s Super League&quot;) %&gt;%
+  #find free matches from WSL
+  #(all matches played so far)
+  select(competition_id) %&gt;%
+  StatsBombR::FreeMatches(.) %&gt;%
+  #only want info that helps us predict scores
+  select(match_id,
+         competition.competition_id,
+         season.season_id,
+         home = home_team.home_team_name,
+         away = away_team.away_team_name,
+         hgoals = home_score,
+         agoals = away_score)
+
+#get the shot information from each match and bind a tibble as a column
+wsl_matches$shots &lt;- wsl_matches %&gt;%
+  #split match info into separate rows
+  split(f = 1:nrow(.)) %&gt;%
+  #get the shots per game
+  lapply(., function(x){
+    StatsBombR::get.matchFree(x) %&gt;%
+      select(team = possession_team.name,
+             xG = shot.statsbomb_xg) %&gt;%
+      filter(!is.na(xG)) %&gt;%
+      #join home/away information
+      left_join(x %&gt;% 
+                  select(home, away) %&gt;%
+                  gather(location, team),
+                ., by = &quot;team&quot;) %&gt;%
+      select(-team)
+  })
+
+#save data
+#ONLY WANT TO RUN THIS CHUNK ONCE
+saveRDS(wsl_matches, &quot;saved_wsl_matches.rds&quot;)</code></pre>
+<p>For every rerun we want to load this data again. I also got rid of the LFC/WFC suffixes from each team as it’s a bit redundant and changed the team name columns to factors, which will be required when modelling later.</p>
+<pre class="r"><code>#load saved data
+wsl_matches &lt;- readRDS(&quot;./saved_wsl_matches.rds&quot;) %&gt;%
+  mutate(home = gsub(&quot; WFC| LFC&quot;, &quot;&quot;, home), away = gsub(&quot; WFC| LFC&quot;, &quot;&quot;, away)) %&gt;%
+  mutate(home = factor(home), away = factor(away))
+
+#peek at what data we have
+head(wsl_matches)</code></pre>
+<pre class="r"><code>#load saved data
+wsl_matches &lt;- readRDS(&quot;C:/Users/Alaa/Documents/R_coding/regista/saved_wsl_matches.rds&quot;) %&gt;%
+  mutate(home = gsub(&quot; WFC| LFC&quot;, &quot;&quot;, home), away = gsub(&quot; WFC| LFC&quot;, &quot;&quot;, away)) %&gt;%
+  mutate(home = factor(home), away = factor(away))
+
+#peek at what data we have
+head(wsl_matches)</code></pre>
+<pre><code>## # A tibble: 6 x 8
+##   match_id competition.com~ season.season_id home  away  hgoals agoals
+##      &lt;int&gt;            &lt;int&gt;            &lt;int&gt; &lt;fct&gt; &lt;fct&gt;  &lt;int&gt;  &lt;int&gt;
+## 1    19751               37                4 West~ Chel~      0      2
+## 2    19727               37                4 Read~ Birm~      0      1
+## 3    19719               37                4 West~ Read~      0      0
+## 4    19731               37                4 West~ Yeov~      2      1
+## 5    19730               37                4 Chel~ Brig~      2      0
+## 6    19733               37                4 Birm~ Manc~      2      3
+## # ... with 1 more variable: shots &lt;list&gt;</code></pre>
+<p>All of these function comes pretty much verbatim from the <a href="http://www.statsandsnakeoil.com/2019/01/01/predicting-the-premier-league-with-dixon-coles/">first blog post by Ben Torvaney</a>. We run through the shot data (and the expected goals for every shot over every match), and find the probability of every plausible score from these matches happening.</p>
+<pre class="r"><code>#http://www.statsandsnakeoil.com/2019/01/01/predicting-the-premier-league-with-dixon-coles/
+add_if_missing &lt;- function(data, col, fill = 0.0) {
+  # Add column if not found in a dataframe
+  # We need this in cases where a team has 0 shots (!)
+  if (!(col %in% colnames(data))) {
+    data[, col] &lt;- fill
+  }
+  data
+}
+
+team_goal_probs &lt;- function(xgs, side) {
+  # Find P(Goals=G) from a set of xGs by the
+  # poisson-binomial distribution
+  # Use tidyeval to prefix column names with
+  # the team&#39;s side (&quot;h&quot;ome or &quot;a&quot;way)
+  tibble(!!str_c(side, &quot;goals&quot;) := 0:length(xgs),
+         !!str_c(side, &quot;prob&quot;)  := poisbinom::dpoisbinom(0:length(xgs), xgs))
+}
+
+simulate_game &lt;- function(shot_xgs) {
+  shot_xgs %&gt;%
+    split(.$location) %&gt;%
+    imap(~ team_goal_probs(.x$xG, .y)) %&gt;%
+    reduce(crossing) %&gt;%
+    # If there are no shots, give that team a 1.0 chance of scoring 0 goals
+    add_if_missing(&quot;homegoals&quot;, 0) %&gt;%
+    add_if_missing(&quot;homeprob&quot;, 1) %&gt;%
+    add_if_missing(&quot;awaygoals&quot;, 0) %&gt;%
+    add_if_missing(&quot;awayprob&quot;, 1) %&gt;%
+    mutate(prob = homeprob * awayprob) %&gt;%
+    select(homegoals, awaygoals, prob)
+}
+
+simulated_games &lt;- wsl_matches %&gt;%
+  mutate(simulated_probabilities = map(shots, simulate_game)) %&gt;%
+  select(match_id, home, away, simulated_probabilities) %&gt;%
+  unnest() %&gt;%
+  filter(prob &gt; 0.001) %&gt;%  # Keep the number of rows vaguely reasonable
+  rename(hgoals = homegoals, agoals = awaygoals)
+
+simulated_games</code></pre>
+<pre><code>## # A tibble: 1,291 x 6
+##    match_id home            away    hgoals agoals    prob
+##       &lt;int&gt; &lt;fct&gt;           &lt;fct&gt;    &lt;int&gt;  &lt;int&gt;   &lt;dbl&gt;
+##  1    19751 West Ham United Chelsea      0      0 0.0869 
+##  2    19751 West Ham United Chelsea      1      0 0.0420 
+##  3    19751 West Ham United Chelsea      2      0 0.00755
+##  4    19751 West Ham United Chelsea      0      1 0.212  
+##  5    19751 West Ham United Chelsea      1      1 0.103  
+##  6    19751 West Ham United Chelsea      2      1 0.0184 
+##  7    19751 West Ham United Chelsea      3      1 0.00161
+##  8    19751 West Ham United Chelsea      0      2 0.201  
+##  9    19751 West Ham United Chelsea      1      2 0.0969 
+## 10    19751 West Ham United Chelsea      2      2 0.0174 
+## # ... with 1,281 more rows</code></pre>
+<p>We can use this data to get estimates of each team’s offensive and defensive strengths using the Dixon-Coles method. From here on out I’m going to refer to “actual goals” as “accomplished” (the number of goals that in reality occurred either for or against a team so far this season) and use “expected goals” for xG.</p>
+<p>In the final tibble, “off” refers to the offensive strength (higher = good) and “def” the “defensive weakness” (i.e. higher is worse).</p>
+<pre class="r"><code>#ag_model
+ag_model &lt;- dixoncoles(
+  hgoal = hgoals,
+  agoal = agoals,
+  hteam = home,
+  ateam = away,
+  data  = factor_teams(wsl_matches, c(&quot;home&quot;, &quot;away&quot;))
+)
+
+#xg_model
+xg_model &lt;- dixoncoles(
+  hgoal   = hgoals,
+  agoal   = agoals,
+  hteam   = home,
+  ateam   = away,
+  weights = prob,
+  data    = factor_teams(simulated_games, c(&quot;home&quot;, &quot;away&quot;))
+)
+
+#join these together
+estimates &lt;-
+  inner_join(
+    broom::tidy(ag_model),
+    broom::tidy(xg_model),
+    by = c(&quot;parameter&quot;, &quot;team&quot;),
+    suffix = c(&quot;_accomplished&quot;, &quot;_xg&quot;)
+  ) %&gt;%
+  mutate(value_accomplished = exp(value_accomplished),
+         value_xg      = exp(value_xg))
+
+# Preview results, ordered by the biggest difference
+estimates %&gt;%
+  arrange(desc(abs(value_xg - value_accomplished))) %&gt;%
+  head()</code></pre>
+<pre><code>## # A tibble: 6 x 4
+##   parameter team                   value_accomplished value_xg
+##   &lt;chr&gt;     &lt;chr&gt;                               &lt;dbl&gt;    &lt;dbl&gt;
+## 1 def       Brighton &amp; Hove Albion              2.65     1.57 
+## 2 off       Arsenal                             2.75     2.03 
+## 3 def       Yeovil Town                         3.10     2.41 
+## 4 off       Chelsea                             0.788    1.42 
+## 5 def       Liverpool                           1.73     1.23 
+## 6 rho       &lt;NA&gt;                                1.48     0.996</code></pre>
+<p>Let’s quickly plot the expected and accomplished goals based strength for each team and facet by offense and defence:</p>
+<pre class="r"><code>#plot the Dixon-Coles strengths
+estimates %&gt;%
+  arrange(desc(abs(value_xg - value_accomplished))) %&gt;%
+  filter(parameter %in% c(&quot;def&quot;, &quot;off&quot;)) %&gt;%
+  ggplot(aes(x = value_xg, y = value_accomplished)) +
+  geom_abline(slope = 1, intercept = 0, linetype = &quot;dotted&quot;) +
+  geom_text(aes(label = team), alpha = 0.7) +
+  labs(title = &quot;Dixon-Coles parameter estimates for WSL teams&quot;,
+       subtitle = &quot;Based on ...&quot;,
+       x = &quot;... expected goals&quot;,
+       y = &quot;... accomplished goals&quot;) +
+  coord_equal(ratio=1) +
+  theme_minimal() +
+  facet_wrap(~parameter)</code></pre>
+<p><img src="/post/2019-01-04-wsl1_files/figure-html/unnamed-chunk-1-1.png" width="672" /> So Arsenal who have been <a href="https://www.arsenal.com/results?field_arsenal_team_target_id=5">outrageously good</a> so far this year have been overperforming in offense (accomplished goals-based Dixon-Coles assume they are better than they probably are), whereas relegation-candidate Yeovil have been hugely underperforming in defense.</p>
+<p>The next step is then to get a list of all unplayed fixtures and predict the probabilities of each score in these using the same models as above (re-stated in the chunk).</p>
+<p>From here we’re using code from the <a href="http://www.statsandsnakeoil.com/2019/01/01/predicting-the-premier-league-with-dixon-coles/">second blog post</a> by Ben Torvaney.</p>
+<pre class="r"><code>#get list of unplayed fixtures
+unplayed_games &lt;-
+  crossing(home = wsl_matches$home,
+           away = wsl_matches$home) %&gt;%
+  filter(home != away) %&gt;%
+  anti_join(wsl_matches, by = c(&quot;home&quot;, &quot;away&quot;))
+
+#don&#39;t need to reinitialise the models really 
+#maybe makes it a bit easier to follow
+xg_model &lt;- dixoncoles(hgoals, agoals, home, away, data = simulated_games)
+ag_model &lt;- dixoncoles(hgoals, agoals, home, away, data = wsl_matches)
+
+#predict future scorelines using these models
+unplayed_xg_scorelines &lt;-
+  broom::augment(xg_model, unplayed_games, type.predict = &quot;scorelines&quot;) %&gt;%
+  unnest() %&gt;%
+  mutate(model = &quot;expected goals&quot;)
+
+unplayed_ag_scorelines &lt;-
+  broom::augment(ag_model, unplayed_games, type.predict = &quot;scorelines&quot;) %&gt;%
+  unnest() %&gt;%
+  mutate(model = &quot;accomplished goals&quot;)</code></pre>
+<p>Bind the data from these predictions to the data from the played games in one big tibble</p>
+<pre class="r"><code>played_scorelines &lt;-
+  wsl_matches %&gt;%
+  select(home, away, hgoal = hgoals, agoal = agoals) %&gt;%
+  mutate(prob = 1.0)
+
+scorelines &lt;- bind_rows(
+  mutate(played_scorelines, model = &quot;expected goals&quot;),
+  mutate(played_scorelines, model = &quot;accomplished goals&quot;),
+  unplayed_xg_scorelines,
+  unplayed_ag_scorelines
+)</code></pre>
+<p>These functions again are pretty much verbatim copied from Ben’s work. They simulate the season using Monte-Carlo sampling and build a final predicted WSL table</p>
+<pre class="r"><code>simulate_season &lt;- function(scoreline_probabilities) {
+  scoreline_probabilities %&gt;%
+    nest(hgoal, agoal, prob, .key = &quot;scorelines&quot;) %&gt;%
+    mutate(sampled = map(scorelines, ~ sample_n(., 1, weight = prob))) %&gt;%
+    select(-scorelines) %&gt;%
+    unnest()
+}
+
+calculate_table &lt;- function(games) {
+  games_augmented &lt;-
+    games %&gt;%
+    mutate(
+      hpoints = case_when(
+        hgoal &gt; agoal  ~ 3,
+        hgoal == agoal ~ 1,
+        agoal &gt; hgoal  ~ 0
+      ),
+      apoints = case_when(
+        hgoal &gt; agoal  ~ 0,
+        hgoal == agoal ~ 1,
+        agoal &gt; hgoal  ~ 3
+      )
+    )
+
+  games_home &lt;-
+    games_augmented %&gt;%
+    select(
+      team   = home,
+      gf     = hgoal,
+      ga     = agoal,
+      points = hpoints
+    )
+
+  games_away &lt;-
+    games_augmented %&gt;%
+    select(
+      team   = away,
+      gf     = agoal,
+      ga     = hgoal,
+      points = apoints
+    )
+
+  bind_rows(games_home, games_away) %&gt;%
+    group_by(team) %&gt;%
+    summarise(w  = sum(gf &gt; ga),
+              d  = sum(gf == ga),
+              l  = sum(gf &lt; ga),
+              gf = sum(gf),
+              ga = sum(ga),
+              gd = gf - ga,
+              points = sum(points)) %&gt;%
+    arrange(desc(points), desc(gd), desc(gf)) %&gt;%
+    mutate(position = row_number())
+}</code></pre>
+<p>Then it’s simply a case of running these function n times. 1000 for each model is a nice balance of predictive power and runtime.</p>
+<pre class="r"><code>n_simulations &lt;- 1000
+
+simulated_tables &lt;- scorelines %&gt;%
+  split(.$model) %&gt;%
+  lapply(., function(sim_data) {
+    rerun(n_simulations, simulate_season(sim_data)) %&gt;%
+      map(calculate_table) %&gt;%
+      bind_rows(.id = &quot;simulation_id&quot;) %&gt;%
+      #add which model we&#39;re using to each sim
+      mutate(model = unique(sim_data$model))
+  }) %&gt;%
+  do.call(rbind, .)
+
+simulated_tables</code></pre>
+<pre><code>## # A tibble: 22,000 x 11
+##    simulation_id team      w     d     l    gf    ga    gd points position
+##  * &lt;chr&gt;         &lt;fct&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;dbl&gt;    &lt;int&gt;
+##  1 1             Manc~    17     3     0    65    11    54     54        1
+##  2 1             Arse~    17     0     3   100    14    86     51        2
+##  3 1             Chel~    11     6     3    22     7    15     39        3
+##  4 1             Birm~    11     3     6    31    19    12     36        4
+##  5 1             Read~    10     3     7    31    30     1     33        5
+##  6 1             West~     9     2     9    26    35    -9     29        6
+##  7 1             Ever~     5     3    12    18    39   -21     18        7
+##  8 1             Live~     5     1    14    17    40   -23     16        8
+##  9 1             Bris~     4     4    12    10    33   -23     16        9
+## 10 1             Brig~     4     3    13    24    57   -33     15       10
+## # ... with 21,990 more rows, and 1 more variable: model &lt;chr&gt;</code></pre>
+<p>Finally we can see how many points each team is predicted to achieve at the end of the season for each model:</p>
+<pre class="r"><code>plot_colour &lt;- &quot;#1a4990&quot;
+n_teams &lt;- length(unique(wsl_matches$home))
+
+simulated_tables %&gt;%
+  count(team, points, model) %&gt;%
+  ggplot(aes(x = points, y = reorder(team, points))) +
+  geom_tile(aes(alpha = n / n_simulations),
+            fill = plot_colour) +
+  scale_alpha_continuous(range = c(0, 1), name = &quot;probability&quot;) +
+  labs(title = &quot;Points total probabilities for the Women&#39;s Super League&quot;,
+       subtitle = paste(&quot;n =&quot;, n_simulations, &quot;simulations each&quot;),
+       x = &quot;final season points&quot;,
+       y = NULL) +
+  theme_minimal() +
+  facet_wrap(~model)</code></pre>
+<p><img src="/post/2019-01-04-wsl1_files/figure-html/plot_season-1.png" width="672" /></p>
+<p>Both models show similar results (most likely Arsenal winning and Yeovil relegated). However, at roughly the season halfway point there are some interesting discrepancies. For instance the xG model is more bullish on Chelsea than the accomplished goals one, and more bearish on Bristol.</p>
+<p>There’s a lot of analysis that can be done here (and if I have time will get round to looking at) but for now I’m pretty satisfied with this as just a very slight synthesis of xG Dixon-Coles and Dixon-Coles tutorial.</p>
+<p>As one final addendum we can look at the probabilities each model assumes for the team to be relegated this year.</p>
+<pre class="r"><code>simulated_tables %&gt;%
+  group_by(team, model) %&gt;%
+  summarise(p_rel = mean(position == 11)) %&gt;%
+  filter(p_rel &gt; 0.01) %&gt;%
+  arrange(desc(p_rel))</code></pre>
+<pre><code>## # A tibble: 6 x 3
+## # Groups:   team [3]
+##   team                   model              p_rel
+##   &lt;fct&gt;                  &lt;chr&gt;              &lt;dbl&gt;
+## 1 Yeovil Town            expected goals     0.899
+## 2 Yeovil Town            accomplished goals 0.845
+## 3 Brighton &amp; Hove Albion accomplished goals 0.139
+## 4 Brighton &amp; Hove Albion expected goals     0.072
+## 5 Everton                expected goals     0.022
+## 6 Everton                accomplished goals 0.015</code></pre>
+<p>Which shows broad agreement between the two models. Yeovil are in real trouble. The expected goals model might give some relief to Brighton fans though.</p>
+<p>Doing the same for the eventual champion:</p>
+<pre class="r"><code>simulated_tables %&gt;%
+  group_by(team, model) %&gt;%
+  summarise(p_rel = mean(position == 1)) %&gt;%
+  filter(p_rel &gt; 0.01) %&gt;%
+  arrange(desc(p_rel))</code></pre>
+<pre><code>## # A tibble: 5 x 3
+## # Groups:   team [3]
+##   team            model              p_rel
+##   &lt;fct&gt;           &lt;chr&gt;              &lt;dbl&gt;
+## 1 Arsenal         expected goals     0.895
+## 2 Arsenal         accomplished goals 0.772
+## 3 Manchester City accomplished goals 0.228
+## 4 Manchester City expected goals     0.089
+## 5 Chelsea         expected goals     0.015</code></pre>
+<p>Chelsea only sneak into the mix for the expected goals model but it doesn’t look likely they’ll win the league. In the accomplished goals model there may be a slight title race (3/4 that Arsenal win, 1/4 that Man City overtake them), but using expected goals, Arsenal should be pretty confident of winning the league this season.</p>
+<p>That’s all for now. Will hopefully do a lot more football analysis in the coming year(s) first to expand on this post then look at other stuff.</p>

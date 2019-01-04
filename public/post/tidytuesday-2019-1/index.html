@@ -338,9 +338,7 @@ MathJax.Hub.Config({
 library(tidyverse)
 #used for clustering later
 library(lsa)
-library(e1071)
-
-rm(list=ls())</code></pre>
+library(e1071)</code></pre>
 <p>When loading the data, the first thing I decided to look at was the evolution of the hashtags use over time. As far as I can tell, first used in spring 2009 by <a href="https://twitter.com/gappy3000">Giuseppe Paleologo</a>. Since then, it’s grown pretty exponentially.</p>
 <pre class="r"><code>#data at https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-01-01
 #rstats_data &lt;- readRDS(&quot;../../Downloads/rstats_tweets.rds&quot;)
@@ -508,7 +506,7 @@ head(rstats_clustering)</code></pre>
 ## 4 AnalyticsFrance -0.3210288  0.4201589        1989
 ## 5 AnalyticsVidhya -0.2969805  0.4152374        1814
 ## 6        AndySugs  0.1371950  0.2465780        8216</code></pre>
-<p>If we plot this we get a nice graph of the top #rstats users qhich fall neatly into two dimensions. The first X1 seems to be ‘social’ vs. ‘professional’. People further to the left are users I recognise off the top of my head for sharing amateur data analyses/package building (e.g. JennyBryan) whereas those on those on the right seem to be more industrial users (e.g. MangoTheCat).</p>
+<p>If we plot this we get a nice graph of the top #rstats users qhich fall neatly into two dimensions. The first X1 seems to be ‘social’ vs. ‘professional’. People further to the left are users I recognise off the top of my head for sharing amateur data analyses/package building (e.g. JennyBryan) whereas those on the right seem to be more industrial users (e.g. MangoTheCat).</p>
 <p>The second dimension is a bit harder to gauge but strikes me as sort of software vs. data science divide with more package creators/rstudio employees towards the bottom and people doing analysis of data towards the top (but this is only a gut feeling).</p>
 <pre class="r"><code>#plot the users by their cosine similarity and number of tweets
 rstats_clustering %&gt;%
@@ -565,7 +563,7 @@ rstats_clustering %&gt;%
           subtitle = &quot;grouping based on cosine similarity between users&quot;) +
   theme_minimal()</code></pre>
 <p><img src="/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
-<p>That’s all for this post. I think I’ll keep on throwing up quick #TidyTuesday posts throughout the year which will be as sparse as this, but hopefully be interesting to one or two people</p>
+<p>That’s all for this post. I think I’ll keep on throwing up quick #TidyTuesday posts throughout the year which will be as sparse as this, but hopefully be interesting to one or two people.</p>
 
       </div>
 

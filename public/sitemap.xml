@@ -5,6 +5,15 @@
     
     <url>
     
+      <loc>/post/wsl-prediction-1/</loc>
+      <lastmod>2019-01-04T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/tidytuesday-2019-1/</loc>
       <lastmod>2019-01-02T00:00:00+00:00</lastmod>
     </url>
@@ -254,8 +263,18 @@
     
     <url>
     
+      <loc>/tags/dixon-coles/</loc>
+      <lastmod>2019-01-04T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/tags/football/</loc>
-      <lastmod>2018-08-04T00:00:00+00:00</lastmod>
+      <lastmod>2019-01-04T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -396,6 +415,16 @@
     
       <loc>/tags/world-cup/</loc>
       <lastmod>2018-06-10T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/xg/</loc>
+      <lastmod>2019-01-04T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
