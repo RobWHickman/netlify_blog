@@ -499,14 +499,17 @@ counties &lt;- readOGR(dsn = &quot;path/to/file&quot;,
   st_transform(., crs = st_crs(&quot;+init=epsg:4326&quot;))
 
 engwal &lt;- counties %&gt;%
-  .[c(1:54, 88, 90),]
-
-#make a quick plot of counties and teams
+  .[c(1:54, 88, 90),]</code></pre>
+<pre class="r"><code>#make a quick plot of counties and teams
 ggplot() +
   geom_sf(data = counties, fill = NA) +
   geom_sf(data = all_locations) +
-  ggtitle(&quot;Location of All Teams to have Played in Top 4 English Football Divisions&quot;) +
-  theme_minimal()</code></pre>
+  ggtitle(&quot;Location of All Teams to have Played Top 4 English Football Divisions&quot;) +
+  theme_minimal() +
+  theme(axis.title=element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank())</code></pre>
+<p><img src="/post/2019-01-21-The_Knowledge_2_files/figure-html/plot_team_locations-1.png" width="672" /></p>
 <p>(by the way the artifacts around Bristol and the Wirral are from the OS dataset- it’s very annoying)</p>
 <p>Then we need to determine which teams are within which counties. The easiest way to do this is to use a spatial join of the team names in all_locations by which county they fall into (using st_contains from the sf package)</p>
 <pre class="r"><code>#bind the team names to each county
@@ -525,7 +528,10 @@ counties %&gt;%
   geom_sf(aes(fill = n_clubs), colour = &quot;black&quot;) +
   scale_fill_viridis_c(option = &quot;plasma&quot;, name = &quot;# clubs&quot;) +
   ggtitle(&quot;Number of Top 4 Division Playing Teams in each Ceremonial County&quot;) +
-  theme_minimal()</code></pre>
+  theme_minimal() +
+  theme(axis.title=element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank())</code></pre>
 <p><img src="/post/2019-01-21-The_Knowledge_2_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
 <p>Which shows that most English historic counties (and a few Welsh ones due to teams like Cardiff City/ Swansea City etc.) have at least 1 team that has competed in the top 4 flights of English football at some point (those that do not are: Isle of Wight, Rutland, Surrey, Warwickshire, West Sussex and Cornwall).</p>
 <p>To finally get the total number of points won by these teams, the county data needs to be joined back onto the match data from the top. First I clean it up a bit then make the left_join by team name. Finally the number of points per match is calculated using case_when and points are grouped by county and summed</p>
@@ -577,9 +583,12 @@ county_points &lt;- county_match_data %&gt;%
   geom_sf(data = engwal) +
   geom_sf(aes(fill = total_points), colour = &quot;black&quot;) +
   scale_fill_viridis_c(option = &quot;plasma&quot;, name = &quot;total points&quot;) +
-  ggtitle(&quot;Number of Points Won by each Team in each Tier of English Football by Ceremonial County&quot;) +
+  ggtitle(&quot;Number of Points Won by each County per Tier of English Football&quot;) +
   facet_wrap(~tier) +
-  theme_minimal()</code></pre>
+  theme_minimal() +
+  theme(axis.title=element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank())</code></pre>
 <p><img src="/post/2019-01-21-The_Knowledge_2_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
 <p>And for the Premier League era this clears up to</p>
 <pre class="r"><code>county_match_data %&gt;%
@@ -593,10 +602,13 @@ county_points &lt;- county_match_data %&gt;%
   geom_sf(data = engwal) +
   geom_sf(aes(fill = total_points), colour = &quot;black&quot;, name = &quot;total points&quot;) +
   scale_fill_viridis_c(option = &quot;plasma&quot;) +
-  ggtitle(&quot;Number of Points Won by each Team in each Tier of English Football by Ceremonial County&quot;,
+  ggtitle(&quot;Number of Points Won by each County per Tier of English Football&quot;,
           subtitle = &quot;From Begining of 1992/1993 Season&quot;) +
   facet_wrap(~tier) +
-  theme_minimal()</code></pre>
+  theme_minimal() +
+  theme(axis.title=element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank())</code></pre>
 <pre><code>## Warning: Ignoring unknown parameters: name</code></pre>
 <p><img src="/post/2019-01-21-The_Knowledge_2_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
 <p>Which shows just how dominant London has been in the top division of English football (especially as it is only competitive at lower levels).</p>
