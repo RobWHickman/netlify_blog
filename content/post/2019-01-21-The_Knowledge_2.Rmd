@@ -218,7 +218,7 @@ engwal <- counties %>%
 ggplot() +
   geom_sf(data = counties, fill = NA) +
   geom_sf(data = all_locations) +
-  ggtitle("Location of All Teams to have Played Top 4 English Football Divisions") +
+  ggtitle("Location of Teams to have Played Top\n 4 English Football Divisions") +
   theme_minimal() +
   theme(axis.title=element_blank(),
         axis.text=element_blank(),
@@ -247,7 +247,7 @@ counties %>%
   geom_sf(data = engwal) +
   geom_sf(aes(fill = n_clubs), colour = "black") +
   scale_fill_viridis_c(option = "plasma", name = "# clubs") +
-  ggtitle("Number of Top 4 Division Playing Teams in each Ceremonial County") +
+  ggtitle("Number of Top 4 Division Playing\n Teams in each Ceremonial County") +
   theme_minimal() +
   theme(axis.title=element_blank(),
         axis.text=element_blank(),
@@ -305,7 +305,7 @@ county_match_data %>%
   geom_sf(data = engwal) +
   geom_sf(aes(fill = total_points), colour = "black") +
   scale_fill_viridis_c(option = "plasma", name = "total points") +
-  ggtitle("Number of Points Won by each County per Tier of English Football") +
+  ggtitle("Number of Points Won by each County\n per Tier of English Football") +
   facet_wrap(~tier) +
   theme_minimal() +
   theme(axis.title=element_blank(),
@@ -328,7 +328,7 @@ county_match_data %>%
   geom_sf(data = engwal) +
   geom_sf(aes(fill = total_points), colour = "black", name = "total points") +
   scale_fill_viridis_c(option = "plasma") +
-  ggtitle("Number of Points Won by each County per Tier of English Football",
+  ggtitle("Number of Points Won by each County\n per Tier of English Football",
           subtitle = "From Begining of 1992/1993 Season") +
   facet_wrap(~tier) +
   theme_minimal() +

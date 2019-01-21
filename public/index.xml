@@ -193,7 +193,7 @@ engwal &amp;lt;- counties %&amp;gt;%
 ggplot() +
   geom_sf(data = counties, fill = NA) +
   geom_sf(data = all_locations) +
-  ggtitle(&amp;quot;Location of All Teams to have Played Top 4 English Football Divisions&amp;quot;) +
+  ggtitle(&amp;quot;Location of Teams to have Played Top\n 4 English Football Divisions&amp;quot;) +
   theme_minimal() +
   theme(axis.title=element_blank(),
         axis.text=element_blank(),
@@ -216,7 +216,7 @@ counties %&amp;gt;%
   geom_sf(data = engwal) +
   geom_sf(aes(fill = n_clubs), colour = &amp;quot;black&amp;quot;) +
   scale_fill_viridis_c(option = &amp;quot;plasma&amp;quot;, name = &amp;quot;# clubs&amp;quot;) +
-  ggtitle(&amp;quot;Number of Top 4 Division Playing Teams in each Ceremonial County&amp;quot;) +
+  ggtitle(&amp;quot;Number of Top 4 Division Playing\n Teams in each Ceremonial County&amp;quot;) +
   theme_minimal() +
   theme(axis.title=element_blank(),
         axis.text=element_blank(),
@@ -272,7 +272,7 @@ county_points &amp;lt;- county_match_data %&amp;gt;%
   geom_sf(data = engwal) +
   geom_sf(aes(fill = total_points), colour = &amp;quot;black&amp;quot;) +
   scale_fill_viridis_c(option = &amp;quot;plasma&amp;quot;, name = &amp;quot;total points&amp;quot;) +
-  ggtitle(&amp;quot;Number of Points Won by each County per Tier of English Football&amp;quot;) +
+  ggtitle(&amp;quot;Number of Points Won by each County\n per Tier of English Football&amp;quot;) +
   facet_wrap(~tier) +
   theme_minimal() +
   theme(axis.title=element_blank(),
@@ -291,7 +291,7 @@ county_points &amp;lt;- county_match_data %&amp;gt;%
   geom_sf(data = engwal) +
   geom_sf(aes(fill = total_points), colour = &amp;quot;black&amp;quot;, name = &amp;quot;total points&amp;quot;) +
   scale_fill_viridis_c(option = &amp;quot;plasma&amp;quot;) +
-  ggtitle(&amp;quot;Number of Points Won by each County per Tier of English Football&amp;quot;,
+  ggtitle(&amp;quot;Number of Points Won by each County\n per Tier of English Football&amp;quot;,
           subtitle = &amp;quot;From Begining of 1992/1993 Season&amp;quot;) +
   facet_wrap(~tier) +
   theme_minimal() +
