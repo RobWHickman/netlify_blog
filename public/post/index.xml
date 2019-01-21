@@ -11,6 +11,290 @@
     <atom:link href="/post/" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>Which English County Has Won the Most Points</title>
+      <link>/post/counties_league_points/</link>
+      <pubDate>Mon, 21 Jan 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/counties_league_points/</guid>
+      <description>&lt;p&gt;Every so often a question on The Guardian’s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; football trivia section piques my interest and is amenable to analysis using R. Previously, I looked at &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;club name suffixes and young World Cup winners&lt;/a&gt; last August. This week (give or take), a question posed on twitter caught my attention:&lt;/p&gt;
+&lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en&#34;&gt;
+&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
+&lt;a href=&#34;https://twitter.com/TheKnowledge_GU?ref_src=twsrc%5Etfw&#34;&gt;&lt;span class=&#34;citation&#34;&gt;@TheKnowledge_GU&lt;/span&gt;&lt;/a&gt; was just chatting to some colleagues in the kitchen at work about why Essex doesn&#39;t have many big football clubs and it got me thinking. If you combined all the points from every league team in the ceremonial counties in England, which county would be on top?
+&lt;/p&gt;
+— BoxBoron (&lt;span class=&#34;citation&#34;&gt;@Rutland_Walker&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/Rutland_Walker/status/1082641231853899781?ref_src=twsrc%5Etfw&#34;&gt;January 8, 2019&lt;/a&gt;
+&lt;/blockquote&gt;
+&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
+&lt;p&gt;To start with as always load the libraries needed to analyse this&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get data
+library(engsoccerdata)
+library(rvest)
+#munging
+library(tidyverse)
+library(magrittr)
+#spatial analysis
+library(sf)
+library(rgdal)
+#for plotting maps
+library(ggthemes)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The easiest way to get a total of points is using the engsoccerdata:: packages database of every English football match from the top four divisions (this does not include data from the 2017-2018, or 2018-2019 seasons). We can work out the points easily from the goals scored for each team&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load the data
+match_data &amp;lt;- engsoccerdata::england %&amp;gt;%
+  #select only the necessary columns and melt
+  select(season = Season, home, visitor, hgoal, vgoal, tier) %&amp;gt;%
+  reshape2::melt(id.vars = c(&amp;quot;season&amp;quot;, &amp;quot;hgoal&amp;quot;, &amp;quot;vgoal&amp;quot;, &amp;quot;tier&amp;quot;),
+                 variable.name = &amp;quot;location&amp;quot;,
+                 value.name = &amp;quot;team&amp;quot;) %&amp;gt;%
+  #will need to match this to location data so some club names need cleaning
+  mutate(team_subbed = case_when(
+    team == &amp;quot;Yeovil&amp;quot; ~ &amp;quot;Yeovil Town&amp;quot;,
+    team == &amp;quot;AFC Bournemouth&amp;quot; ~ &amp;quot;A.F.C. Bournemouth&amp;quot;,
+    team == &amp;quot;Halifax Town&amp;quot; ~ &amp;quot;F.C. Halifax Town&amp;quot;,
+    team == &amp;quot;Aldershot&amp;quot; ~ &amp;quot;Aldershot Town F.C&amp;quot;,
+    team == &amp;quot;Wimbledon&amp;quot; ~ &amp;quot;A.F.C. Wimbledon&amp;quot;,
+    team == &amp;quot;AFC Wimbledon&amp;quot; ~ &amp;quot;A.F.C. Wimbledon&amp;quot;,
+    team == &amp;quot;Macclesfield&amp;quot; ~ &amp;quot;Macclesfield Town&amp;quot;,
+    team == &amp;quot;Rushden &amp;amp; Diamonds&amp;quot; ~ &amp;quot;A.F.C. Rushden &amp;amp; Diamonds&amp;quot;,
+    team == &amp;quot;Milton Keynes Dons&amp;quot; ~ &amp;quot;Milton Keynes&amp;quot;,
+    team == &amp;quot;Dagenham and Redbridge&amp;quot; ~ &amp;quot;Dagenham &amp;amp; Redbridge&amp;quot;,
+    team == &amp;quot;Stevenage Borough&amp;quot; ~ &amp;quot;Stevenage&amp;quot;
+  )) %&amp;gt;%
+  #if cleaning isnt required, take original
+  mutate(team_subbed = ifelse(is.na(team_subbed), team, team_subbed))
+
+#peek at the data
+head(match_data)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##   season hgoal vgoal tier location            team     team_subbed
+## 1   1888     1     1    1     home Accrington F.C. Accrington F.C.
+## 2   1888     0     2    1     home Accrington F.C. Accrington F.C.
+## 3   1888     2     3    1     home Accrington F.C. Accrington F.C.
+## 4   1888     5     1    1     home Accrington F.C. Accrington F.C.
+## 5   1888     6     2    1     home Accrington F.C. Accrington F.C.
+## 6   1888     3     1    1     home Accrington F.C. Accrington F.C.&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The 388k (194k matches) data.frame seems daunting, but actually only results in many fewer unique teams that have played at least one match in the top 4 divisions in England&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;length(unique(match_data$team_subbed))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 141&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The location of each club can then be found using the wikipedia pages for them/their stadia. This matches 121 of the 141 clubs pretty nicely which is a fairly good percentage all things considered&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the links to each clubs wikipedia page
+wiki &amp;lt;- read_html(&amp;quot;https://en.wikipedia.org/wiki/List_of_football_clubs_in_England&amp;quot;) %&amp;gt;%
+  html_nodes(&amp;quot;td:nth-child(1)&amp;quot;) %&amp;gt;%
+  .[which(grepl(&amp;quot;href&amp;quot;, .))]
+
+#get the names for each club
+wiki_clubs &amp;lt;- wiki %&amp;gt;% html_text() %&amp;gt;% gsub(&amp;quot; \\(.*\\)$&amp;quot;, &amp;quot;&amp;quot;, .)
+
+#can match 121/141 right off the bat
+(unique(match_data$team_subbed) %in% wiki_clubs) %&amp;gt;%
+  which() %&amp;gt;%
+  length()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 121&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can find the location of these matching clubs by finding the page for their stadia and then finding the coordinates. It’s a bit of a messy function because I was just jamming stuff together to get data out as best as possible. This takes ~1 minute to run through all 121 teams (for the blog post I actually saved an RDS of the output from this and load it just to save time/server calls)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;matching_club_locations &amp;lt;- wiki %&amp;gt;% 
+  #take only the matching clubs
+  .[which(wiki_clubs %in% unique(match_data$team_subbed))] %&amp;gt;%
+  html_nodes(&amp;quot;a&amp;quot;) %&amp;gt;%
+  #get the wiki page link
+  html_attr(&amp;quot;href&amp;quot;) %&amp;gt;%
+  paste0(&amp;quot;https://en.wikipedia.org&amp;quot;, .) %&amp;gt;%
+  #for each club page find the stadium and its coordinates
+  lapply(., function(team) {
+    link &amp;lt;- read_html(team) %&amp;gt;%
+      html_nodes(&amp;quot;.label a&amp;quot;) %&amp;gt;%
+      .[1] %&amp;gt;%
+      html_attr(&amp;quot;href&amp;quot;) %&amp;gt;% 
+      paste0(&amp;quot;https://en.wikipedia.org&amp;quot;,. )
+    coords &amp;lt;- link %&amp;gt;%
+      read_html() %&amp;gt;% 
+      html_nodes(&amp;quot;#coordinates a&amp;quot;) %&amp;gt;%
+      html_attr(&amp;quot;href&amp;quot;) %&amp;gt;%
+      .[2]
+    #if coords not found use NA
+    if(is.na(coords)) {
+      coord_df &amp;lt;- data.frame(lat = NA,
+                             lon = NA)
+    } else {
+      coords &amp;lt;- coords %&amp;gt;%
+        paste0(&amp;quot;https:&amp;quot;, .) %&amp;gt;%
+        read_html() %&amp;gt;%
+        html_nodes(&amp;quot;.geo&amp;quot;) %&amp;gt;%
+        html_text() %&amp;gt;%
+        strsplit(., split = &amp;quot;, &amp;quot;)
+      coord_df &amp;lt;- data.frame(lat = as.numeric(coords[[1]][1]),
+                             lon = as.numeric(coords[[1]][2]))
+    }
+    return(coord_df)
+  })  %&amp;gt;%
+  #bind everything together
+  do.call(rbind, .) %&amp;gt;%
+  #add the club name as a new column
+  mutate(team = wiki_clubs[
+    which(wiki_clubs %in% unique(match_data$team_subbed))
+    ]) %&amp;gt;%
+  #filter out missing data
+  filter(!is.na(lat) &amp;amp; !is.na(lon))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Which gives us the location of 114 of our 141 clubs. Most of the remaining ones are now-defunct clubs (e.g. Middlesbrough Ironopolis, Leeds City etc.)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;missing_teams &amp;lt;- unique(match_data$team_subbed)[which(!unique(match_data$team_subbed) %in% matching_club_locations$team)]
+missing_teams&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##  [1] &amp;quot;Accrington F.C.&amp;quot;           &amp;quot;Darwen&amp;quot;                   
+##  [3] &amp;quot;Burton Swifts&amp;quot;             &amp;quot;Port Vale&amp;quot;                
+##  [5] &amp;quot;Middlesbrough Ironopolis&amp;quot;  &amp;quot;Rotherham Town&amp;quot;           
+##  [7] &amp;quot;Burton Wanderers&amp;quot;          &amp;quot;Loughborough&amp;quot;             
+##  [9] &amp;quot;Blackpool&amp;quot;                 &amp;quot;New Brighton Tower&amp;quot;       
+## [11] &amp;quot;Burton United&amp;quot;             &amp;quot;Leeds City&amp;quot;               
+## [13] &amp;quot;Rotherham County&amp;quot;          &amp;quot;Bristol Rovers&amp;quot;           
+## [15] &amp;quot;Darlington&amp;quot;                &amp;quot;Wigan Borough&amp;quot;            
+## [17] &amp;quot;Aberdare Athletic&amp;quot;         &amp;quot;New Brighton&amp;quot;             
+## [19] &amp;quot;Thames&amp;quot;                    &amp;quot;Aldershot Town F.C&amp;quot;       
+## [21] &amp;quot;Hereford United&amp;quot;           &amp;quot;Scarborough&amp;quot;              
+## [23] &amp;quot;Cheltenham&amp;quot;                &amp;quot;A.F.C. Rushden &amp;amp; Diamonds&amp;quot;
+## [25] &amp;quot;Accrington&amp;quot;                &amp;quot;Crawley Town&amp;quot;             
+## [27] &amp;quot;Fleetwood Town&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Given it was a Saturday morning where I had nothing better to do, I simply located these clubs home grounds manually and created a data.frame for their locations. It’s not really great practice but whatever.&lt;/p&gt;
+&lt;p&gt;These are then all bound together and converted to an sf spatial object with the correct projection&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#add in the missing locations
+missing_locations &amp;lt;- data.frame(
+  lat = c(53.7646, 53.711772, 52.799, 53.049722, 54.5641, 53.42644, 52.8146,
+          52.7743, 53.804722, 53.4359, 52.799, 53.7778, 53.428367, 51.48622,
+          54.508425, 53.554914, 51.7127, 53.4292, 51.514431, 51.248386,
+          52.060719, 54.265478, 51.906158, 52.328033, 53.7646, 51.405083, 53.9165),
+  lon = c(-2.358, -2.477292, -1.6354, -2.1925, -1.2456, -1.34377, -1.6335, -1.1992,
+          -3.048056, -3.0377, -1.6354, -1.5722, -1.370231, -2.583134, -1.534394,
+          -2.650661, -3.4374, -3.0407, 0.034739, -0.754789, -2.717711, -0.418247,
+          -2.060211, -0.5999, -2.358, -0.281944, -3.0247),
+    team = as.character(missing_teams)
+)
+
+#bind together and convert to sf
+all_locations &amp;lt;- rbind(matching_club_locations,
+                       missing_locations) %&amp;gt;%
+  st_as_sf(coords = c(&amp;quot;lon&amp;quot;, &amp;quot;lat&amp;quot;), crs = st_crs(&amp;quot;+init=epsg:4326&amp;quot;)) %T&amp;gt;%
+  #make a quick plot of locations for sanity check
+  plot()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-21-The_Knowledge_2_files/figure-html/bind_missing_locations-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Now that we have all the teams, we need the English historical county boundaries to group them by. I’d actually already used these for football analysis, looknig at &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;if an independent Yorkshire could win the World Cup&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Load the data (the boundary file can be download from the &lt;a href=&#34;https://www.ordnancesurvey.co.uk/business-and-government/products/boundaryline.html&#34;&gt;Ordnance Survey&lt;/a&gt;) and make a quick plot of the boundaries and teams&lt;/p&gt;
+&lt;p&gt;(I also created an sf object engwal which is just the counties from England and Wales selected out for background plotting)&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;## OGR data source with driver: ESRI Shapefile 
+## Source: &amp;quot;C:\Users\Alaa\Desktop\geo_data\boundary\Data\Supplementary_Ceremonial&amp;quot;, layer: &amp;quot;Boundary-line-ceremonial-counties_region&amp;quot;
+## with 91 features
+## It has 2 fields&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load the boundary file
+counties &amp;lt;- readOGR(dsn = &amp;quot;path/to/file&amp;quot;,
+                    layer = &amp;quot;county_boundaries&amp;quot;) %&amp;gt;%
+  #convert to sf and project as northing/easting
+  st_as_sf(., crs = st_crs(&amp;quot;+init=epsg:27700&amp;quot;)) %&amp;gt;%
+  #only interested in the county name
+  select(county = NAME) %&amp;gt;%
+  #transform the projection to match that of the club locations
+  st_transform(., crs = st_crs(&amp;quot;+init=epsg:4326&amp;quot;))
+
+engwal &amp;lt;- counties %&amp;gt;%
+  .[c(1:54, 88, 90),]
+
+#make a quick plot of counties and teams
+ggplot() +
+  geom_sf(data = counties, fill = NA) +
+  geom_sf(data = all_locations) +
+  ggtitle(&amp;quot;Location of All Teams to have Played in Top 4 English Football Divisions&amp;quot;) +
+  theme_minimal()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;(by the way the artifacts around Bristol and the Wirral are from the OS dataset- it’s very annoying)&lt;/p&gt;
+&lt;p&gt;Then we need to determine which teams are within which counties. The easiest way to do this is to use a spatial join of the team names in all_locations by which county they fall into (using st_contains from the sf package)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#bind the team names to each county
+counties %&amp;lt;&amp;gt;%
+  st_join(., all_locations, join = st_contains) %&amp;gt;%
+  #remove counties that contain zero teams
+  filter(!is.na(team)) %&amp;gt;%
+  mutate(county = as.character(county))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## although coordinates are longitude/latitude, st_contains assumes that they are planar&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#quick plot of number of teams per county (missing = 0)
+counties %&amp;gt;%
+  group_by(county) %&amp;gt;%
+  summarise(n_clubs = n()) %&amp;gt;%
+  ggplot(data = .) +
+  geom_sf(data = engwal) +
+  geom_sf(aes(fill = n_clubs), colour = &amp;quot;black&amp;quot;) +
+  scale_fill_viridis_c(option = &amp;quot;plasma&amp;quot;, name = &amp;quot;# clubs&amp;quot;) +
+  ggtitle(&amp;quot;Number of Top 4 Division Playing Teams in each Ceremonial County&amp;quot;) +
+  theme_minimal()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-21-The_Knowledge_2_files/figure-html/unnamed-chunk-1-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Which shows that most English historic counties (and a few Welsh ones due to teams like Cardiff City/ Swansea City etc.) have at least 1 team that has competed in the top 4 flights of English football at some point (those that do not are: Isle of Wight, Rutland, Surrey, Warwickshire, West Sussex and Cornwall).&lt;/p&gt;
+&lt;p&gt;To finally get the total number of points won by these teams, the county data needs to be joined back onto the match data from the top. First I clean it up a bit then make the left_join by team name. Finally the number of points per match is calculated using case_when and points are grouped by county and summed&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;county_match_data &amp;lt;- match_data %&amp;gt;% 
+  mutate(team = team_subbed) %&amp;gt;%
+  select(-team_subbed) %&amp;gt;%
+  left_join(., counties, by = &amp;quot;team&amp;quot;) %&amp;gt;%
+  mutate(points = case_when(
+    location == &amp;quot;home&amp;quot; &amp;amp; hgoal &amp;gt; vgoal ~ 3,
+    location == &amp;quot;visitor&amp;quot; &amp;amp; vgoal &amp;gt; hgoal ~ 3,
+    location == &amp;quot;home&amp;quot; &amp;amp; hgoal &amp;lt; vgoal ~ 0,
+    location == &amp;quot;visitor&amp;quot; &amp;amp; vgoal &amp;lt; hgoal ~ 0,
+    hgoal == vgoal ~ 1
+  ))
+
+county_points &amp;lt;- county_match_data %&amp;gt;%
+  group_by(county) %&amp;gt;%
+  summarise(total_points = sum(points))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Perhaps unsurprisingly, the county with the most points is Greater London, with Greater Manchester following and other footballing hotspots/ large counties in the West Midlands, Lancashire and around Yorkshire in the trailing group&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;head(arrange(county_points, -total_points))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 2
+##   county             total_points
+##   &amp;lt;chr&amp;gt;                     &amp;lt;dbl&amp;gt;
+## 1 Greater London            67189
+## 2 Greater Manchester        47203
+## 3 West Midlands             37413
+## 4 Lancashire                30808
+## 5 South Yorkshire           30061
+## 6 West Yorkshire            24947&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;By contrast, Worcestshire and Northumberland barely have any points, with a few Welsh counties also struggling&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;head(arrange(county_points, total_points))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 2
+##   county          total_points
+##   &amp;lt;chr&amp;gt;                  &amp;lt;dbl&amp;gt;
+## 1 Worcestershire           275
+## 2 Northumberland           398
+## 3 Mid Glamorgan            744
+## 4 Somerset                 813
+## 5 Gloucestershire          994
+## 6 Herefordshire           1739&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If we group by tier as well as county, it’s possible to see how well each county has done at specific tiers.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;county_match_data %&amp;gt;%
+  group_by(county, tier) %&amp;gt;%
+  summarise(total_points = sum(points)) %&amp;gt;%
+  left_join(.,
+            select(counties, county),
+            by = &amp;quot;county&amp;quot;) %&amp;gt;%
+  ggplot(data = .) +
+  geom_sf(data = engwal) +
+  geom_sf(aes(fill = total_points), colour = &amp;quot;black&amp;quot;) +
+  scale_fill_viridis_c(option = &amp;quot;plasma&amp;quot;, name = &amp;quot;total points&amp;quot;) +
+  ggtitle(&amp;quot;Number of Points Won by each Team in each Tier of English Football by Ceremonial County&amp;quot;) +
+  facet_wrap(~tier) +
+  theme_minimal()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-21-The_Knowledge_2_files/figure-html/unnamed-chunk-2-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;And for the Premier League era this clears up to&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;county_match_data %&amp;gt;%
+  filter(season &amp;gt; 1991) %&amp;gt;%
+  group_by(county, tier) %&amp;gt;%
+  summarise(total_points = sum(points)) %&amp;gt;%
+  left_join(.,
+            select(counties, county),
+            by = &amp;quot;county&amp;quot;) %&amp;gt;%
+  ggplot(data = .) +
+  geom_sf(data = engwal) +
+  geom_sf(aes(fill = total_points), colour = &amp;quot;black&amp;quot;, name = &amp;quot;total points&amp;quot;) +
+  scale_fill_viridis_c(option = &amp;quot;plasma&amp;quot;) +
+  ggtitle(&amp;quot;Number of Points Won by each Team in each Tier of English Football by Ceremonial County&amp;quot;,
+          subtitle = &amp;quot;From Begining of 1992/1993 Season&amp;quot;) +
+  facet_wrap(~tier) +
+  theme_minimal()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## Warning: Ignoring unknown parameters: name&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-21-The_Knowledge_2_files/figure-html/unnamed-chunk-3-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Which shows just how dominant London has been in the top division of English football (especially as it is only competitive at lower levels).&lt;/p&gt;
+&lt;p&gt;I had wanted to weight points by the average ELO of that league and see which county has the most weight-adjusted points but got bored for this small blog post.&lt;/p&gt;
+&lt;p&gt;Best,&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Predicting the 2018-19 Women&#39;s Super League Using xG and Dixon-Coles</title>
       <link>/post/wsl-prediction-1/</link>
       <pubDate>Fri, 04 Jan 2019 00:00:00 +0000</pubDate>
