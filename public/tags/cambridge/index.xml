@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>cambridge on Robert Hickman</title>
+    <link>/tags/cambridge/</link>
+    <description>Recent content in cambridge on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Thu, 22 Nov 2018 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/cambridge/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Planning a Pub Crawl Using R</title>
+      <link>/post/cambridge_pub_crawl/</link>
+      <pubDate>Thu, 22 Nov 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/cambridge_pub_crawl/</guid>
+      <description>A few weeks ago I went on the first pub crawl I’d been on in years around my city of Cambridge. Around the same time I had also been visiting 4 very good pubs within ~200m of each other tucked away in a quiet neighbourhood of the town. Together, I wondered if it was possible with freely avaiable data to plan an optimal pub crawl around any town/area of the UK, and also, if it would be feasbile to visit every pub within the city in a single day if travelling optimally.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>chess on Robert Hickman</title>
+    <link>/tags/chess/</link>
+    <description>Recent content in chess on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Tue, 01 May 2018 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/chess/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Riddler 27th April 2018</title>
+      <link>/post/riddler-27th-april-2018/</link>
+      <pubDate>Tue, 01 May 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/riddler-27th-april-2018/</guid>
+      <description>I’ve been looking for small programming problems to practice on while running experiments. One such source is Fivethirtyeight’s Riddler column which posts conundrums weekly. This week one problem focus on one of life’s universal problems: how many urinals are needed in any bathroom for all patrons to use it without awkwardness.
+Formally this is phrased as:
+Some number, N, of people need to pee, and there is some number, M, of urinals in a row in a men’s room.</description>
+    </item>
+    
+    <item>
+      <title>Hello World! And A Small Chess Plotting Package</title>
+      <link>/post/hello-world-a-small-chess-plotting-package/</link>
+      <pubDate>Wed, 21 Mar 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/hello-world-a-small-chess-plotting-package/</guid>
+      <description>Finally gotten around to using my blogdown website!
+Feels like a fairly good place to publicise a small package to plot chess games using only the pgn using ggplot2 in R which can be found here
+To copy the readme mini-vignette provides a nice overview of the uber-function which goes from pgn -&amp;gt; gif.
+As in the README massive thanks and inspiration to Joshua Kunst and his rchess package which I failed to get going on my laptop and decided to try my arm at writing something from scratch.</description>
+    </item>
+    
+  </channel>
+</rss>

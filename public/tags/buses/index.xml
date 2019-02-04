@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>buses on Robert Hickman</title>
+    <link>/tags/buses/</link>
+    <description>Recent content in buses on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Thu, 04 Oct 2018 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/buses/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>How I Learned To Stop Worrying and Love Heatmaps</title>
+      <link>/post/getis-ord-heatmaps-tutorial/</link>
+      <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/getis-ord-heatmaps-tutorial/</guid>
+      <description>Whilst getting some work done browsing twitter at work today, I came across this tweet from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.
+For instance, lets load some mapping libraries
+library(tidyverse)library(sf)library(rgdal)For this blog I’m going to use data of bus stops in London, because there’s an absolute ton of them and because I love the London Datastore and it was the first public, heavy, point data file I came across.</description>
+    </item>
+    
+  </channel>
+</rss>

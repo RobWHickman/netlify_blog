@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Dixon-Coles on Robert Hickman</title>
+    <link>/tags/dixon-coles/</link>
+    <description>Recent content in Dixon-Coles on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Fri, 04 Jan 2019 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/dixon-coles/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Predicting the 2018-19 Women&#39;s Super League Using xG and Dixon-Coles</title>
+      <link>/post/wsl-prediction-1/</link>
+      <pubDate>Fri, 04 Jan 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/wsl-prediction-1/</guid>
+      <description>Over the last few years since I started coding I’d always been interested in how data science could help predict football results/ identify footballing talents, and just generally ‘solve’ football.
+One of the major problems with analysing football had been the availability of data. Though there’s a lot of great published stuff freely available to read, a lot of the cutting edge work revolves around advanced metrics, such as expected goals, which it’s hard to get the data for.</description>
+    </item>
+    
+  </channel>
+</rss>

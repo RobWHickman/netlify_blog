@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>sf on Robert Hickman</title>
+    <link>/tags/sf/</link>
+    <description>Recent content in sf on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Sun, 09 Sep 2018 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/sf/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>sf.chlorodot mini-package</title>
+      <link>/post/sf.schlorodot/</link>
+      <pubDate>Sun, 09 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/sf.schlorodot/</guid>
+      <description>Recently, I’d seen two tweets with stunning examples of maps by Paul Campbell here and (taken inspiration from the first) by Imer Muhović here.
+The basic idea of the dot chloropleths is to visualise not only the location clustering of each variable but the number of observations (something traditional ‘filled’ chloropleths don’t do). More importantly than this, the maps also just look really really cool.
+I had a spare few minutes during work on Friday which I tidied up into a package to calculate the random position of dots for such maps which can be found on my github.</description>
+    </item>
+    
+  </channel>
+</rss>

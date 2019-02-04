@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>the_knowledge on Robert Hickman</title>
+    <link>/tags/the_knowledge/</link>
+    <description>Recent content in the_knowledge on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Mon, 21 Jan 2019 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/the_knowledge/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Which English County Has Won the Most Points</title>
+      <link>/post/counties_league_points/</link>
+      <pubDate>Mon, 21 Jan 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/counties_league_points/</guid>
+      <description>Every so often a question on The Guardian’s The Knowledge football trivia section piques my interest and is amenable to analysis using R. Previously, I looked at club name suffixes and young World Cup winners last August. This week (give or take), a question posed on twitter caught my attention:
+@TheKnowledge_GU was just chatting to some colleagues in the kitchen at work about why Essex doesn&#39;t have many big football clubs and it got me thinking.</description>
+    </item>
+    
+    <item>
+      <title>The Knowledge 4th August 2018</title>
+      <link>/post/the-knowledge-4th-august-2018/</link>
+      <pubDate>Sat, 04 Aug 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/the-knowledge-4th-august-2018/</guid>
+      <description>The Guardian publish a weekly set of questions and answers on a variety of football minutiae at The Knowledge. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.
+library(rvest)library(dplyr)library(magrittr)library(data.table)library(zoo)library(ggplot2)library(rvest)library(stringr)#jalapic/engsoccerdatalibrary(engsoccerdata)We Ain’t Going To The Town..‘This season, Tranmere Rovers return to contest League Two alongside eight teams with the suffix Town, including six successive fixtures against these clubs over the New Year.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -13,6 +13,8 @@ header:
   image: ''
 ---
 
+# Riddler Classic
+
 In my spare time [I enjoy solving](http://www.robert-hickman.eu/post/riddler-27th-april-2018/) [538's The Riddler column](https://fivethirtyeight.com/tag/the-riddler/). This week I had a spare few hours waiting for the Superbowl to start and decided to code up a solution to the latest problem to keep me busy.
 
 The question revolves around a card game in which whatever choice a player makes, they are likely to lose to a con artist. Formally this is phrased as:
@@ -46,7 +48,7 @@ decks <- list(
 in tidy R we can easily simulate a game using a quickly written function
 
 ```{r tidy_func, warning=FALSE,message=FALSE}
-run_game <- function(deck_player, deck_grifter) {
+play_game <- function(deck_player, deck_grifter) {
   #shuffle the decks
   deck_player <- sample(decks[[grep(deck_player, deck_names)]])
   deck_grifter <- sample(decks[[grep(deck_grifter, deck_names)]])
@@ -78,17 +80,152 @@ run_game <- function(deck_player, deck_grifter) {
 }
 ```
 
+However, there's not much learnt from just answering these question as easily/quickly as possible, so I frequently try and write out my solutions using the [Rcpp package](https://cran.r-project.org/web/packages/Rcpp/index.html) from Dirk Edelbuettel which allows for C++ integration into R. 
+
+For problems like this it isn't reaaalllly necessary, but it's good practice nonetheless.
+
+The equivalent Rcpp function looks like:
+
 ```{r cpp_func, warning=FALSE,message=FALSE}
-cppFunction('double play_gameC(NumericVector player_deck, NumericVector grifter_deck) {'
+#first declare the type_of_output function_name(type_of_input argument) up top
+cppFunction('int play_gameC(NumericVector player_deck, NumericVector grifter_deck) {
+  //shuffle the decks
+  std::random_shuffle(player_deck.begin(), player_deck.end());
+  std::random_shuffle(grifter_deck.begin(), grifter_deck.end());
+  
+  //initialise
+  int turn = 0;
+  int points_player = 0;
+  int points_grifter = 0;
 
+  //play each round
+  while(points_player < 5 && points_grifter < 5) {
+    int player_card = player_deck(turn);
+    int grifter_card = grifter_deck(turn);
 
-cppFunction('double drawn_card(NumericVector player_deck) {
-  NumericVector shuffled = random_shuffle(player_deck);
-  int card = shuffled(1);
-  return card
+    if(player_card > grifter_card)
+    {
+      points_player = points_player + 1;
+    } 
+    else 
+    {
+      points_grifter = points_grifter + 1;
+    }
+
+    turn = turn + 1;
+  }
+  
+  //say default result =0 and update when player wins
+  int result = 0;
+
+  if(points_player > points_grifter) {
+    result = result + 1;
+  }
+
+//return the game result
+  return result;
 }')
 
 
+```
+
+all that's left is to rerun this a load of times. Fortunately purrr makes this super easy
+
+```{r solve_puzzle, warning=FALSE,message=FALSE}
+#create a df of all deck combinations
+combinations <- data.frame(player_choice = deck_names,
+                           grifter_choice = deck_names) %>%
+    expand(player_choice, grifter_choice) %>%
+    filter(player_choice != grifter_choice)
+
+#choose how many games to play
+number_of_games <- 10000
+
+#find how often the player wins for each deck choice
+results <- rerun(number_of_games,
+                 map2(combinations$player_choice,
+                      combinations$grifter_choice,
+                      play_game)
+                 ) %>%
+  unlist(.) %>%
+  matrix(ncol = number_of_games) %>%
+  #as a proportion of games
+  rowSums() / number_of_games 
+
+#mutate this back onto the combinations
+combinations <- combinations %>%
+  mutate(win_chance = results) %>%
+  print()
+```
+
+So whatever deck you pick you have a 70% chance of losing providing the grifter has memorised the winning counter-deck. What an unfortunate state of affairs.
+
+Giving we've written the C++ code (which I didn't use in the end to run my model), it's worth seeing what the speed advantage would have been. If you're eagle-eyed you might notice that play_game and play_gameC have a slightly different way to defining the decks (the R function selects based on name in the first line) so I also wrote a play_gameR function that functions the same as the C++ one for a fairer comparison.
+
+```{r r_func, warning=FALSE,message=FALSE,echo=FALSE}
+play_gameR <- function(deck_player, deck_grifter) {
+  #shuffle the decks
+  deck_player <- sample(deck_player)
+  deck_grifter <- sample(deck_grifter)
+  
+  #set the point to zero
+  points_player <- 0
+  points_grifter <- 0
+  
+  #set the turn to 0
+  n <- 1
+  
+  #keep drawing cards until one player wins 5 times
+  while(points_grifter < 5 & points_player < 5) {
+    if(deck_player[n] > deck_grifter[n]) {
+      points_player <- points_player + 1
+    } else {
+      points_grifter <- points_grifter + 1
+    }
+    
+    #and update the turn 
+    n <- n + 1
+  }
+  
+  if(points_player > points_grifter) {
+    return(1)
+  } else {
+    return(0)
+  }
+}
 
 ```
+
+We can benchmark these using the microbenchmark 
+
+```{r}
+library(microbenchmark)
+
+#we'll just use deck1 vs deck2 for the example
+deck1 <- decks[[1]]
+deck2 <- decks[[2]]
+
+microbenchmark(
+  play_gameR(deck1, deck2),
+  play_gameC(deck1, deck2),
+  times = 10000
+)
+```
+
+And we can see that despite being very similar, the C++ code is much faster. For problems like this it makes no difference (a mean of 13 vs. 2ms isn't going to be noticeable to a human except on very large numbers of reruns), but it's fun to know how to get some free speed out of code in any case.
+
+[Radiohead - House of Cards](https://www.youtube.com/watch?v=8nTFjVm9sTQ)
+
+
+# Riddler Express - Can You Escape a Maze Without Walls
+
+I also completed the riddler express which involves a maze. Obviously look away if you don't want it spoiled, but the key is to work backwards and see there's 1 clear fastest path. You can complete the maze in 24 moves.
+
+```{r maze_answer, warning=FALSE,message=FALSE,echo=FALSE}
+knitr::include_graphics("C:/Users/robwh/Desktop/static/img/riddler_maze.png")
+```
+
+
+
+
 

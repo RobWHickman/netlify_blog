@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>clustering on Robert Hickman</title>
+    <link>/tags/clustering/</link>
+    <description>Recent content in clustering on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Wed, 02 Jan 2019 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/clustering/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>TidyTuesday Week One</title>
+      <link>/post/tidytuesday-2019-1/</link>
+      <pubDate>Wed, 02 Jan 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/tidytuesday-2019-1/</guid>
+      <description>Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).
+A quick way to get something to work with that can be published unpolished is #TidyTuesday on twitter which (as far as I know/can tell) is organised by Thomas Mock from RStudio.
+This week, the data comes in the form of a massive corpus of every tweet using the #rstats hashtag, curated by rtweet package creator Mike Kearney.</description>
+    </item>
+    
+  </channel>
+</rss>
