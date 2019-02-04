@@ -219,7 +219,7 @@ And we can see that despite being very similar, the C++ code is much faster. For
 
 # Riddler Express - Can You Escape a Maze Without Walls
 
-I also completed the riddler express which involves a maze. Obviously look away if you don't want it spoiled, but the key is to work backwards and see there's 1 clear fastest path. You can complete the maze in 24 moves.
+I also completed the riddler express which involves a maze. Obviously look away if you don't want it spoiled, but the key is to work backwards and see there's 1 clear fastest path. You can complete the maze in 42 moves. I've tried to show my messy working
 
 ```{r maze_answer, warning=FALSE,message=FALSE,echo=FALSE}
 knitr::include_graphics("/img/riddler_maze.png")
