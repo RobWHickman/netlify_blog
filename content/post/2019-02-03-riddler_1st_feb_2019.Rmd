@@ -158,7 +158,7 @@ combinations <- combinations %>%
   print()
 ```
 
-So whatever deck you pick you have a 70% chance of losing providing the grifter has memorised the winning counter-deck. What an unfortunate state of affairs.
+So whatever deck you pick you have a 70% chance of losing providing the grifter has memorized the winning counter-deck. What an unfortunate state of affairs.
 
 Giving we've written the C++ code (which I didn't use in the end to run my model), it's worth seeing what the speed advantage would have been. If you're eagle-eyed you might notice that play_game and play_gameC have a slightly different way to defining the decks (the R function selects based on name in the first line) so I also wrote a play_gameR function that functions the same as the C++ one for a fairer comparison.
 
@@ -222,7 +222,7 @@ And we can see that despite being very similar, the C++ code is much faster. For
 I also completed the riddler express which involves a maze. Obviously look away if you don't want it spoiled, but the key is to work backwards and see there's 1 clear fastest path. You can complete the maze in 24 moves.
 
 ```{r maze_answer, warning=FALSE,message=FALSE,echo=FALSE}
-knitr::include_graphics("C:/Users/robwh/Desktop/static/img/riddler_maze.png")
+knitr::include_graphics("/img/riddler_maze.png")
 ```
 
 
