@@ -1,0 +1,94 @@
+---
+title: Riddler 1st February 2019
+author: Robert Hickman
+date: '2019-02-03'
+slug: riddler-1st-feb-2019
+output: pdf_document
+categories: []
+tags:
+  - rstats
+  - riddler
+header:
+  caption: ''
+  image: ''
+---
+
+In my spare time [I enjoy solving](http://www.robert-hickman.eu/post/riddler-27th-april-2018/) [538's The Riddler column](https://fivethirtyeight.com/tag/the-riddler/). This week I had a spare few hours waiting for the Superbowl to start and decided to code up a solution to the latest problem to keep me busy.
+
+The question revolves around a card game in which whatever choice a player makes, they are likely to lose to a con artist. Formally this is phrased as:
+
+> You meet someone on a street corner who’s standing at a table on which there are three decks of playing cards. He tells you his name is “Three Deck Monte.” Knowing this will surely end well, you inspect the decks. Each deck contains 12 cards …
+
+> Red Deck: four aces, four 9s, four 7s
+> Blue Deck: four kings, four jacks, four 6s
+> Black Deck: four queens, four 10s, four 8s
+> The man offers you a bet: You pick one of the decks, he then picks a different one. You both shuffle your decks, and you compete in a short game similar to War. You each turn over cards one at a time, the one with a higher card wins that turn (aces are high), and the first to win five turns wins the bet. (There can’t be ties, as no deck contains any of the same cards as any other deck.)
+
+> Should you take the bet? After all, you can pick any of the decks, which seems like it should give you an advantage against the dealer. If you take the bet, and the dealer picks the best possible counter deck each time, how often will you win?
+
+
+Obviously if you've ever seen a trick like this you'll know you shouldn't. But what is the probability you lose?
+
+```{r set_up, warning=FALSE,message=FALSE}
+library(tidyverse)
+library(Rcpp)
+
+#set up the parameters
+deck_names <- c("red", "blue", "black")
+decks <- list(
+  c(rep(14, 4), rep(9, 4), rep(7, 4)),
+  c(rep(13, 4), rep(11, 4), rep(6, 4)),
+  c(rep(12, 4), rep(10, 4), rep(8, 4))
+  )
+
+```
+
+in tidy R we can easily simulate a game using a quickly written function
+
+```{r tidy_func, warning=FALSE,message=FALSE}
+run_game <- function(deck_player, deck_grifter) {
+  #shuffle the decks
+  deck_player <- sample(decks[[grep(deck_player, deck_names)]])
+  deck_grifter <- sample(decks[[grep(deck_grifter, deck_names)]])
+  
+  #set the point to zero
+  points_player <- 0
+  points_grifter <- 0
+  
+  #set the turn to 0
+  n <- 1
+  
+  #keep drawing cards until one player wins 5 times
+  while(points_grifter < 5 & points_player < 5) {
+    if(deck_player[n] > deck_grifter[n]) {
+      points_player <- points_player + 1
+    } else {
+      points_grifter <- points_grifter + 1
+    }
+    
+    #and update the turn 
+    n <- n + 1
+  }
+  
+  if(points_player > points_grifter) {
+    return(1)
+  } else {
+    return(0)
+  }
+}
+```
+
+```{r cpp_func, warning=FALSE,message=FALSE}
+cppFunction('double play_gameC(NumericVector player_deck, NumericVector grifter_deck) {'
+
+
+cppFunction('double drawn_card(NumericVector player_deck) {
+  NumericVector shuffled = random_shuffle(player_deck);
+  int card = shuffled(1);
+  return card
+}')
+
+
+
+```
+
