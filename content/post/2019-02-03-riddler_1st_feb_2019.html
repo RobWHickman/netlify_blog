@@ -139,12 +139,12 @@ combinations &lt;- combinations %&gt;%
 <pre><code>## # A tibble: 6 x 3
 ##   player_choice grifter_choice win_chance
 ##   &lt;fct&gt;         &lt;fct&gt;               &lt;dbl&gt;
-## 1 black         blue                0.296
-## 2 black         red                 0.707
+## 1 black         blue                0.299
+## 2 black         red                 0.701
 ## 3 blue          black               0.704
-## 4 blue          red                 0.298
-## 5 red           black               0.294
-## 6 red           blue                0.695</code></pre>
+## 4 blue          red                 0.306
+## 5 red           black               0.295
+## 6 red           blue                0.709</code></pre>
 <p>So whatever deck you pick you have a 70% chance of losing providing the grifter has memorized the winning counter-deck. What an unfortunate state of affairs.</p>
 <p>Giving we’ve written the C++ code (which I didn’t use in the end to run my model), it’s worth seeing what the speed advantage would have been. If you’re eagle-eyed you might notice that play_game and play_gameC have a slightly different way to defining the decks (the R function selects based on name in the first line) so I also wrote a play_gameR function that functions the same as the C++ one for a fairer comparison.</p>
 <p>We can benchmark these using the microbenchmark</p>
@@ -160,9 +160,9 @@ microbenchmark(
   times = 10000
 )</code></pre>
 <pre><code>## Unit: microseconds
-##                      expr   min     lq      mean median     uq      max
-##  play_gameR(deck1, deck2) 8.752 10.212 15.473546 10.941 14.587 8018.404
-##  play_gameC(deck1, deck2) 1.094  1.460  2.519572  1.824  2.553  878.495
+##                      expr   min    lq      mean median     uq      max
+##  play_gameR(deck1, deck2) 8.388 9.847 14.202272 10.576 13.858 7745.265
+##  play_gameC(deck1, deck2) 1.094 1.459  2.333585  1.824  2.553  815.771
 ##  neval
 ##  10000
 ##  10000</code></pre>
@@ -171,6 +171,6 @@ microbenchmark(
 </div>
 <div id="riddler-express---can-you-escape-a-maze-without-walls" class="section level1">
 <h1>Riddler Express - Can You Escape a Maze Without Walls</h1>
-<p>I also completed the riddler express which involves a maze. Obviously look away if you don’t want it spoiled, but the key is to work backwards and see there’s 1 clear fastest path. You can complete the maze in 24 moves.</p>
+<p>I also completed the riddler express which involves a maze. Obviously look away if you don’t want it spoiled, but the key is to work backwards and see there’s 1 clear fastest path. You can complete the maze in 42 moves. I’ve tried to show my messy working</p>
 <p><img src="/img/riddler_maze.png" /><!-- --></p>
 </div>
