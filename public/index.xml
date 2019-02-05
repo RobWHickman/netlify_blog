@@ -11,6 +11,245 @@
     <atom:link href="/" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>THe Knowledge 3</title>
+      <link>/post/cambridge_pub_crawl/</link>
+      <pubDate>Tue, 05 Feb 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/cambridge_pub_crawl/</guid>
+      <description>
+
+
+&lt;div id=&#34;section&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;&lt;/h1&gt;
+&lt;p&gt;The first question this week concerns players scoring on (or nearest to) every day of the year&lt;/p&gt;
+&lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en&#34;&gt;
+&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
+Has any player played/or even scored on every date in a calendar year. What’s the nearest anyone has come?
+&lt;/p&gt;
+— David Thomson (&lt;span class=&#34;citation&#34;&gt;@thomsonionioni&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/thomsonionioni/status/1090206478479298560?ref_src=twsrc%5Etfw&#34;&gt;January 29, 2019&lt;/a&gt;
+&lt;/blockquote&gt;
+&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
+&lt;p&gt;Getting the data for this is the main problem. The best (free) source I tend to use is transfermarkt.com, but data there becomes less reliable from before 2000 (and only has a few years of data from more obscure years where I could believe some players are banging in goals for fun).&lt;/p&gt;
+&lt;p&gt;Nonetheless, it should at least gives us some ideas&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(rvest)
+library(tidyverse)
+library(zoo)
+library(openair)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For each player sampled we’re going to want the data for each goal scored both for their club and country. Saving the competition data is also useful as it also allows us to sort out friendlies which may or may not count depending on interpretation of the question.&lt;/p&gt;
+&lt;p&gt;Two quick functions will do this for any given player id&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#create a data frame of club goals
+get_club_goals &amp;lt;- function(club_stats) {
+  #read the page
+  read &amp;lt;- read_html(club_stats)
+  
+  #get the players names
+  name &amp;lt;- read %&amp;gt;%
+    html_nodes(&amp;quot;.dataName b&amp;quot;) %&amp;gt;%
+    html_text()
+    
+  #read the table of goals scored and munge together
+  club_df &amp;lt;- read %&amp;gt;%
+    html_nodes(xpath = &amp;#39;//*[@id=&amp;quot;main&amp;quot;]/div[10]/div/div/div[4]/table&amp;#39;) %&amp;gt;%
+    html_table(fill = TRUE) %&amp;gt;%
+    as.data.frame() %&amp;gt;%
+    select(Date, Minute, Competition.1) %&amp;gt;%
+    mutate(minute = as.numeric(gsub(&amp;quot;&amp;#39;.*&amp;quot;, &amp;quot;&amp;quot;, Minute))) %&amp;gt;%
+    filter(!is.na(minute)) %&amp;gt;% 
+    #convert date to day of the year
+    mutate(date = case_when(
+      Date != &amp;quot;&amp;quot; ~ strftime(as.Date(Date, &amp;quot;%m/%d/%y&amp;quot;), &amp;quot;%m/%d&amp;quot;)
+    )) %&amp;gt;%
+    mutate(competition = ifelse(Competition.1 == &amp;quot;&amp;quot;, NA, Competition.1)) %&amp;gt;%
+    select(competition, date, minute) %&amp;gt;%
+    #fill down the competition and date if missing
+    do(na.locf(.)) %&amp;gt;%
+    mutate(scored_for = &amp;quot;club&amp;quot;, name = name)
+}
+
+#do the same for national team goals
+get_nt_goals &amp;lt;- function(nt_stats) {
+  read &amp;lt;- read_html(nt_stats)
+  
+  name &amp;lt;- read %&amp;gt;%
+    html_nodes(&amp;quot;.dataName b&amp;quot;) %&amp;gt;%
+    html_text()
+
+  goal_table &amp;lt;- read %&amp;gt;%
+    html_nodes(xpath = &amp;#39;//*[@id=&amp;quot;main&amp;quot;]/div[10]/div[1]/div[3]/div[4]/table&amp;#39;)
+  
+  #some players won&amp;#39;t have any national team goals
+  #return NA
+  if(!is_empty(goal_table)) {
+    nt &amp;lt;- goal_table %&amp;gt;%
+      html_table(fill = TRUE) %&amp;gt;%
+      as.data.frame() %&amp;gt;%
+      select(For, Date, Var.11) %&amp;gt;%
+      mutate(goals = as.numeric(Var.11)) %&amp;gt;%
+      mutate(date = case_when(
+        Date != &amp;quot;&amp;quot; ~ strftime(as.Date(Date, &amp;quot;%m/%d/%y&amp;quot;), &amp;quot;%m/%d&amp;quot;)
+      )) %&amp;gt;%
+      mutate(competition = ifelse(For == &amp;quot;&amp;quot;, NA, For)) %&amp;gt;%
+      mutate(competition = na.locf(competition)) %&amp;gt;%
+      filter(!is.na(date)) %&amp;gt;%
+      select(competition, date, goals) 
+    
+    #if more than 1 goal is scored on a game it&amp;#39;s counted as two rows
+    #separate these out
+    if(any(nt$goals != 1)) {
+      nt_df &amp;lt;- do.call(&amp;quot;c&amp;quot;, (mapply(rep, c(nt$competition, nt$date), nt$goals))) %&amp;gt;%
+        matrix(., 2, byrow = TRUE) %&amp;gt;%
+        t() %&amp;gt;%
+        as.data.frame() %&amp;gt;%
+        select(competition = V1, date = V2)
+    } else {
+      nt_df &amp;lt;- nt %&amp;gt;%
+        select(-goals)
+    }
+    
+    #finish off munging
+    df &amp;lt;- nt_df %&amp;gt;%
+      mutate(minute = NA, scored_for = &amp;quot;nation&amp;quot;, name = name)
+  } else {
+    df &amp;lt;- NA
+  }
+  return(df)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we can get into the scraping. For each player some parts of the URL stay the same, so lets save those as objects so we don’t have to deal with massive long urls.&lt;/p&gt;
+&lt;p&gt;I decided to test out the functions using Cristiano Ronaldo as his 675 goals for club and country is (I believe) more than any active player. Pasting the url together and running on the functions does the trick&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#for each player some parts of url stay the same
+base_url &amp;lt;- &amp;quot;https://www.transfermarkt.co.uk/&amp;quot;
+club_text1 &amp;lt;- &amp;quot;/alletore/spieler/&amp;quot;
+club_text2 &amp;lt;- &amp;quot;/saison//verein/0/liga/0/wettbewerb//pos/0/trainer_id/0/minute/0/torart/0/plus/1&amp;quot;
+nt_text1 &amp;lt;- &amp;quot;/nationalmannschaft/spieler/&amp;quot;
+nt_text2 &amp;lt;- &amp;quot;/verein_id/3300/plus/0?hauptwettbewerb=&amp;amp;wettbewerb_id=&amp;amp;trainer_id=&amp;amp;start=Aug+20%2C+2003&amp;amp;ende=Feb+4%2C+2019&amp;amp;nurEinsatz=2&amp;quot;
+
+#get all the goals scored by Cristiano Ronaldo
+ronaldo &amp;lt;- rbind(
+  paste0(base_url, &amp;quot;player_name&amp;quot;, club_text1, 8198, club_text2) %&amp;gt;%
+    get_club_goals(),
+  paste0(base_url, &amp;quot;player_name&amp;quot;, nt_text1, 8198, nt_text2) %&amp;gt;%
+    get_nt_goals()
+)
+
+#count the number of unique dates scored on
+length(unique(ronaldo$date))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 244&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So Ronaldo has scored on 244 of the 366 possible days of the year. It’s not surprising that scoring on &lt;em&gt;every&lt;/em&gt; day would be difficult. The club season only runs August-June and there are unlikely to be many possible games to pla in July at all. Plus days such a Christmas are usually taken off from football.&lt;/p&gt;
+&lt;p&gt;In terms of goals per day using 2019s calendar this looks like (plot made using the &lt;a href=&#34;https://cran.r-project.org/web/packages/openair/index.html&#34;&gt;openair package&lt;/a&gt;:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;ronaldo %&amp;gt;%
+  #count goals per date
+  group_by(date) %&amp;gt;%
+  summarise(goals = n()) %&amp;gt;%
+  #convert to 2019 dates
+  mutate(date = as.Date(paste0(&amp;quot;2019/&amp;quot;, date))) %&amp;gt;%
+  #use calendarPlot from the openair package
+  calendarPlot(., pollutant = &amp;quot;goals&amp;quot;, year = 2019)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-03-05-The_Knowledge_3_files/figure-html/ronaldo_calendar-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Which shows more deviation in scoring than I thought it would. Nethertheless, from Sepetember-May each year is pretty blocked out, though there is a run of Saturdays this December which could be fertile ground for increasing his total.&lt;/p&gt;
+&lt;p&gt;Next we need to get a list of likely players who could come close to matching Ronaldo’s record.&lt;/p&gt;
+&lt;p&gt;For this I took the first page of transfermarkt’s top scorers of the year across all leagues. It’s possible that a player might (e.g.) be on the second page each year and have scored a ton, but I don’t think it’s super likely.&lt;/p&gt;
+&lt;p&gt;I run this through the top scorers page from 1995 (the earliest year available) to 2018 and grab each player id. Afterwards, save the scraped list as an .rds to preventneeding to continually rescrape the page and put extra load onto the server.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#the url for the pages of top scorers
+top_scorer_ids &amp;lt;- paste0(base_url, 
+                         &amp;quot;spieler-statistik/jahrestorschuetzen/&amp;quot;,
+                         &amp;quot;statistik/stat/plus/0/galerie/0?jahr=&amp;quot;,
+                         1995:2018,
+                         &amp;quot;&amp;amp;wettbewerb=alle&amp;amp;monatVon=01&amp;amp;monatBis=12&amp;amp;altersklasse=&amp;amp;&amp;quot;,
+                         &amp;quot;land_id=&amp;amp;ausrichtung=alle&amp;amp;spielerposition_id=alle&amp;amp;art=0&amp;quot;) %&amp;gt;%
+  #scrape the ids of players
+  lapply(., function(year) {
+    read_html(year) %&amp;gt;%
+      html_nodes(&amp;quot;#yw1 .spielprofil_tooltip&amp;quot;) %&amp;gt;%
+      html_attr(&amp;quot;id&amp;quot;)
+  }) %&amp;gt;%
+  unlist() %&amp;gt;%
+  unique()
+
+#save this to prevent need for re-scraping
+saveRDS(top_scorer_ids, &amp;quot;transfermarkt_top_scorers.rds&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then all that’s left is to scrape the goals for each player whose id we’ve scraped. Again, save this once run, especially as it takes a fair while to complete. For this article the data was scraped on the 5th February 2019&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;player_goals &amp;lt;- top_scorer_ids %&amp;gt;%
+  #for each player scrape every goal
+  lapply(., function(id) {
+    goals &amp;lt;- rbind(
+      paste0(base_url, &amp;quot;player_name&amp;quot;, club_text1, id, club_text2) %&amp;gt;%
+        get_club_goals(),
+      paste0(base_url, &amp;quot;player_name&amp;quot;, nt_text1, id, nt_text2) %&amp;gt;%
+        get_nt_goals()
+    ) %&amp;gt;%
+      #remove NAS
+      #this is where a player hasn&amp;#39;t scored for their nation
+      filter(!is.na(date)) %&amp;gt;%
+      mutate(id = id)
+  }) %&amp;gt;%
+  do.call(rbind, .)
+
+#and save
+saveRDS(player_goals, &amp;quot;top_scorer_goals.rds&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we have a list of every goal scored by profilic strikers, we just have to group by each player and count how many dates they’ve scored on. To get the playest with the highest number of unique dates we group by their id and count the length of the unique dates they’ve scored on.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;days_per_player &amp;lt;- player_goals %&amp;gt;%
+  #group by player
+  group_by(id) %&amp;gt;%
+  #count the dates scored on
+  summarise(days = length(unique(date))) %&amp;gt;%
+  arrange(-days) %&amp;gt;%
+  #rejoin the name data back in
+  left_join(.,
+            player_goals %&amp;gt;%
+              select(id, name) %&amp;gt;%
+              unique(),
+            by = &amp;quot;id&amp;quot;) %&amp;gt;%
+  print()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 413 x 3
+##    id     days name             
+##    &amp;lt;chr&amp;gt; &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt;            
+##  1 8198    244 Cristiano Ronaldo
+##  2 28003   210 Messi            
+##  3 7349    203 Raúl             
+##  4 3455    200 Ibrahimovic      
+##  5 3207    189 Henry            
+##  6 4257    187 Eto&amp;#39;o            
+##  7 3924    173 Drogba           
+##  8 48280   173 Cavani           
+##  9 44352   172 Suárez           
+## 10 7980    171 Villa            
+## # ... with 403 more rows&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;so perhaps unsurprisingly, Ronaldo comes out on top. As expected given the data source, most of the top players are very recent strikers- all of the top 10 were active well into the 2010s. &lt;a href=&#34;https://en.wikipedia.org/wiki/Ulf_Kirsten&#34;&gt;Ulf Kirsten&lt;/a&gt; and &lt;a href=&#34;https://en.wikipedia.org/wiki/Toni_Polster&#34;&gt;Toni Polster&lt;/a&gt; are the torchbearers for strikers from the 90s.&lt;/p&gt;
+&lt;p&gt;As always in these posts, I try to learn some new stuff as I do them. I thought this miht be&lt;/p&gt;
+&lt;p&gt;Interestingly, &lt;a href=&#34;https://en.wikipedia.org/wiki/Dirk_Kuyt&#34;&gt;Dirk Kuyt&lt;/a&gt; also features heavily, despite not being renowned as a great goalscorer.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;left_join(
+  days_per_player,
+  player_goals %&amp;gt;%
+    group_by(id) %&amp;gt;%
+    summarise(goals = n()),
+  by = &amp;quot;id&amp;quot;
+) %&amp;gt;%
+  mutate(proportion_unique = days / goals) %&amp;gt;%
+  arrange(-days) %&amp;gt;%
+  filter(days &amp;gt; 150) %&amp;gt;%
+  select(name, goals, days, proportion_unique) %&amp;gt;%
+  arrange(-proportion_unique)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 34 x 4
+##    name      goals  days proportion_unique
+##    &amp;lt;chr&amp;gt;     &amp;lt;int&amp;gt; &amp;lt;int&amp;gt;             &amp;lt;dbl&amp;gt;
+##  1 Gilardino   231   154             0.667
+##  2 Cissé       269   166             0.617
+##  3 Signori     260   160             0.615
+##  4 Di Vaio     269   165             0.613
+##  5 Toni        273   165             0.604
+##  6 Kuyt        281   169             0.601
+##  7 Lampard     258   154             0.597
+##  8 Frei        257   153             0.595
+##  9 Drogba      300   173             0.577
+## 10 Trézéguet   265   152             0.574
+## # ... with 24 more rows&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;When sorted by how evenly their goals/date coverage is (i.e. the ideal ratio would be 1 goal on every day), Dirk Kuyt pops up again (and did in fact score many more goals than I had assumed). &lt;a href=&#34;https://en.wikipedia.org/wiki/Alberto_Gilardino&#34;&gt;Alberto Gilardino&lt;/a&gt; really stands out as a player who has maximum date coverage desite (relative to other members of the list!) a low number of total goals scored.&lt;/p&gt;
+&lt;p&gt;I’m not sure what, if any, insight that adds but is a cool piece of trivia.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Riddler 1st February 2019</title>
       <link>/post/riddler-1st-feb-2019/</link>
       <pubDate>Sun, 03 Feb 2019 00:00:00 +0000</pubDate>
@@ -3537,162 +3776,6 @@ head(select(all_players_data, id, name, nationality, overall))&lt;/code&gt;&lt;/
 ## 6:  6            De Gea       Spain      91&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Over the course of the next posts, we’ll use this data to calculate a player’s ability in any position on the field. This will then be used to select optimal teams for each nation (or each historic British county). Finally we’ll take the average ability of these optimal teams and use them to simulate the World Cup to get the chance each team has to win the tournament.&lt;/p&gt;
 &lt;/div&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Riddler 27th April 2018</title>
-      <link>/post/riddler-27th-april-2018/</link>
-      <pubDate>Tue, 01 May 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/riddler-27th-april-2018/</guid>
-      <description>
-
-
-&lt;p&gt;I’ve been looking for small programming problems to practice on while running experiments. One such source is &lt;a href=&#34;https://fivethirtyeight.com/features/how-fast-can-you-type-a-million-letters/&#34;&gt;Fivethirtyeight’s Riddler&lt;/a&gt; column which posts conundrums weekly. This week one problem focus on one of life’s universal problems: how many urinals are needed in any bathroom for all patrons to use it without awkwardness.&lt;/p&gt;
-&lt;p&gt;Formally this is phrased as:&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Some number, N, of people need to pee, and there is some number, M, of urinals in a row in a men’s room. The people always follow a rule for which urinal they select: The first person goes to one on either far end of the row, and the rest try to maximize the number of urinals between them and any other person. So the second person will go on the other far end, the third person in the middle, and so on. They continue to occupy the urinals until one person would have to go directly next to another person, at which point that person decides not to go at all.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;blockquote&gt;
-&lt;p&gt;What’s the minimum number, M, of urinals required to accommodate all the N people at the same time?&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;Which is perhaps easiest explained using the ‘urinal etiquette’ meme:&lt;/p&gt;
-&lt;div class=&#34;figure&#34;&gt;
-&lt;img src=&#34;/img/urinal_etiquette.png&#34; /&gt;
-
-&lt;/div&gt;
-&lt;p&gt;Luckily, this sort of problem is extremely tractable in R to get an estimate of the function for any 1:N people with a few simple loops:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#just going to use dplyr and purr
-#data.table might be faster but not too worried- verbose programming anyway
-library(dplyr)
-library(purrr)
-
-#a tip from colin fay
-#https://tinyurl.com/colin-fay-purrr
-`%not_in%` &amp;lt;- negate(`%in%`)
-
-#start with n = 1 and with a bathroom with 1 urinal
-n &amp;lt;- 1
-urinal_number &amp;lt;- 1
-
-#create a df with 1 urinal which is unoccupied
-urinals_df &amp;lt;- data.frame(urinal = 1:urinal_number,
-                         occupied = rep(NA, urinal_number))
-
-#for how many n do we want to solve
-while(n &amp;lt; 101) {
-  #whilst not all n have a urinal to use loop through
-  while(sum(urinals_df$occupied, na.rm = TRUE) &amp;lt; n) {
-    #when all are unoccupied take the first urinal
-    if(sum(urinals_df$occupied, na.rm = TRUE) == 0) {
-      urinals_df$occupied[1] &amp;lt;- 1
-    #when all but 1 are unoccupied and there are more than 2 urinals
-    #take the opposite end one next
-    } else if(sum(urinals_df$occupied, na.rm = TRUE) == 1 &amp;amp;
-              nrow(urinals_df) &amp;gt; 2) {
-      urinals_df$occupied[nrow(urinals_df)] &amp;lt;- 1
-    #otherwise work out the most isolated free urinal
-    } else {
-      #get the distances from each urinal to all the occupied urinals
-      urinal_distances &amp;lt;- abs(1:nrow(urinals_df) - 
-                                rep(which(!is.na(urinals_df$occupied)), each = nrow(urinals_df))) %&amp;gt;%
-        matrix(., nrow = length(!is.na(urinals_df$occupied)))
-      #index
-      rownames(urinal_distances) &amp;lt;- 1:nrow(urinal_distances)  
-      
-      #awkward urinals are ones that are either taken or next to taken urinals
-      #don&amp;#39;t want to urinate there
-      awkward &amp;lt;- c(which(urinal_distances == 1, arr.ind = TRUE)[,1], 
-                   which(urinal_distances == 0, arr.ind = TRUE)[,1]) %&amp;gt;%
-        unique()
-      
-      #use %not_in% to find free urinals that aren&amp;#39;t in an awkward position
-      possible_urinals &amp;lt;- which(rownames(urinal_distances) %not_in% awkward)
-      
-      #if only one remains use this urinal
-      if(length(possible_urinals) == 1) {
-        taken_urinal &amp;lt;- possible_urinals
-      } else if(length(possible_urinals) &amp;gt; 1) {
-        #for the remaining possible urinals find how far the closest taken urinal is
-        #initialise a small nameless func
-        closest_distance &amp;lt;- lapply(seq(nrow(urinal_distances)), function(x){
-          row &amp;lt;- urinal_distances[x,]
-          min &amp;lt;- min(row)
-          }) %&amp;gt;%
-          unlist()
-        
-        #use the urinal that has the maximum distance to its closest urinal
-        taken_urinal &amp;lt;- as.numeric(rownames(urinal_distances)[which.max(closest_distance)])
-      } else if(length(possible_urinals) == 0) {
-        #if there are no free urinals break the loop
-        #and add one to the urinal number in the hypothetical bathroom
-        urinal_number &amp;lt;- urinal_number + 1
-        break
-      }
-      #occupy the chosen urinal
-      urinals_df$occupied[taken_urinal] &amp;lt;- 1
-    }
-  }
-  
-  #if completed
-  #i.e. if all users have found a satisfactory free urinal
-  if(sum(urinals_df$occupied, na.rm = TRUE) == n) {
-    if(n == 1) {
-      #when n = 1 initial a df to hold the results per n
-      results_df &amp;lt;- data.frame(n = 1,
-                               urinals_required = urinal_number)
-    } else {
-      #otherwise add in a new row to results_df
-      results_df &amp;lt;- rbind(results_df, data.frame(n = n, urinals_required = urinal_number))
-    }
-      #increase n to the next number of patrons
-      n &amp;lt;- n + 1
-      #start with at least n urinals in the next bathroom
-      #this is the bare minimum we would need
-      urinal_number &amp;lt;- n
-  }
-  
-  #reintialise the bathroom to see if it is big enough for the n patrons
-  urinals_df &amp;lt;- data.frame(urinal = 1:urinal_number,
-                           occupied = rep(NA, urinal_number))
-  
-}&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We can then plot this. I decided to add a little flair to the plot using annotate_custom which is a nice little trick to spice up ggplots&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load the libraries for plotting
-library(ggplot2)
-library(png)
-library(grid)
-
-#a nice png of a urinal I found online
-urinal_image &amp;lt;- readPNG(&amp;quot;../../static/img/urinal.png&amp;quot;) %&amp;gt;%
-  rasterGrob()
-
-#plot the number of urinals needed for any n number of patrons
-urinals_plot &amp;lt;- ggplot(data = results_df, aes(x = n, y = urinals_required)) + 
-  geom_point() +
-  #mapply a function to paste the urinal image as an annotation to the graph
-  #takes the x and y arguments from the ggplot aesthetic
-  mapply(function(x, y, size) {
-    annotation_custom(urinal_image,
-                      xmin = x - size, xmax = x + size, 
-                      ymin = y - size, ymax = y + size) },
-    x = results_df$n, y = results_df$urinals_required, size = 7) +
-  #labelling and etc.
-  ylab(&amp;quot;Urinals Required&amp;quot;) +
-  xlab(&amp;quot;Number of Patrons&amp;quot;) +
-  ggtitle(&amp;quot;How many urinals are needed for any n number of socially awkward urinators&amp;quot;,
-          subtitle = &amp;quot;answer to The Riddler 27/04/2018&amp;quot;) +
-  theme(panel.background = element_rect(fill = &amp;#39;lightblue&amp;#39;))
-
-urinals_plot&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-05-01-riddler-27th-april-2018_files/figure-html/unnamed-chunk-2-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;which gives a surprisingly complex function! I had assume it would be some simple function of x but clearly something more complex is going on.&lt;/p&gt;
-&lt;p&gt;Why this happens become clear if you plot out why M urinals are needed for N people. Optimally each person would be separated by 1 urinal, but as the number of urinals increases they become less efficiently packed, with 2 urinals (neither of which can be used without standing next to someone) between each urinating person. This eventually reaches a breaking point and the number of urinals necessary jumps upward.&lt;/p&gt;
-&lt;p&gt;The formula is known as ‘The Pay Phone Packing Sequence’ (where users of pay phones don’t want to be overheard) and is summarised at &lt;a href=&#34;https://oeis.org/A185456&#34; class=&#34;uri&#34;&gt;https://oeis.org/A185456&lt;/a&gt; (where packing occurs/ n &amp;gt; 2). The formula itself is:&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[f(n) = n + 2 ^ {(1 + floor(log(n - 2)))}\]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;That’s all for this weeks riddler.&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.youtube.com/watch?v=l3V4KfeJBCQ&#34;&gt;Franz Ferdinand and Sparks - Piss Off&lt;/a&gt;&lt;/p&gt;
 </description>
     </item>
     

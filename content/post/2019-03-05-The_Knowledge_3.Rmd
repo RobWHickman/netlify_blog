@@ -1,0 +1,413 @@
+---
+title: THe Knowledge 3
+author: Robert Hickman
+date: '2019-02-05'
+slug: cambridge_pub_crawl
+output: pdf_document
+categories: []
+tags:
+  - maps
+  - pubs
+  - cambridge
+header:
+  caption: ''
+  image: ''
+---
+
+# 
+The first question this week concerns players scoring on (or nearest to) every day of the year
+
+<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Has any player played/or even scored on every date in a calendar year. What’s the nearest anyone has come?</p>&mdash; David Thomson (@thomsonionioni) <a href="https://twitter.com/thomsonionioni/status/1090206478479298560?ref_src=twsrc%5Etfw">January 29, 2019</a></blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+Getting the data for this is the main problem. The best (free) source I tend to use is transfermarkt.com, but data there becomes less reliable from before 2000 (and only has a few years of data from more obscure years where I could believe some players are banging in goals for fun).
+
+Nonetheless, it should at least gives us some ideas
+
+```{r libraries, warning=FALSE,message=FALSE}
+library(rvest)
+library(tidyverse)
+library(zoo)
+library(openair)
+library(engsoccerdata)
+library(data.table)
+```
+
+For each player sampled we're going to want the data for each goal scored both for their club and country. Saving the competition data is also useful as it also allows us to sort out friendlies which may or may not count depending on interpretation of the question.
+
+Two quick functions will do this for any given player id
+
+```{r scraping_functions, warning=FALSE,message=FALSE}
+#create a data frame of club goals
+get_club_goals <- function(club_stats) {
+  #read the page
+  read <- read_html(club_stats)
+  
+  #get the players names
+  name <- read %>%
+    html_nodes(".dataName b") %>%
+    html_text()
+    
+  #read the table of goals scored and munge together
+  club_df <- read %>%
+    html_nodes(xpath = '//*[@id="main"]/div[10]/div/div/div[4]/table') %>%
+    html_table(fill = TRUE) %>%
+    as.data.frame() %>%
+    select(Date, Minute, Competition.1) %>%
+    mutate(minute = as.numeric(gsub("'.*", "", Minute))) %>%
+    filter(!is.na(minute)) %>% 
+    #convert date to day of the year
+    mutate(date = case_when(
+      Date != "" ~ strftime(as.Date(Date, "%m/%d/%y"), "%m/%d")
+    )) %>%
+    mutate(competition = ifelse(Competition.1 == "", NA, Competition.1)) %>%
+    select(competition, date, minute) %>%
+    #fill down the competition and date if missing
+    do(na.locf(.)) %>%
+    mutate(scored_for = "club", name = name)
+}
+
+#do the same for national team goals
+get_nt_goals <- function(nt_stats) {
+  read <- read_html(nt_stats)
+  
+  name <- read %>%
+    html_nodes(".dataName b") %>%
+    html_text()
+
+  goal_table <- read %>%
+    html_nodes(xpath = '//*[@id="main"]/div[10]/div[1]/div[3]/div[4]/table')
+  
+  #some players won't have any national team goals
+  #return NA
+  if(!is_empty(goal_table)) {
+    nt <- goal_table %>%
+      html_table(fill = TRUE) %>%
+      as.data.frame() %>%
+      select(For, Date, Var.11) %>%
+      mutate(goals = as.numeric(Var.11)) %>%
+      mutate(date = case_when(
+        Date != "" ~ strftime(as.Date(Date, "%m/%d/%y"), "%m/%d")
+      )) %>%
+      mutate(competition = ifelse(For == "", NA, For)) %>%
+      mutate(competition = na.locf(competition)) %>%
+      filter(!is.na(date)) %>%
+      select(competition, date, goals) 
+    
+    #if more than 1 goal is scored on a game it's counted as two rows
+    #separate these out
+    if(any(nt$goals != 1)) {
+      nt_df <- do.call("c", (mapply(rep, c(nt$competition, nt$date), nt$goals))) %>%
+        matrix(., 2, byrow = TRUE) %>%
+        t() %>%
+        as.data.frame() %>%
+        select(competition = V1, date = V2)
+    } else {
+      nt_df <- nt %>%
+        select(-goals)
+    }
+    
+    #finish off munging
+    df <- nt_df %>%
+      mutate(minute = NA, scored_for = "nation", name = name)
+  } else {
+    df <- NA
+  }
+  return(df)
+}
+
+```
+
+Now we can get into the scraping. For each player some parts of the URL stay the same, so lets save those as objects so we don't have to deal with massive long urls.
+
+I decided to test out the functions using Cristiano Ronaldo as his 675 goals for club and country is (I believe) more than any active player. Pasting the url together and running on the functions does the trick
+
+```{r test_functions, warning=FALSE,message=FALSE}
+#for each player some parts of url stay the same
+base_url <- "https://www.transfermarkt.co.uk/"
+club_text1 <- "/alletore/spieler/"
+club_text2 <- "/saison//verein/0/liga/0/wettbewerb//pos/0/trainer_id/0/minute/0/torart/0/plus/1"
+nt_text1 <- "/nationalmannschaft/spieler/"
+nt_text2 <- "/verein_id/3300/plus/0?hauptwettbewerb=&wettbewerb_id=&trainer_id=&start=Aug+20%2C+2003&ende=Feb+4%2C+2019&nurEinsatz=2"
+
+#get all the goals scored by Cristiano Ronaldo
+ronaldo <- rbind(
+  paste0(base_url, "player_name", club_text1, 8198, club_text2) %>%
+    get_club_goals(),
+  paste0(base_url, "player_name", nt_text1, 8198, nt_text2) %>%
+    get_nt_goals()
+)
+
+#count the number of unique dates scored on
+length(unique(ronaldo$date))
+```
+
+So Ronaldo has scored on 244 of the 366 possible days of the year. It's not surprising that scoring on _every_ day would be difficult. The club season only runs August-June and there are unlikely to be many possible games to pla in July at all. Plus days such a Christmas are usually taken off from football.
+
+In terms of goals per day using 2019s calendar this looks like (plot made using the [openair package](https://cran.r-project.org/web/packages/openair/index.html): 
+
+```{r ronaldo_calendar, warning=FALSE,message=FALSE}
+ronaldo %>%
+  #count goals per date
+  group_by(date) %>%
+  summarise(goals = n()) %>%
+  #convert to 2019 dates
+  mutate(date = as.Date(paste0("2019/", date))) %>%
+  #use calendarPlot from the openair package
+  calendarPlot(., pollutant = "goals", year = 2019)
+  
+```
+
+Which shows more deviation in scoring than I thought it would. Nethertheless, from Sepetember-May each year is pretty blocked out, though there is a run of Saturdays this December which could be fertile ground for increasing his total.
+
+Next we need to get a list of likely players who could come close to matching Ronaldo's record.
+
+For this I took the first page of transfermarkt's top scorers of the year across all leagues. It's possible that a player might (e.g.) be on the second page each year and have scored a ton, but I don't think it's super likely.
+
+I run this through the top scorers page from 1995 (the earliest year available) to 2018 and grab each player id. Afterwards, save the scraped list as an .rds to preventneeding to continually rescrape the page and put extra load onto the server.
+
+```{r get_top_scorers, warning=FALSE,message=FALSE,eval=FALSE}
+#the url for the pages of top scorers
+top_scorer_ids <- paste0(base_url, 
+                         "spieler-statistik/jahrestorschuetzen/",
+                         "statistik/stat/plus/0/galerie/0?jahr=",
+                         1995:2018,
+                         "&wettbewerb=alle&monatVon=01&monatBis=12&altersklasse=&",
+                         "land_id=&ausrichtung=alle&spielerposition_id=alle&art=0") %>%
+  #scrape the ids of players
+  lapply(., function(year) {
+    read_html(year) %>%
+      html_nodes("#yw1 .spielprofil_tooltip") %>%
+      html_attr("id")
+  }) %>%
+  unlist() %>%
+  unique()
+
+#save this to prevent need for re-scraping
+saveRDS(top_scorer_ids, "transfermarkt_top_scorers.rds")
+```
+
+Then all that's left is to scrape the goals for each player whose id we've scraped. Again, save this once run, especially as it takes a fair while to complete. For this article the data was scraped on the 5th February 2019
+
+```{r, load_scorer_ids, warning=FALSE,message=FALSE,echo=FALSE}
+top_scorer_ids <- readRDS("../../static/files/transfermarkt_top_scorers.rds")
+```
+
+```{r get_player_goals, warning=FALSE,message=FALSE,eval=FALSE}
+player_goals <- top_scorer_ids %>%
+  #for each player scrape every goal
+  lapply(., function(id) {
+    goals <- rbind(
+      paste0(base_url, "player_name", club_text1, id, club_text2) %>%
+        get_club_goals(),
+      paste0(base_url, "player_name", nt_text1, id, nt_text2) %>%
+        get_nt_goals()
+    ) %>%
+      #remove NAS
+      #this is where a player hasn't scored for their nation
+      filter(!is.na(date)) %>%
+      mutate(id = id)
+  }) %>%
+  do.call(rbind, .)
+
+#and save
+saveRDS(player_goals, "top_scorer_goals.rds")
+```
+
+Now we have a list of every goal scored by profilic strikers, we just have to group by each player and count how many dates they've scored on. To get the playest with the highest number of unique dates we group by their id and count the length of the unique dates they've scored on.
+
+```{r, load_scorer_goals, warning=FALSE,message=FALSE,echo=FALSE}
+player_goals <- readRDS("../../static/files/top_scorer_goals.rds")
+```
+
+```{r find_days, warning=FALSE,message=FALSE}
+days_per_player <- player_goals %>%
+  #group by player
+  group_by(id) %>%
+  #count the dates scored on
+  summarise(days = length(unique(date))) %>%
+  arrange(-days) %>%
+  #rejoin the name data back in
+  left_join(.,
+            player_goals %>%
+              select(id, name) %>%
+              unique(),
+            by = "id") %>%
+  print()
+
+```
+
+so perhaps unsurprisingly, Ronaldo comes out on top. As expected given the data source, most of the top players are very recent strikers- all of the top 10 were active well into the 2010s. [Ulf Kirsten](https://en.wikipedia.org/wiki/Ulf_Kirsten) and [Toni Polster](https://en.wikipedia.org/wiki/Toni_Polster) are the torchbearers for strikers from the 90s.
+
+As always in these posts, I try to learn some new stuff as I do them. I thought this might be a good time to try some circular plotting. I don't think the resultan
+
+```{r plot_circular, warning=FALSE,message=FALSE}
+circular_data <- player_goals %>%
+  #filter out top 16 scorers
+  filter(id %in% days_per_player$id[1:16]) %>%
+  #group by month and player and sum
+  mutate(month = gsub("\\/.*", "", date)) %>%
+  group_by(id, month, competition) %>%
+  summarise(goals = n()) %>%
+  left_join(.,
+            player_goals %>%
+              select(id, name) %>%
+              unique(),
+            by = "id")
+
+#too many competititon for legend
+#sort out into broad groups
+competition_types <- data.frame(competition = circular_data$competition) %>%
+  unique() %>%
+  mutate(competition = as.character(competition)) %>%
+  mutate(competition_type = case_when(
+    grepl("MLS", competition) ~ "Domestic",
+    grepl("World Cup qualification| Qualifiers", competition) ~ "International",
+    grepl("Friendlies", competition) ~ "International Friendlies",
+    grepl("World Cup [0-9]{4}|Confederations|EURO [0-9]{4}", competition) ~ "International Tournament",
+    grepl("UEFA|Champions League|UI Cup|Cup Winners|European Cup|Europa", competition) ~ "European",
+    grepl("Club World", competition) ~ "International Club",
+    grepl("Cup|cup|Pokal|copa|Copa|beker|Coupe|coppa|Kupasi|Trophée|Kupa", competition) ~ "Domestic Cup"
+  )) %>%
+  mutate(competition_type = ifelse(is.na(competition_type), "Domestic", competition_type)) %>%
+  #convert to factor for plot fill order
+  mutate(competition_type = fct_rev(factor(competition_type)))
+
+#plot as circular radar plots
+circular_data %>%
+  left_join(., competition_types, by = "competition") %>%
+  ggplot(., aes(x = month, y = goals, fill = competition_type)) +
+  #convert to polar coordinates
+  coord_polar(theta = "x", start = -.13) +
+  geom_bar(stat = "identity") +
+  scale_fill_discrete(name = "Competition Type") +
+  ggtitle("Goals Per Month for Top 16 Unique Day Scorers") +
+  facet_wrap(~name) +
+  theme_minimal() +
+  theme(axis.text = element_blank())
+  
+  
+```
+
+One nice thin that pops out is how Kirsten rarely scored in December/January- probably due to the Bundesliga mid season break.
+
+I also found it interesting that [Dirk Kuyt](https://en.wikipedia.org/wiki/Dirk_Kuyt) featured in the top 16, despite not being renowned as a great goalscorer.
+
+```{r}
+#count total goals per player
+left_join(
+  days_per_player,
+  player_goals %>%
+    group_by(id) %>%
+    summarise(goals = n()),
+  by = "id"
+) %>%
+  #work out days/total goals
+  mutate(proportion_unique = days / goals) %>%
+  arrange(-days) %>%
+  filter(days > 150) %>%
+  select(name, goals, days, proportion_unique) %>%
+  arrange(-proportion_unique)
+```
+
+When sorted by how evenly their goals/date coverage is (i.e. the ideal ratio would be 1 goal on every day), Dirk Kuyt pops up again (and did in fact score many more goals than I had assumed). [Alberto Gilardino](https://en.wikipedia.org/wiki/Alberto_Gilardino) really stands out as a player who has maximum date coverage desite (relative to other members of the list!) a low number of total goals scored.
+
+I'm not sure what, if any, insight that adds but is a cool piece of trivia.
+
+#
+
+First lets load up the engsoccerdata for English leagues 1882-2016. I've munged it in a pretty verbose way; there's definitely a faster way to do it but that's not really necessary. All we need are the indicators used to sort the league (points, goal difference, and goal scored) for every match in a long format.
+
+```{r}
+eng_data <- engsoccerdata::england %>%
+  #select only pertinent variables
+  select(Date, Season, home, visitor, hgoal, vgoal, division) %>%
+  rename_all(tolower) %>%
+  #melt the data to long format
+  reshape2::melt(id.vars = c("date", "season", "hgoal", "vgoal", "division"),
+                 value.name = "team", variable.name = "location") %>%
+  #this can be done in one step but for sanity
+  mutate(result = case_when(
+    hgoal > vgoal & location == "home" ~ "W",
+    vgoal > hgoal & location == "visitor" ~ "W",
+    hgoal < vgoal & location == "home" ~ "L",
+    vgoal < hgoal & location == "visitor" ~ "L",
+    vgoal == hgoal ~ "D"
+  )) %>%
+  #points for a win changed in 1981
+  mutate(points = case_when(
+    result == "L" ~ 0,
+    result == "D" ~ 1,
+    result == "W" & season < 1981 ~ 2,
+    result == "W" & season > 1980 ~ 3
+  )) %>%
+  #and get the goal info too
+  mutate(goal_diff = case_when(
+    location == "home" ~ hgoal - vgoal,
+    location == "visitor" ~ vgoal - hgoal
+  )) %>%
+  mutate(goals = case_when(
+    location == "home" ~ hgoal,
+    location == "visitor" ~ vgoal
+  )) %>%
+  #only save the variables we care about then sort
+  select(date, season, division, team, points, goals, goal_diff) %>%
+  arrange(date, team)
+
+```
+
+```{r}
+final_positions <- eng_data %>%
+  setDT() %>%
+  .[, match := 1:.N, by = c("season", "team")] %>%
+  .[, season_points := cumsum(points), by = c("season", "team")] %>%
+  .[, season_gd := cumsum(goal_diff), by = c("season", "team")] %>%
+  .[, season_g := cumsum(goals), by = c("season", "team")] %>%
+  .[.[, .I[match == max(match)], by= c("season", "division")]$V1] %>%
+  .[order(season, division, -season_points)] %>%
+  .[, final_position := 1:.N, by = c("season", "division")] %>%
+  .[, c("team", "division", "final_position")] %>%
+  .[, pos_count := .N, by = c("team", "division", "final_position")] %>%
+  unique()
+```
+
+```{r}
+second_place <- final_positions %>%
+  .[final_position == 2] %>%
+  .[, c("team", "division", "final_position", "pos_count")] %>%
+  .[order(-pos_count)] %>%
+  .[1:20,] %>%
+  print()
+```
+
+```{r}
+p <- eng_data %>%
+  filter(season > 1991) %>%
+  setDT() %>%
+  .[, match := 1:.N, by = c("season", "team")] %>%
+  .[, season_points := cumsum(points), by = c("season", "team")] %>%
+  .[, season_gd := cumsum(goal_diff), by = c("season", "team")] %>%
+  .[, season_g := cumsum(goals), by = c("season", "team")] %>%
+  .[.[, .I[match == max(match)], by= c("season", "division")]$V1] %>%
+  .[order(season, division, -season_points)] %>%
+  .[, final_position := 1:.N, by = c("season", "division")] %>%
+  .[, total_position := 1:.N, by = c("season")] %>%
+  .[, c("team", "division", "final_position", "total_position")] %>%
+  .[, pos_count := .N, by = c("team", "division", "final_position")] %>%
+  .[, team_appearances := .N, by = c("team")] %>%
+  .[, mean_pos := sum(total_position)/team_appearances, by = c("team")] %>%
+  unique() %>%
+  .[order(mean_pos)] %>%
+  .[, team := fct_rev(fct_relevel(as.factor(team), unique(.$team)))] %>%
+  ggplot(., aes(x = total_position, y = team)) + 
+  geom_tile(aes(alpha = pos_count/team_appearances), fill = "blue") +
+  scale_alpha_continuous(guide = FALSE) +
+  ggtitle("Teams Ordered by Mean Final Position 1992-2016",
+          subtitle = "Weight indicates proportion of finishes in that position") +
+  xlab("Total League Position") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(angle = 10)) %>%
+  plot()
+
+```
+

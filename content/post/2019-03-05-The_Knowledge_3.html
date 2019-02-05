@@ -1,0 +1,245 @@
+---
+title: THe Knowledge 3
+author: Robert Hickman
+date: '2019-02-05'
+slug: cambridge_pub_crawl
+output: pdf_document
+categories: []
+tags:
+  - maps
+  - pubs
+  - cambridge
+header:
+  caption: ''
+  image: ''
+---
+
+
+
+<div id="section" class="section level1">
+<h1></h1>
+<p>The first question this week concerns players scoring on (or nearest to) every day of the year</p>
+<blockquote class="twitter-tweet" data-lang="en">
+<p lang="en" dir="ltr">
+Has any player played/or even scored on every date in a calendar year. What’s the nearest anyone has come?
+</p>
+— David Thomson (<span class="citation">@thomsonionioni</span>) <a href="https://twitter.com/thomsonionioni/status/1090206478479298560?ref_src=twsrc%5Etfw">January 29, 2019</a>
+</blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<p>Getting the data for this is the main problem. The best (free) source I tend to use is transfermarkt.com, but data there becomes less reliable from before 2000 (and only has a few years of data from more obscure years where I could believe some players are banging in goals for fun).</p>
+<p>Nonetheless, it should at least gives us some ideas</p>
+<pre class="r"><code>library(rvest)
+library(tidyverse)
+library(zoo)
+library(openair)</code></pre>
+<p>For each player sampled we’re going to want the data for each goal scored both for their club and country. Saving the competition data is also useful as it also allows us to sort out friendlies which may or may not count depending on interpretation of the question.</p>
+<p>Two quick functions will do this for any given player id</p>
+<pre class="r"><code>#create a data frame of club goals
+get_club_goals &lt;- function(club_stats) {
+  #read the page
+  read &lt;- read_html(club_stats)
+  
+  #get the players names
+  name &lt;- read %&gt;%
+    html_nodes(&quot;.dataName b&quot;) %&gt;%
+    html_text()
+    
+  #read the table of goals scored and munge together
+  club_df &lt;- read %&gt;%
+    html_nodes(xpath = &#39;//*[@id=&quot;main&quot;]/div[10]/div/div/div[4]/table&#39;) %&gt;%
+    html_table(fill = TRUE) %&gt;%
+    as.data.frame() %&gt;%
+    select(Date, Minute, Competition.1) %&gt;%
+    mutate(minute = as.numeric(gsub(&quot;&#39;.*&quot;, &quot;&quot;, Minute))) %&gt;%
+    filter(!is.na(minute)) %&gt;% 
+    #convert date to day of the year
+    mutate(date = case_when(
+      Date != &quot;&quot; ~ strftime(as.Date(Date, &quot;%m/%d/%y&quot;), &quot;%m/%d&quot;)
+    )) %&gt;%
+    mutate(competition = ifelse(Competition.1 == &quot;&quot;, NA, Competition.1)) %&gt;%
+    select(competition, date, minute) %&gt;%
+    #fill down the competition and date if missing
+    do(na.locf(.)) %&gt;%
+    mutate(scored_for = &quot;club&quot;, name = name)
+}
+
+#do the same for national team goals
+get_nt_goals &lt;- function(nt_stats) {
+  read &lt;- read_html(nt_stats)
+  
+  name &lt;- read %&gt;%
+    html_nodes(&quot;.dataName b&quot;) %&gt;%
+    html_text()
+
+  goal_table &lt;- read %&gt;%
+    html_nodes(xpath = &#39;//*[@id=&quot;main&quot;]/div[10]/div[1]/div[3]/div[4]/table&#39;)
+  
+  #some players won&#39;t have any national team goals
+  #return NA
+  if(!is_empty(goal_table)) {
+    nt &lt;- goal_table %&gt;%
+      html_table(fill = TRUE) %&gt;%
+      as.data.frame() %&gt;%
+      select(For, Date, Var.11) %&gt;%
+      mutate(goals = as.numeric(Var.11)) %&gt;%
+      mutate(date = case_when(
+        Date != &quot;&quot; ~ strftime(as.Date(Date, &quot;%m/%d/%y&quot;), &quot;%m/%d&quot;)
+      )) %&gt;%
+      mutate(competition = ifelse(For == &quot;&quot;, NA, For)) %&gt;%
+      mutate(competition = na.locf(competition)) %&gt;%
+      filter(!is.na(date)) %&gt;%
+      select(competition, date, goals) 
+    
+    #if more than 1 goal is scored on a game it&#39;s counted as two rows
+    #separate these out
+    if(any(nt$goals != 1)) {
+      nt_df &lt;- do.call(&quot;c&quot;, (mapply(rep, c(nt$competition, nt$date), nt$goals))) %&gt;%
+        matrix(., 2, byrow = TRUE) %&gt;%
+        t() %&gt;%
+        as.data.frame() %&gt;%
+        select(competition = V1, date = V2)
+    } else {
+      nt_df &lt;- nt %&gt;%
+        select(-goals)
+    }
+    
+    #finish off munging
+    df &lt;- nt_df %&gt;%
+      mutate(minute = NA, scored_for = &quot;nation&quot;, name = name)
+  } else {
+    df &lt;- NA
+  }
+  return(df)
+}</code></pre>
+<p>Now we can get into the scraping. For each player some parts of the URL stay the same, so lets save those as objects so we don’t have to deal with massive long urls.</p>
+<p>I decided to test out the functions using Cristiano Ronaldo as his 675 goals for club and country is (I believe) more than any active player. Pasting the url together and running on the functions does the trick</p>
+<pre class="r"><code>#for each player some parts of url stay the same
+base_url &lt;- &quot;https://www.transfermarkt.co.uk/&quot;
+club_text1 &lt;- &quot;/alletore/spieler/&quot;
+club_text2 &lt;- &quot;/saison//verein/0/liga/0/wettbewerb//pos/0/trainer_id/0/minute/0/torart/0/plus/1&quot;
+nt_text1 &lt;- &quot;/nationalmannschaft/spieler/&quot;
+nt_text2 &lt;- &quot;/verein_id/3300/plus/0?hauptwettbewerb=&amp;wettbewerb_id=&amp;trainer_id=&amp;start=Aug+20%2C+2003&amp;ende=Feb+4%2C+2019&amp;nurEinsatz=2&quot;
+
+#get all the goals scored by Cristiano Ronaldo
+ronaldo &lt;- rbind(
+  paste0(base_url, &quot;player_name&quot;, club_text1, 8198, club_text2) %&gt;%
+    get_club_goals(),
+  paste0(base_url, &quot;player_name&quot;, nt_text1, 8198, nt_text2) %&gt;%
+    get_nt_goals()
+)
+
+#count the number of unique dates scored on
+length(unique(ronaldo$date))</code></pre>
+<pre><code>## [1] 244</code></pre>
+<p>So Ronaldo has scored on 244 of the 366 possible days of the year. It’s not surprising that scoring on <em>every</em> day would be difficult. The club season only runs August-June and there are unlikely to be many possible games to pla in July at all. Plus days such a Christmas are usually taken off from football.</p>
+<p>In terms of goals per day using 2019s calendar this looks like (plot made using the <a href="https://cran.r-project.org/web/packages/openair/index.html">openair package</a>:</p>
+<pre class="r"><code>ronaldo %&gt;%
+  #count goals per date
+  group_by(date) %&gt;%
+  summarise(goals = n()) %&gt;%
+  #convert to 2019 dates
+  mutate(date = as.Date(paste0(&quot;2019/&quot;, date))) %&gt;%
+  #use calendarPlot from the openair package
+  calendarPlot(., pollutant = &quot;goals&quot;, year = 2019)</code></pre>
+<p><img src="/post/2019-03-05-The_Knowledge_3_files/figure-html/ronaldo_calendar-1.png" width="672" /></p>
+<p>Which shows more deviation in scoring than I thought it would. Nethertheless, from Sepetember-May each year is pretty blocked out, though there is a run of Saturdays this December which could be fertile ground for increasing his total.</p>
+<p>Next we need to get a list of likely players who could come close to matching Ronaldo’s record.</p>
+<p>For this I took the first page of transfermarkt’s top scorers of the year across all leagues. It’s possible that a player might (e.g.) be on the second page each year and have scored a ton, but I don’t think it’s super likely.</p>
+<p>I run this through the top scorers page from 1995 (the earliest year available) to 2018 and grab each player id. Afterwards, save the scraped list as an .rds to preventneeding to continually rescrape the page and put extra load onto the server.</p>
+<pre class="r"><code>#the url for the pages of top scorers
+top_scorer_ids &lt;- paste0(base_url, 
+                         &quot;spieler-statistik/jahrestorschuetzen/&quot;,
+                         &quot;statistik/stat/plus/0/galerie/0?jahr=&quot;,
+                         1995:2018,
+                         &quot;&amp;wettbewerb=alle&amp;monatVon=01&amp;monatBis=12&amp;altersklasse=&amp;&quot;,
+                         &quot;land_id=&amp;ausrichtung=alle&amp;spielerposition_id=alle&amp;art=0&quot;) %&gt;%
+  #scrape the ids of players
+  lapply(., function(year) {
+    read_html(year) %&gt;%
+      html_nodes(&quot;#yw1 .spielprofil_tooltip&quot;) %&gt;%
+      html_attr(&quot;id&quot;)
+  }) %&gt;%
+  unlist() %&gt;%
+  unique()
+
+#save this to prevent need for re-scraping
+saveRDS(top_scorer_ids, &quot;transfermarkt_top_scorers.rds&quot;)</code></pre>
+<p>Then all that’s left is to scrape the goals for each player whose id we’ve scraped. Again, save this once run, especially as it takes a fair while to complete. For this article the data was scraped on the 5th February 2019</p>
+<pre class="r"><code>player_goals &lt;- top_scorer_ids %&gt;%
+  #for each player scrape every goal
+  lapply(., function(id) {
+    goals &lt;- rbind(
+      paste0(base_url, &quot;player_name&quot;, club_text1, id, club_text2) %&gt;%
+        get_club_goals(),
+      paste0(base_url, &quot;player_name&quot;, nt_text1, id, nt_text2) %&gt;%
+        get_nt_goals()
+    ) %&gt;%
+      #remove NAS
+      #this is where a player hasn&#39;t scored for their nation
+      filter(!is.na(date)) %&gt;%
+      mutate(id = id)
+  }) %&gt;%
+  do.call(rbind, .)
+
+#and save
+saveRDS(player_goals, &quot;top_scorer_goals.rds&quot;)</code></pre>
+<p>Now we have a list of every goal scored by profilic strikers, we just have to group by each player and count how many dates they’ve scored on. To get the playest with the highest number of unique dates we group by their id and count the length of the unique dates they’ve scored on.</p>
+<pre class="r"><code>days_per_player &lt;- player_goals %&gt;%
+  #group by player
+  group_by(id) %&gt;%
+  #count the dates scored on
+  summarise(days = length(unique(date))) %&gt;%
+  arrange(-days) %&gt;%
+  #rejoin the name data back in
+  left_join(.,
+            player_goals %&gt;%
+              select(id, name) %&gt;%
+              unique(),
+            by = &quot;id&quot;) %&gt;%
+  print()</code></pre>
+<pre><code>## # A tibble: 413 x 3
+##    id     days name             
+##    &lt;chr&gt; &lt;int&gt; &lt;chr&gt;            
+##  1 8198    244 Cristiano Ronaldo
+##  2 28003   210 Messi            
+##  3 7349    203 Raúl             
+##  4 3455    200 Ibrahimovic      
+##  5 3207    189 Henry            
+##  6 4257    187 Eto&#39;o            
+##  7 3924    173 Drogba           
+##  8 48280   173 Cavani           
+##  9 44352   172 Suárez           
+## 10 7980    171 Villa            
+## # ... with 403 more rows</code></pre>
+<p>so perhaps unsurprisingly, Ronaldo comes out on top. As expected given the data source, most of the top players are very recent strikers- all of the top 10 were active well into the 2010s. <a href="https://en.wikipedia.org/wiki/Ulf_Kirsten">Ulf Kirsten</a> and <a href="https://en.wikipedia.org/wiki/Toni_Polster">Toni Polster</a> are the torchbearers for strikers from the 90s.</p>
+<p>As always in these posts, I try to learn some new stuff as I do them. I thought this miht be</p>
+<p>Interestingly, <a href="https://en.wikipedia.org/wiki/Dirk_Kuyt">Dirk Kuyt</a> also features heavily, despite not being renowned as a great goalscorer.</p>
+<pre class="r"><code>left_join(
+  days_per_player,
+  player_goals %&gt;%
+    group_by(id) %&gt;%
+    summarise(goals = n()),
+  by = &quot;id&quot;
+) %&gt;%
+  mutate(proportion_unique = days / goals) %&gt;%
+  arrange(-days) %&gt;%
+  filter(days &gt; 150) %&gt;%
+  select(name, goals, days, proportion_unique) %&gt;%
+  arrange(-proportion_unique)</code></pre>
+<pre><code>## # A tibble: 34 x 4
+##    name      goals  days proportion_unique
+##    &lt;chr&gt;     &lt;int&gt; &lt;int&gt;             &lt;dbl&gt;
+##  1 Gilardino   231   154             0.667
+##  2 Cissé       269   166             0.617
+##  3 Signori     260   160             0.615
+##  4 Di Vaio     269   165             0.613
+##  5 Toni        273   165             0.604
+##  6 Kuyt        281   169             0.601
+##  7 Lampard     258   154             0.597
+##  8 Frei        257   153             0.595
+##  9 Drogba      300   173             0.577
+## 10 Trézéguet   265   152             0.574
+## # ... with 24 more rows</code></pre>
+<p>When sorted by how evenly their goals/date coverage is (i.e. the ideal ratio would be 1 goal on every day), Dirk Kuyt pops up again (and did in fact score many more goals than I had assumed). <a href="https://en.wikipedia.org/wiki/Alberto_Gilardino">Alberto Gilardino</a> really stands out as a player who has maximum date coverage desite (relative to other members of the list!) a low number of total goals scored.</p>
+<p>I’m not sure what, if any, insight that adds but is a cool piece of trivia.</p>
+</div>
