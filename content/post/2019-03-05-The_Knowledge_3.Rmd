@@ -381,7 +381,7 @@ second_place <- final_positions %>%
 ```
 
 ```{r}
-p <- eng_data %>%
+eng_data %>%
   filter(season > 1991) %>%
   setDT() %>%
   .[, match := 1:.N, by = c("season", "team")] %>%
@@ -406,8 +406,98 @@ p <- eng_data %>%
           subtitle = "Weight indicates proportion of finishes in that position") +
   xlab("Total League Position") +
   theme_minimal() +
-  theme(axis.text.y = element_text(angle = 10)) %>%
-  plot()
+  theme(axis.text.y = element_text(angle = 10))
 
 ```
+
+# Hold Your Position
+
+```{r position_sets, warning=FALSE,message=FALSE}
+relegation_spots <- eng_data %>%
+  .[, c("season", "division")] %>%
+  unique() %>%
+  mutate(relegation_spots = case_when(
+    season >= 1995 & division == 1 ~ 3,
+    season >= 1994 & division == 1 ~ 4,
+    season >= 1991 & division == 1 ~ 3,
+    season >= 1990 & division == 1 ~ 2,
+    season >= 1973 & division == 1 ~ 3,
+    season >= 1898 & division == 1 ~ 2,
+    season >= 1995 & division == 2 ~ 3,
+    season >= 1994 & division == 2 ~ 4,
+    season >= 1991 & division == 2 ~ 3,
+    season >= 1990 & division == 2 ~ 2,
+    season >= 1988 & division == 2 ~ 3,
+    season >= 1986 & division == 2 ~ 2,
+    season >= 1973 & division == 2 ~ 3,
+    season >= 1921 & division == 2 ~ 2,
+    season >= 1920 & division == 2 ~ 1,
+    season >= 1919 & division == 2 ~ 3,
+    season >= 1995 & division == 3 ~ 4,
+    season >= 1994 & division == 3 ~ 5,
+    season >= 1991 & division == 3 ~ 4,
+    season >= 1990 & division == 3 ~ 3,
+    season >= 1988 & division == 3 ~ 4,
+    season >= 1986 & division == 3 ~ 3,
+    season >= 1958 & division == 3 ~ 4,
+    season >= 2002 & division == 4 ~ 2,
+    season >= 1996 & division == 4 ~ 1,
+    season >= 1993 & division == 4 ~ 0,
+    season >= 1992 & division == 4 ~ 1,
+    season >= 1990 & division == 4 ~ 0,
+    season >= 1986 & division == 4 ~ 1
+ )) %>%
+  mutate(relegation_spots = ifelse(relegation_spots == 0, NA, relegation_spots))
+
+possible_positions <- eng_data %>%
+  #filter(season == 1968 & division == 4) %>%
+    setDT() %>%
+    .[, match := 1:.N, by = c("season", "team")] %>%
+    .[, season_points := cumsum(points), by = c("season", "team")] %>%
+    .[order(division, season, match, -season_points)] %>%
+    .[, position := 1:.N, by = c("division", "season", "match")] %>%
+  .[, teams := max(position), by = c("division", "season")] %>%
+  .[, matches_remaining := max(match) - match, by = c("division", "season")] %>%
+  .[season < 1981, possible_points := season_points + (matches_remaining * 2)] %>%
+  .[season > 1980, possible_points := season_points + (matches_remaining * 3)] %>%
+  .[, poss_points_nextworst := lead(possible_points), by = c("season", "division", "match")] %>%
+  .[, points_nextbest := lag(season_points), by = c("season", "division", "match")] %>%
+  merge(., relegation_spots, by = c("division", "season")) %>%
+  .[, lowest_safe_position := teams - relegation_spots] %>%
+  .[position == lowest_safe_position, lowest_safe_points := season_points]
+
+```
+
+```{r relegations_secured}
+relegation_secured <- possible_positions %>%
+  #filter out teams in relegation trouble
+  .[!is.na(lowest_safe_position)] %>%
+  .[position >= lowest_safe_position] %>%
+  .[, lowest_safe_points := na.locf(lowest_safe_points)] %>%
+  .[possible_points < lowest_safe_points] %>%
+    .[, c("season", "division", "match", "team", "position", "season_points",
+          "matches_remaining", "possible_points", "lowest_safe_position", "lowest_safe_points")]
+```
+
+
+```{r}
+possible_positions <- possible_positions %>%
+  .[(is.na(poss_points_nextworst) | season_points > poss_points_nextworst) & 
+      (is.na(points_nextbest) | possible_points < points_nextbest) &
+      #(position != 1 & position != teams) &
+      matches_remaining > 0]
+  .[possible_points < lead(season_points) & possible_points > lag(season_points), , by = c("season", "division", "match")]
+  
+  
+  
+  
+  .[.[, .I[match == max(match)], by= c("season", "division")]$V1] %>%
+  .[order(season, division, -season_points)] %>%
+  .[, final_position := 1:.N, by = c("season", "division")] %>%
+  .[, c("team", "division", "final_position")] %>%
+  .[, pos_count := .N, by = c("team", "division", "final_position")] %>%
+  unique()
+
+```
+
 
