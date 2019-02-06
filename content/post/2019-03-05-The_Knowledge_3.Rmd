@@ -2,7 +2,7 @@
 title: THe Knowledge 3
 author: Robert Hickman
 date: '2019-02-05'
-slug: cambridge_pub_crawl
+slug: knowledge_3
 output: pdf_document
 categories: []
 tags:
