@@ -34,7 +34,9 @@ Has any player played/or even scored on every date in a calendar year. What’s 
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(rvest)
 library(tidyverse)
 library(zoo)
-library(openair)&lt;/code&gt;&lt;/pre&gt;
+library(openair)
+library(engsoccerdata)
+library(data.table)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;For each player sampled we’re going to want the data for each goal scored both for their club and country. Saving the competition data is also useful as it also allows us to sort out friendlies which may or may not count depending on interpretation of the question.&lt;/p&gt;
 &lt;p&gt;Two quick functions will do this for any given player id&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#create a data frame of club goals
@@ -215,15 +217,62 @@ saveRDS(player_goals, &amp;quot;top_scorer_goals.rds&amp;quot;)&lt;/code&gt;&lt;
 ## 10 7980    171 Villa            
 ## # ... with 403 more rows&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;so perhaps unsurprisingly, Ronaldo comes out on top. As expected given the data source, most of the top players are very recent strikers- all of the top 10 were active well into the 2010s. &lt;a href=&#34;https://en.wikipedia.org/wiki/Ulf_Kirsten&#34;&gt;Ulf Kirsten&lt;/a&gt; and &lt;a href=&#34;https://en.wikipedia.org/wiki/Toni_Polster&#34;&gt;Toni Polster&lt;/a&gt; are the torchbearers for strikers from the 90s.&lt;/p&gt;
-&lt;p&gt;As always in these posts, I try to learn some new stuff as I do them. I thought this miht be&lt;/p&gt;
-&lt;p&gt;Interestingly, &lt;a href=&#34;https://en.wikipedia.org/wiki/Dirk_Kuyt&#34;&gt;Dirk Kuyt&lt;/a&gt; also features heavily, despite not being renowned as a great goalscorer.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;left_join(
+&lt;p&gt;As always in these posts, I try to learn some new stuff as I do them. I thought this might be a good time to try some circular plotting. I don’t think the resultan&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;circular_data &amp;lt;- player_goals %&amp;gt;%
+  #filter out top 16 scorers
+  filter(id %in% days_per_player$id[1:16]) %&amp;gt;%
+  #group by month and player and sum
+  mutate(month = gsub(&amp;quot;\\/.*&amp;quot;, &amp;quot;&amp;quot;, date)) %&amp;gt;%
+  group_by(id, month, competition) %&amp;gt;%
+  summarise(goals = n()) %&amp;gt;%
+  left_join(.,
+            player_goals %&amp;gt;%
+              select(id, name) %&amp;gt;%
+              unique(),
+            by = &amp;quot;id&amp;quot;)
+
+#too many competititon for legend
+#sort out into broad groups
+competition_types &amp;lt;- data.frame(competition = circular_data$competition) %&amp;gt;%
+  unique() %&amp;gt;%
+  mutate(competition = as.character(competition)) %&amp;gt;%
+  mutate(competition_type = case_when(
+    grepl(&amp;quot;MLS&amp;quot;, competition) ~ &amp;quot;Domestic&amp;quot;,
+    grepl(&amp;quot;World Cup qualification| Qualifiers&amp;quot;, competition) ~ &amp;quot;International&amp;quot;,
+    grepl(&amp;quot;Friendlies&amp;quot;, competition) ~ &amp;quot;International Friendlies&amp;quot;,
+    grepl(&amp;quot;World Cup [0-9]{4}|Confederations|EURO [0-9]{4}&amp;quot;, competition) ~ &amp;quot;International Tournament&amp;quot;,
+    grepl(&amp;quot;UEFA|Champions League|UI Cup|Cup Winners|European Cup|Europa&amp;quot;, competition) ~ &amp;quot;European&amp;quot;,
+    grepl(&amp;quot;Club World&amp;quot;, competition) ~ &amp;quot;International Club&amp;quot;,
+    grepl(&amp;quot;Cup|cup|Pokal|copa|Copa|beker|Coupe|coppa|Kupasi|Trophée|Kupa&amp;quot;, competition) ~ &amp;quot;Domestic Cup&amp;quot;
+  )) %&amp;gt;%
+  mutate(competition_type = ifelse(is.na(competition_type), &amp;quot;Domestic&amp;quot;, competition_type)) %&amp;gt;%
+  #convert to factor for plot fill order
+  mutate(competition_type = fct_rev(factor(competition_type)))
+
+#plot as circular radar plots
+circular_data %&amp;gt;%
+  left_join(., competition_types, by = &amp;quot;competition&amp;quot;) %&amp;gt;%
+  ggplot(., aes(x = month, y = goals, fill = competition_type)) +
+  #convert to polar coordinates
+  coord_polar(theta = &amp;quot;x&amp;quot;, start = -.13) +
+  geom_bar(stat = &amp;quot;identity&amp;quot;) +
+  scale_fill_discrete(name = &amp;quot;Competition Type&amp;quot;) +
+  ggtitle(&amp;quot;Goals Per Month for Top 16 Unique Day Scorers&amp;quot;) +
+  facet_wrap(~name) +
+  theme_minimal() +
+  theme(axis.text = element_blank())&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-03-05-The_Knowledge_3_files/figure-html/plot_circular-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;One nice thin that pops out is how Kirsten rarely scored in December/January- probably due to the Bundesliga mid season break.&lt;/p&gt;
+&lt;p&gt;I also found it interesting that &lt;a href=&#34;https://en.wikipedia.org/wiki/Dirk_Kuyt&#34;&gt;Dirk Kuyt&lt;/a&gt; featured in the top 16, despite not being renowned as a great goalscorer.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#count total goals per player
+left_join(
   days_per_player,
   player_goals %&amp;gt;%
     group_by(id) %&amp;gt;%
     summarise(goals = n()),
   by = &amp;quot;id&amp;quot;
 ) %&amp;gt;%
+  #work out days/total goals
   mutate(proportion_unique = days / goals) %&amp;gt;%
   arrange(-days) %&amp;gt;%
   filter(days &amp;gt; 150) %&amp;gt;%
@@ -245,6 +294,309 @@ saveRDS(player_goals, &amp;quot;top_scorer_goals.rds&amp;quot;)&lt;/code&gt;&lt;
 ## # ... with 24 more rows&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;When sorted by how evenly their goals/date coverage is (i.e. the ideal ratio would be 1 goal on every day), Dirk Kuyt pops up again (and did in fact score many more goals than I had assumed). &lt;a href=&#34;https://en.wikipedia.org/wiki/Alberto_Gilardino&#34;&gt;Alberto Gilardino&lt;/a&gt; really stands out as a player who has maximum date coverage desite (relative to other members of the list!) a low number of total goals scored.&lt;/p&gt;
 &lt;p&gt;I’m not sure what, if any, insight that adds but is a cool piece of trivia.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;first-losers&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;First Losers&lt;/h1&gt;
+&lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en&#34;&gt;
+&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
+Which club holds the record for most 2nd place finishes in the English top flight?
+&lt;/p&gt;
+— Tom Goddard (&lt;span class=&#34;citation&#34;&gt;@Tom_Goddard_13&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/Tom_Goddard_13/status/1092785174046228480?ref_src=twsrc%5Etfw&#34;&gt;February 5, 2019&lt;/a&gt;
+&lt;/blockquote&gt;
+&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
+&lt;p&gt;The fist question this week involving final positions ask which teams have finished second the most.&lt;/p&gt;
+&lt;p&gt;First lets load up the engsoccerdata for English leagues 1882-2016. I’ve munged it in a pretty verbose way; there’s definitely a faster way to do it but that’s not really necessary. All we need are the indicators used to sort the league (points, goal difference, and goal scored) for every match in a long format.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;eng_data &amp;lt;- engsoccerdata::england %&amp;gt;%
+  #select only pertinent variables
+  select(Date, Season, home, visitor, hgoal, vgoal, division) %&amp;gt;%
+  rename_all(tolower) %&amp;gt;%
+  #melt the data to long format
+  reshape2::melt(id.vars = c(&amp;quot;date&amp;quot;, &amp;quot;season&amp;quot;, &amp;quot;hgoal&amp;quot;, &amp;quot;vgoal&amp;quot;, &amp;quot;division&amp;quot;),
+                 value.name = &amp;quot;team&amp;quot;, variable.name = &amp;quot;location&amp;quot;) %&amp;gt;%
+  #this can be done in one step but for sanity
+  mutate(result = case_when(
+    hgoal &amp;gt; vgoal &amp;amp; location == &amp;quot;home&amp;quot; ~ &amp;quot;W&amp;quot;,
+    vgoal &amp;gt; hgoal &amp;amp; location == &amp;quot;visitor&amp;quot; ~ &amp;quot;W&amp;quot;,
+    hgoal &amp;lt; vgoal &amp;amp; location == &amp;quot;home&amp;quot; ~ &amp;quot;L&amp;quot;,
+    vgoal &amp;lt; hgoal &amp;amp; location == &amp;quot;visitor&amp;quot; ~ &amp;quot;L&amp;quot;,
+    vgoal == hgoal ~ &amp;quot;D&amp;quot;
+  )) %&amp;gt;%
+  #points for a win changed in 1981
+  mutate(points = case_when(
+    result == &amp;quot;L&amp;quot; ~ 0,
+    result == &amp;quot;D&amp;quot; ~ 1,
+    result == &amp;quot;W&amp;quot; &amp;amp; season &amp;lt; 1981 ~ 2,
+    result == &amp;quot;W&amp;quot; &amp;amp; season &amp;gt; 1980 ~ 3
+  )) %&amp;gt;%
+  #and get the goal info too
+  mutate(goal_diff = case_when(
+    location == &amp;quot;home&amp;quot; ~ hgoal - vgoal,
+    location == &amp;quot;visitor&amp;quot; ~ vgoal - hgoal
+  )) %&amp;gt;%
+  mutate(goals = case_when(
+    location == &amp;quot;home&amp;quot; ~ hgoal,
+    location == &amp;quot;visitor&amp;quot; ~ vgoal
+  )) %&amp;gt;%
+  #only save the variables we care about then sort
+  select(date, season, division, team, points, goals, goal_diff) %&amp;gt;%
+  arrange(date, team)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then find the final positions of each team in each season of English football sorted by points, goal difference and goals for&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;final_positions &amp;lt;- eng_data %&amp;gt;%
+  setDT() %&amp;gt;%
+  #find the match number
+  .[, match := 1:.N, by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
+  #find the cumulative points, goal difference and goals for
+  .[, season_points := cumsum(points), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
+  .[, season_gd := cumsum(goal_diff), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
+  .[, season_g := cumsum(goals), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
+  #filter out the final matches totals and order
+  .[.[, .I[match == max(match)], by= c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;)]$V1] %&amp;gt;%
+  .[order(season, division, -season_points)] %&amp;gt;%
+  #assign the final positions
+  .[, final_position := 1:.N, by = c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;)] %&amp;gt;%
+  .[, c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;)] %&amp;gt;%
+  #count by final position
+  .[, pos_count := .N, by = c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;)] %&amp;gt;%
+  unique()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then we can filter out those who have finished second most&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;second_place &amp;lt;- final_positions %&amp;gt;%
+  #filter out second place finishes
+  .[final_position == 2] %&amp;gt;%
+  .[, c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;, &amp;quot;pos_count&amp;quot;)] %&amp;gt;%
+  .[order(-pos_count)] %&amp;gt;%
+  print()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##                    team division final_position pos_count
+##   1:  Manchester United        1              2        14
+##   2:            Arsenal        1              2        12
+##   3:          Liverpool        1              2        11
+##   4:        Aston Villa        1              2         9
+##   5:   Sheffield United        2              2         8
+##  ---                                                     
+## 202:           Rochdale        4              2         1
+## 203: Milton Keynes Dons        3              2         1
+## 204:      Burton Albion        3              2         1
+## 205:      Oxford United        4              2         1
+## 206:         Portsmouth        4              2         1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Perhaps unsurprisingly, most of the teams to finish second have finished second in the top flight. Manchester United lead the way with Arsenal and Liverpool following up.&lt;/p&gt;
+&lt;p&gt;Bristol City, Charlton Athletic, Oldham Athletic, Blackpool, QPR, Watford and Southampton have finished runners up in the top division without winning it, all having acheived this exactly once.&lt;/p&gt;
+&lt;p&gt;Plymouth Argyle have perhaps the most heartbreaking run of all though- having finished second in the old 3rd Division South SIX times in a row between 1922-1927 before finally winning it in 1929.&lt;/p&gt;
+&lt;p&gt;I thought I might as well also plot every teams league finishes as a proportion of their season in the league. Position here refers to total overall position (so 1st in Division two might be 21st overall). The darker the colour, the more likely the team was the end the season in that position. All teams have been sorted by their mean final league position.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;eng_data %&amp;gt;%
+  filter(season &amp;gt; 1991) %&amp;gt;%
+  setDT() %&amp;gt;%
+  .[, match := 1:.N, by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
+  .[, season_points := cumsum(points), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
+  .[, season_gd := cumsum(goal_diff), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
+  .[, season_g := cumsum(goals), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
+  .[.[, .I[match == max(match)], by= c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;)]$V1] %&amp;gt;%
+  .[order(season, division, -season_points)] %&amp;gt;%
+  .[, final_position := 1:.N, by = c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;)] %&amp;gt;%
+  .[, total_position := 1:.N, by = c(&amp;quot;season&amp;quot;)] %&amp;gt;%
+  .[, c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;, &amp;quot;total_position&amp;quot;)] %&amp;gt;%
+  .[, pos_count := .N, by = c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;)] %&amp;gt;%
+  .[, team_appearances := .N, by = c(&amp;quot;team&amp;quot;)] %&amp;gt;%
+  .[, mean_pos := sum(total_position)/team_appearances, by = c(&amp;quot;team&amp;quot;)] %&amp;gt;%
+  unique() %&amp;gt;%
+  .[order(mean_pos)] %&amp;gt;%
+  .[, team := fct_rev(fct_relevel(as.factor(team), unique(.$team)))] %&amp;gt;%
+  ggplot(., aes(x = total_position, y = team)) + 
+  geom_tile(aes(alpha = pos_count/team_appearances), fill = &amp;quot;blue&amp;quot;) +
+  scale_alpha_continuous(guide = FALSE) +
+  ggtitle(&amp;quot;Teams Ordered by Mean Final Position 1992-2016&amp;quot;,
+          subtitle = &amp;quot;Weight indicates proportion of finishes in that position&amp;quot;) +
+  xlab(&amp;quot;Total League Position&amp;quot;) +
+  theme_minimal() +
+  theme(axis.text.y = element_text(angle = 10))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-03-05-The_Knowledge_3_files/figure-html/unnamed-chunk-4-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;slip-slidin-away&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Slip Slidin’ Away&lt;/h1&gt;
+&lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en&#34;&gt;
+&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
+As we&#39;re starting to reach that time of season (we&#39;ll, we are at &lt;a href=&#34;https://twitter.com/hashtag/itfc?src=hash&amp;amp;ref_src=twsrc%5Etfw&#34;&gt;#itfc&lt;/a&gt;)… What&#39;s the earliest &lt;em&gt;collectively&lt;/em&gt; a team from each of the top 4 English leagues has been relegated?
+&lt;/p&gt;
+— Philip Genochio (&lt;span class=&#34;citation&#34;&gt;@philipgenochio&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/philipgenochio/status/1092782376852156416?ref_src=twsrc%5Etfw&#34;&gt;February 5, 2019&lt;/a&gt;
+&lt;/blockquote&gt;
+&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
+&lt;p&gt;A similar question involves the earliest teams to get relegated. Obviously for this first we need to know how many teams are relegated from each league per season. Having only really started watching football around the turn of the millenium I was a bit surprised how much this has changed over the years (n.b. I’m only counting automatic relegation- playoffs and re-elections don’t count).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#manually enter the number of relegation spots per league
+relegation_spots &amp;lt;- eng_data %&amp;gt;%
+  .[, c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;)] %&amp;gt;%
+  unique() %&amp;gt;%
+  mutate(relegation_spots = case_when(
+    season &amp;gt;= 1995 &amp;amp; division == 1 ~ 3,
+    season &amp;gt;= 1994 &amp;amp; division == 1 ~ 4,
+    season &amp;gt;= 1991 &amp;amp; division == 1 ~ 3,
+    season &amp;gt;= 1990 &amp;amp; division == 1 ~ 2,
+    season &amp;gt;= 1973 &amp;amp; division == 1 ~ 3,
+    season &amp;gt;= 1898 &amp;amp; division == 1 ~ 2,
+    season &amp;gt;= 1995 &amp;amp; division == 2 ~ 3,
+    season &amp;gt;= 1994 &amp;amp; division == 2 ~ 4,
+    season &amp;gt;= 1991 &amp;amp; division == 2 ~ 3,
+    season &amp;gt;= 1990 &amp;amp; division == 2 ~ 2,
+    season &amp;gt;= 1988 &amp;amp; division == 2 ~ 3,
+    season &amp;gt;= 1986 &amp;amp; division == 2 ~ 2,
+    season &amp;gt;= 1973 &amp;amp; division == 2 ~ 3,
+    season &amp;gt;= 1921 &amp;amp; division == 2 ~ 2,
+    season &amp;gt;= 1920 &amp;amp; division == 2 ~ 1,
+    season &amp;gt;= 1919 &amp;amp; division == 2 ~ 3,
+    season &amp;gt;= 1995 &amp;amp; division == 3 ~ 4,
+    season &amp;gt;= 1994 &amp;amp; division == 3 ~ 5,
+    season &amp;gt;= 1991 &amp;amp; division == 3 ~ 4,
+    season &amp;gt;= 1990 &amp;amp; division == 3 ~ 3,
+    season &amp;gt;= 1988 &amp;amp; division == 3 ~ 4,
+    season &amp;gt;= 1986 &amp;amp; division == 3 ~ 3,
+    season &amp;gt;= 1958 &amp;amp; division == 3 ~ 4,
+    season &amp;gt;= 2002 &amp;amp; division == 4 ~ 2,
+    season &amp;gt;= 1996 &amp;amp; division == 4 ~ 1,
+    season &amp;gt;= 1993 &amp;amp; division == 4 ~ 0,
+    season &amp;gt;= 1992 &amp;amp; division == 4 ~ 1,
+    season &amp;gt;= 1990 &amp;amp; division == 4 ~ 0,
+    season &amp;gt;= 1986 &amp;amp; division == 4 ~ 1
+ )) %&amp;gt;%
+  mutate(relegation_spots = ifelse(relegation_spots == 0, NA, relegation_spots))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We then need to work out how many points each team has, and how many they could possibly achieve, after every match in a season.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;possible_positions &amp;lt;- eng_data %&amp;gt;%
+    setDT() %&amp;gt;%
+  #get the match number
+  .[, match := 1:.N, by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
+  #get the current points for the team
+  .[, season_points := cumsum(points), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
+  .[order(division, season, match, -season_points)] %&amp;gt;%
+  #get the current position for the team
+  .[, position := 1:.N, by = c(&amp;quot;division&amp;quot;, &amp;quot;season&amp;quot;, &amp;quot;match&amp;quot;)] %&amp;gt;%
+  #how many teams are in the league
+  .[, teams := max(position), by = c(&amp;quot;division&amp;quot;, &amp;quot;season&amp;quot;)] %&amp;gt;%
+  #find how many matches each team has left to play
+  .[, matches_remaining := max(match) - match, by = c(&amp;quot;division&amp;quot;, &amp;quot;season&amp;quot;)] %&amp;gt;%
+  #the max points assumes each team wins all of their remaining matches
+  .[season &amp;lt; 1981, possible_points := season_points + (matches_remaining * 2)] %&amp;gt;%
+  .[season &amp;gt; 1980, possible_points := season_points + (matches_remaining * 3)] %&amp;gt;%
+  #merge in the relegation spots and find what position each team needs to be safe
+  merge(., relegation_spots, by = c(&amp;quot;division&amp;quot;, &amp;quot;season&amp;quot;)) %&amp;gt;%
+  .[, lowest_safe_position := teams - relegation_spots] %&amp;gt;%
+  #the threshold for safety is the number of points the lowest safe team has
+  .[position == lowest_safe_position, lowest_safe_points := season_points]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then it’s a simple case of finding teams in the relgation zone and finding the point at which they can no longer catch the lowest safe team&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;relegation_secured &amp;lt;- possible_positions %&amp;gt;%
+  #filter out teams in relegation trouble
+  .[!is.na(lowest_safe_position)] %&amp;gt;%
+  .[position &amp;gt;= lowest_safe_position] %&amp;gt;%
+  .[, lowest_safe_points := na.locf(lowest_safe_points)] %&amp;gt;%
+  .[possible_points &amp;lt; lowest_safe_points] %&amp;gt;%
+    .[, c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;team&amp;quot;, &amp;quot;season_points&amp;quot;,
+          &amp;quot;matches_remaining&amp;quot;, &amp;quot;possible_points&amp;quot;, &amp;quot;lowest_safe_points&amp;quot;)] %&amp;gt;%
+  .[order(-matches_remaining)] %&amp;gt;%
+  #remove duplicates
+  .[!duplicated(paste0(season, division, team))] %&amp;gt;%
+  print()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##      season division              team season_points matches_remaining
+##   1:   1973        3          Rochdale            16                 8
+##   2:   1984        1        Stoke City            17                 7
+##   3:   2001        2  Stockport County            17                 7
+##   4:   2003        2         Wimbledon            21                 7
+##   5:   2016        2  Rotherham United            17                 7
+##  ---                                                                  
+## 709:   2009        4      Grimsby Town            44                 0
+## 710:   2010        4      Lincoln City            47                 0
+## 711:   2011        4   Hereford United            44                 0
+## 712:   2012        4         Aldershot            48                 0
+## 713:   2016        4 Hartlepool United            46                 0
+##      possible_points lowest_safe_points
+##   1:              32                 33
+##   2:              38                 40
+##   3:              38                 39
+##   4:              42                 44
+##   5:              38                 41
+##  ---                                   
+## 709:              44                 48
+## 710:              47                 48
+## 711:              44                 46
+## 712:              48                 51
+## 713:              46                 48&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So Rochdale hold the questionable honour of being the team knowing they are doomed with the most matches to go (with 8 in division 3 in 1973). There’s quite a large chasing pack of teams who have known with 7 or 6 matches left too. Ipswich are currently ‘only’ 8 points off of safety with 16 games left to go so seems unlikely to beat 8 but it could be close…&lt;/p&gt;
+&lt;p&gt;I also wanted to see what the earliest a team has ever been certain of their final position is.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;certain_final_positions &amp;lt;- possible_positions %&amp;gt;%
+  #find the possible points for the teams above and below each team
+  .[, poss_points_nextworst := lead(possible_points), by = c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;match&amp;quot;)] %&amp;gt;%
+  .[, points_nextbest := lag(season_points), by = c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;match&amp;quot;)] %&amp;gt;%
+  #filter out teams that cannot beat/fall below the next best/worst teams
+  .[(is.na(poss_points_nextworst) | season_points &amp;gt; poss_points_nextworst) &amp;amp; 
+      (is.na(points_nextbest) | possible_points &amp;lt; points_nextbest) &amp;amp;
+      matches_remaining &amp;gt; 0] %&amp;gt;%
+  #order and select columns
+  .[order(-matches_remaining)] %&amp;gt;%
+  .[, c(&amp;quot;division&amp;quot;, &amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;, &amp;quot;position&amp;quot;, &amp;quot;matches_remaining&amp;quot;, &amp;quot;teams&amp;quot;)] %&amp;gt;%
+  print()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##       division season                 team position matches_remaining
+##    1:        4   1968 Bradford Park Avenue       24                 7
+##    2:        1   1984           Stoke City       22                 6
+##    3:        2   1949    Tottenham Hotspur        1                 6
+##    4:        2   1971              Watford       22                 6
+##    5:        2   1973        Middlesbrough        1                 6
+##   ---                                                                
+## 1458:        4   2014    Hartlepool United       22                 1
+## 1459:        4   2015     Northampton Town        1                 1
+## 1460:        4   2015        AFC Wimbledon        7                 1
+## 1461:        4   2015               Barnet       15                 1
+## 1462:        4   2016        Leyton Orient       24                 1
+##       teams
+##    1:    24
+##    2:    22
+##    3:    22
+##    4:    22
+##    5:    22
+##   ---      
+## 1458:    24
+## 1459:    24
+## 1460:    24
+## 1461:    24
+## 1462:    24&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Spare a thought for fans of Bradford Park Avenue in 1968-1969 who knew their team would finish bottom of the 3rd Division North with 7 matches (of 46) remaining. Luckily they wern’t relegated as they were already in the bottom division of the football league and we re-elected for the next season. They repeated this feat, now in Division 4, 5 years later, finishing bottom with 6 games to go.&lt;/p&gt;
+&lt;p&gt;Most of these involve teams either winning or finishing bottom of their league. If we filter these out we’re left with:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;certain_final_positions %&amp;gt;%
+  .[position != 1 &amp;amp; position != teams]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##      division season              team position matches_remaining teams
+##   1:       3a   1931      New Brighton       20                 4    22
+##   2:       3a   1931          Rochdale       21                 4    22
+##   3:        2   2003     Bradford City       23                 3    24
+##   4:        2   2005  Sheffield United        2                 3    24
+##   5:       3a   1931      New Brighton       20                 3    22
+##  ---                                                                   
+## 446:        4   2013    Fleetwood Town        4                 1    24
+## 447:        4   2014 Stevenage Borough        6                 1    24
+## 448:        4   2014 Hartlepool United       22                 1    24
+## 449:        4   2015     AFC Wimbledon        7                 1    24
+## 450:        4   2015            Barnet       15                 1    24&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Which really emphasises how only exceptionally good/bad teams are ever really certain of their position before the end of the season.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;draw-me-like-one-of-your&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Draw Me Like One of Your&lt;/h1&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.theguardian.com/football/2019/feb/06/what-are-the-lowest-xg-scoring-football-matches-in-history-expected-goals-the-knowledge-football&#34;&gt;““Tottenham have currently played 29 consecutive Premier League games without drawing one,” notes Wouter van Dael. “What is the longest ever such league run?””&lt;/a&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;draws &amp;lt;- eng_data %&amp;gt;%
+  .[order(team, date)] %&amp;gt;%
+  .[, game_id := 1:.N, by = team] %&amp;gt;%
+  .[goal_diff != 0] %&amp;gt;%
+  .[, consecutive := lead(game_id) - game_id, by = team] %&amp;gt;%
+  .[consecutive != 1, consecutive := NA] %&amp;gt;%
+  .[, count := .N*!is.na(consecutive), rleid(!is.na(consecutive))] %&amp;gt;%
+  .[count != lead(count)] %&amp;gt;%
+  .[, c(&amp;quot;date&amp;quot;, &amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;team&amp;quot;, &amp;quot;count&amp;quot;)] %&amp;gt;%
+  .[order(-count)] %&amp;gt;%
+  print()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##               date season division                 team count
+##      1: 1892-12-10   1892        1          Aston Villa    50
+##      2: 1896-11-09   1896        1           Stoke City    45
+##      3: 1909-02-27   1908        1           Sunderland    45
+##      4: 1914-02-14   1913        2 Bradford Park Avenue    43
+##      5: 1910-03-25   1909        2       Leicester City    43
+##     ---                                                      
+## 108806: 2015-09-05   2015        4            York City     0
+## 108807: 2015-10-17   2015        4            York City     0
+## 108808: 2015-12-19   2015        4            York City     0
+## 108809: 2016-01-16   2015        4            York City     0
+## 108810: 2016-03-28   2015        4            York City     0&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Tottenham’s run without a draw doesn’t even make the top 25 such runs! ANd they still would have to wait until at least next season until they can match Aston Villa’s run from New Years Day 1891 until Christmas Eve in 1892, a run of 50 matches without a draw- a run that included 23 losses, and 27 wins.&lt;/p&gt;
 &lt;/div&gt;
 </description>
     </item>

@@ -14,6 +14,8 @@ header:
   image: ''
 ---
 
+
+
 # 
 The first question this week concerns players scoring on (or nearest to) every day of the year
 
@@ -314,11 +316,16 @@ When sorted by how evenly their goals/date coverage is (i.e. the ideal ratio wou
 
 I'm not sure what, if any, insight that adds but is a cool piece of trivia.
 
-#
+# First Losers
+
+<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Which club holds the record for most 2nd place finishes in the English top flight?</p>&mdash; Tom Goddard (@Tom_Goddard_13) <a href="https://twitter.com/Tom_Goddard_13/status/1092785174046228480?ref_src=twsrc%5Etfw">February 5, 2019</a></blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+The fist question this week involving final positions ask which teams have finished second the most. 
 
 First lets load up the engsoccerdata for English leagues 1882-2016. I've munged it in a pretty verbose way; there's definitely a faster way to do it but that's not really necessary. All we need are the indicators used to sort the league (points, goal difference, and goal scored) for every match in a long format.
 
-```{r}
+```{r english_football_data, warning=FALSE,message=FALSE}
 eng_data <- engsoccerdata::england %>%
   #select only pertinent variables
   select(Date, Season, home, visitor, hgoal, vgoal, division) %>%
@@ -356,29 +363,46 @@ eng_data <- engsoccerdata::england %>%
 
 ```
 
+Then find the final positions of each team in each season of English football sorted by points, goal difference and goals for
+
 ```{r}
 final_positions <- eng_data %>%
   setDT() %>%
+  #find the match number
   .[, match := 1:.N, by = c("season", "team")] %>%
+  #find the cumulative points, goal difference and goals for
   .[, season_points := cumsum(points), by = c("season", "team")] %>%
   .[, season_gd := cumsum(goal_diff), by = c("season", "team")] %>%
   .[, season_g := cumsum(goals), by = c("season", "team")] %>%
+  #filter out the final matches totals and order
   .[.[, .I[match == max(match)], by= c("season", "division")]$V1] %>%
   .[order(season, division, -season_points)] %>%
+  #assign the final positions
   .[, final_position := 1:.N, by = c("season", "division")] %>%
   .[, c("team", "division", "final_position")] %>%
+  #count by final position
   .[, pos_count := .N, by = c("team", "division", "final_position")] %>%
   unique()
 ```
 
+Then we can filter out those who have finished second most
+
 ```{r}
 second_place <- final_positions %>%
+  #filter out second place finishes
   .[final_position == 2] %>%
   .[, c("team", "division", "final_position", "pos_count")] %>%
   .[order(-pos_count)] %>%
-  .[1:20,] %>%
   print()
 ```
+
+Perhaps unsurprisingly, most of the teams to finish second have finished second in the top flight. Manchester United lead the way with Arsenal and Liverpool following up. 
+
+Bristol City, Charlton Athletic, Oldham Athletic, Blackpool, QPR, Watford and Southampton have finished runners up in the top division without winning it, all having acheived this exactly once. 
+
+Plymouth Argyle have perhaps the most heartbreaking run of all though- having finished second in the old 3rd Division South SIX times in a row between 1922-1927 before finally winning it in 1929.
+
+I thought I might as well also plot every teams league finishes as a proportion of their season in the league. Position here refers to total overall position (so 1st in Division two might be 21st overall). The darker the colour, the more likely the team was the end the season in that position. All teams have been sorted by their mean final league position.
 
 ```{r}
 eng_data %>%
@@ -410,9 +434,15 @@ eng_data %>%
 
 ```
 
-# Hold Your Position
+# Slip Slidin' Away
 
-```{r position_sets, warning=FALSE,message=FALSE}
+<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">As we&#39;re starting to reach that time of season (we&#39;ll, we are at <a href="https://twitter.com/hashtag/itfc?src=hash&amp;ref_src=twsrc%5Etfw">#itfc</a>)... What&#39;s the earliest *collectively* a team from each of the top 4 English leagues has been relegated?</p>&mdash; Philip Genochio (@philipgenochio) <a href="https://twitter.com/philipgenochio/status/1092782376852156416?ref_src=twsrc%5Etfw">February 5, 2019</a></blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+A similar question involves the earliest teams to get relegated. Obviously for this first we need to know how many teams are relegated from each league per season. Having only really started watching football around the turn of the millenium I was a bit surprised how much this has changed over the years (n.b. I'm only counting automatic relegation- playoffs and re-elections don't count).
+
+```{r relegation_spots, warning=FALSE,message=FALSE}
+#manually enter the number of relegation spots per league
 relegation_spots <- eng_data %>%
   .[, c("season", "division")] %>%
   unique() %>%
@@ -449,55 +479,99 @@ relegation_spots <- eng_data %>%
  )) %>%
   mutate(relegation_spots = ifelse(relegation_spots == 0, NA, relegation_spots))
 
+```
+
+We then need to work out how many points each team has, and how many they could possibly achieve, after every match in a season. 
+
+```{r possible_positions, warning=FALSE,message=FALSE}
 possible_positions <- eng_data %>%
-  #filter(season == 1968 & division == 4) %>%
     setDT() %>%
-    .[, match := 1:.N, by = c("season", "team")] %>%
-    .[, season_points := cumsum(points), by = c("season", "team")] %>%
-    .[order(division, season, match, -season_points)] %>%
-    .[, position := 1:.N, by = c("division", "season", "match")] %>%
+  #get the match number
+  .[, match := 1:.N, by = c("season", "team")] %>%
+  #get the current points for the team
+  .[, season_points := cumsum(points), by = c("season", "team")] %>%
+  .[order(division, season, match, -season_points)] %>%
+  #get the current position for the team
+  .[, position := 1:.N, by = c("division", "season", "match")] %>%
+  #how many teams are in the league
   .[, teams := max(position), by = c("division", "season")] %>%
+  #find how many matches each team has left to play
   .[, matches_remaining := max(match) - match, by = c("division", "season")] %>%
+  #the max points assumes each team wins all of their remaining matches
   .[season < 1981, possible_points := season_points + (matches_remaining * 2)] %>%
   .[season > 1980, possible_points := season_points + (matches_remaining * 3)] %>%
-  .[, poss_points_nextworst := lead(possible_points), by = c("season", "division", "match")] %>%
-  .[, points_nextbest := lag(season_points), by = c("season", "division", "match")] %>%
+  #merge in the relegation spots and find what position each team needs to be safe
   merge(., relegation_spots, by = c("division", "season")) %>%
   .[, lowest_safe_position := teams - relegation_spots] %>%
+  #the threshold for safety is the number of points the lowest safe team has
   .[position == lowest_safe_position, lowest_safe_points := season_points]
 
 ```
 
-```{r relegations_secured}
+Then it's a simple case of finding teams in the relgation zone and finding the point at which they can no longer catch the lowest safe team
+
+```{r relegations_secured, warning=FALSE,message=FALSE}
 relegation_secured <- possible_positions %>%
   #filter out teams in relegation trouble
   .[!is.na(lowest_safe_position)] %>%
   .[position >= lowest_safe_position] %>%
   .[, lowest_safe_points := na.locf(lowest_safe_points)] %>%
   .[possible_points < lowest_safe_points] %>%
-    .[, c("season", "division", "match", "team", "position", "season_points",
-          "matches_remaining", "possible_points", "lowest_safe_position", "lowest_safe_points")]
+    .[, c("season", "division", "team", "season_points",
+          "matches_remaining", "possible_points", "lowest_safe_points")] %>%
+  .[order(-matches_remaining)] %>%
+  #remove duplicates
+  .[!duplicated(paste0(season, division, team))] %>%
+  print()
 ```
 
+So Rochdale hold the questionable honour of being the team knowing they are doomed with the most matches to go (with 8 in division 3 in 1973). There's quite a large chasing pack of teams who have known with 7 or 6 matches left too. Ipswich are currently 'only' 8 points off of safety with 16 games left to go so seems unlikely to beat 8 but it could be close...
 
-```{r}
-possible_positions <- possible_positions %>%
+I also wanted to see what the earliest a team has ever been certain of their final position is. 
+
+```{r certain_finishes, warning=FALSE,message=FALSE}
+certain_final_positions <- possible_positions %>%
+  #find the possible points for the teams above and below each team
+  .[, poss_points_nextworst := lead(possible_points), by = c("season", "division", "match")] %>%
+  .[, points_nextbest := lag(season_points), by = c("season", "division", "match")] %>%
+  #filter out teams that cannot beat/fall below the next best/worst teams
   .[(is.na(poss_points_nextworst) | season_points > poss_points_nextworst) & 
       (is.na(points_nextbest) | possible_points < points_nextbest) &
-      #(position != 1 & position != teams) &
-      matches_remaining > 0]
-  .[possible_points < lead(season_points) & possible_points > lag(season_points), , by = c("season", "division", "match")]
-  
-  
-  
-  
-  .[.[, .I[match == max(match)], by= c("season", "division")]$V1] %>%
-  .[order(season, division, -season_points)] %>%
-  .[, final_position := 1:.N, by = c("season", "division")] %>%
-  .[, c("team", "division", "final_position")] %>%
-  .[, pos_count := .N, by = c("team", "division", "final_position")] %>%
-  unique()
+      matches_remaining > 0] %>%
+  #order and select columns
+  .[order(-matches_remaining)] %>%
+  .[, c("division", "season", "team", "position", "matches_remaining", "teams")] %>%
+  print()
 
 ```
 
+Spare a thought for fans of Bradford Park Avenue in 1968-1969 who knew their team would finish bottom of the 3rd Division North with 7 matches (of 46) remaining. Luckily they wern't relegated as they were already in the bottom division of the football league and we re-elected for the next season. They repeated this feat, now in Division 4, 5 years later, finishing bottom with 6 games to go.
 
+Most of these involve teams either winning or finishing bottom of their league. If we filter these out we're left with:
+
+```{r filter_top_bottom, warning=FALSE,message=FALSE}
+certain_final_positions %>%
+  .[position != 1 & position != teams]
+```
+
+Which really emphasises how only exceptionally good/bad teams are ever really certain of their position before the end of the season.
+
+# Draw Me Like One of Your
+
+["“Tottenham have currently played 29 consecutive Premier League games without drawing one,” notes Wouter van Dael. “What is the longest ever such league run?”"](https://www.theguardian.com/football/2019/feb/06/what-are-the-lowest-xg-scoring-football-matches-in-history-expected-goals-the-knowledge-football)
+
+```{r}
+draws <- eng_data %>%
+  .[order(team, date)] %>%
+  .[, game_id := 1:.N, by = team] %>%
+  .[goal_diff != 0] %>%
+  .[, consecutive := lead(game_id) - game_id, by = team] %>%
+  .[consecutive != 1, consecutive := NA] %>%
+  .[, count := .N*!is.na(consecutive), rleid(!is.na(consecutive))] %>%
+  .[count != lead(count)] %>%
+  .[, c("date", "season", "division", "team", "count")] %>%
+  .[order(-count)] %>%
+  print()
+```
+
+Tottenham's run without a draw doesn't even make the top 25 such runs! ANd they still would have to wait until at least next season until they can match Aston Villa's run from New Years Day 1891 until Christmas Eve in 1892, a run of 50 matches without a draw- a run that included 23 losses, and 27 wins.
