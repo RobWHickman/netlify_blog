@@ -402,8 +402,10 @@ second_place <- final_positions %>%
   #filter out second place finishes
   .[final_position == 2] %>%
   .[, c("team", "division", "final_position", "pos_count")] %>%
-  .[order(-pos_count)] %>%
-  print()
+  .[order(-pos_count)]
+
+head(data.frame(second_place), 10)
+
 ```
 
 Perhaps unsurprisingly, most of the teams to finish second have finished second in the top flight. Manchester United lead the way with Arsenal and Liverpool following up. 
@@ -536,7 +538,7 @@ relegation_secured <- possible_positions %>%
   .[, lowest_safe_points := na.locf(lowest_safe_points)] %>%
   .[possible_points < lowest_safe_points] %>%
     .[, c("season", "division", "team", "season_points",
-          "matches_remaining", "possible_points", "lowest_safe_points")] %>%
+          "matches_remaining")] %>%
   .[order(-matches_remaining)] %>%
   #remove duplicates
   .[!duplicated(paste0(season, division, team))]

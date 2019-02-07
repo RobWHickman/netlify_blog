@@ -370,20 +370,20 @@ Which club holds the record for most 2nd place finishes in the English top fligh
   #filter out second place finishes
   .[final_position == 2] %&amp;gt;%
   .[, c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;, &amp;quot;pos_count&amp;quot;)] %&amp;gt;%
-  .[order(-pos_count)] %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##                    team division final_position pos_count
-##   1:  Manchester United        1              2        14
-##   2:            Arsenal        1              2        12
-##   3:          Liverpool        1              2        11
-##   4:        Aston Villa        1              2         9
-##   5:   Sheffield United        2              2         8
-##  ---                                                     
-## 202:           Rochdale        4              2         1
-## 203: Milton Keynes Dons        3              2         1
-## 204:      Burton Albion        3              2         1
-## 205:      Oxford United        4              2         1
-## 206:         Portsmouth        4              2         1&lt;/code&gt;&lt;/pre&gt;
+  .[order(-pos_count)]
+
+head(data.frame(second_place), 10)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##                 team division final_position pos_count
+## 1  Manchester United        1              2        14
+## 2            Arsenal        1              2        12
+## 3          Liverpool        1              2        11
+## 4        Aston Villa        1              2         9
+## 5   Sheffield United        2              2         8
+## 6    Birmingham City        2              2         8
+## 7            Everton        1              2         7
+## 8         Sunderland        1              2         7
+## 9  Preston North End        1              2         6
+## 10   Manchester City        1              2         6&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Perhaps unsurprisingly, most of the teams to finish second have finished second in the top flight. Manchester United lead the way with Arsenal and Liverpool following up.&lt;/p&gt;
 &lt;p&gt;Bristol City, Charlton Athletic, Oldham Athletic, Blackpool, QPR, Watford and Southampton have finished runners up in the top division without winning it, all having achieved this exactly once.&lt;/p&gt;
 &lt;p&gt;Plymouth Argyle have perhaps the most heartbreaking run of all though- having finished second in the old 3rd Division South &lt;a href=&#34;https://en.wikipedia.org/wiki/Plymouth_Argyle_F.C.#Honours&#34;&gt;SIX times in a row between 1922-1927&lt;/a&gt; before finally winning it in 1929.&lt;/p&gt;
@@ -500,7 +500,7 @@ relegation_spots &amp;lt;- eng_data %&amp;gt;%
   .[, lowest_safe_points := na.locf(lowest_safe_points)] %&amp;gt;%
   .[possible_points &amp;lt; lowest_safe_points] %&amp;gt;%
     .[, c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;team&amp;quot;, &amp;quot;season_points&amp;quot;,
-          &amp;quot;matches_remaining&amp;quot;, &amp;quot;possible_points&amp;quot;, &amp;quot;lowest_safe_points&amp;quot;)] %&amp;gt;%
+          &amp;quot;matches_remaining&amp;quot;)] %&amp;gt;%
   .[order(-matches_remaining)] %&amp;gt;%
   #remove duplicates
   .[!duplicated(paste0(season, division, team))]
@@ -521,23 +521,7 @@ head(data.frame(relegation_secured), 15)&lt;/code&gt;&lt;/pre&gt;
 ## 12   1975        1    Sheffield United            13                 6
 ## 13   1994        1        Ipswich Town            23                 6
 ## 14   2007        1        Derby County            11                 6
-## 15   1952        2            Barnsley            17                 6
-##    possible_points lowest_safe_points
-## 1               32                 33
-## 2               38                 40
-## 3               38                 39
-## 4               42                 44
-## 5               38                 41
-## 6               32                 33
-## 7               38                 41
-## 8               44                 46
-## 9               43                 44
-## 10              28                 29
-## 11              31                 32
-## 12              25                 28
-## 13              41                 42
-## 14              29                 30
-## 15              29                 30&lt;/code&gt;&lt;/pre&gt;
+## 15   1952        2            Barnsley            17                 6&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;So Rochdale hold the questionable honour of being the team knowing they are doomed with the most matches to go (with 8 in division 3 in 1973). There’s quite a large chasing pack of teams who have known with 7 or 6 matches left too. Ipswich are currently ‘only’ 8 points off of safety with 16 games left to go so seems unlikely to beat 8 but it could be close…&lt;/p&gt;
 &lt;p&gt;I also wanted to see what the earliest a team has ever been certain of their final position is.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;certain_final_positions &amp;lt;- possible_positions %&amp;gt;%
