@@ -16,7 +16,7 @@ header:
 
 In what is becoming a [repeated](http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/) [series](http://www.robert-hickman.eu/post/counties_league_points/), I enjoy answering trivia questions from The Guardian's [The Knowledge](https://www.theguardian.com/football/series/theknowledge) football trivia column. 
 
-There's a few questions that built up that seemed ammenable to coding answers so I've taken a stab at them here
+There's a few questions that built up that seemed amenable to coding answers so I've taken a stab at them here
 
 ```{r libraries, warning=FALSE,message=FALSE}
 #munging
@@ -38,6 +38,8 @@ The first question this week concerns players scoring on (or nearest to) every d
 
 <blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Has any player played/or even scored on every date in a calendar year. What’s the nearest anyone has come?</p>&mdash; David Thomson (@thomsonionioni) <a href="https://twitter.com/thomsonionioni/status/1090206478479298560?ref_src=twsrc%5Etfw">January 29, 2019</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+### Answer: Cristiano Ronaldo (using data from around the turn of the millenium) - 244 days
 
 Getting the data for this is the main problem. The best (free) source I tend to use is transfermarkt.com, but data there becomes less reliable from before 2000 (and only has a few years of data from more obscure years where I could believe some players are banging in goals for fun). Nonetheless, it should at least gives us some ideas
 
@@ -150,7 +152,7 @@ ronaldo <- rbind(
 length(unique(ronaldo$date))
 ```
 
-So Ronaldo has scored on 244 of the 366 possible days of the year. It's not surprising that scoring on _every_ day would be difficult. The club season only runs August-June and there are unlikely to be many possible games to pla in July at all. Plus days such a Christmas are usually taken off from football.
+So Ronaldo has scored on 244 of the 366 possible days of the year. It's not surprising that scoring on _every_ day would be difficult. The club season only runs August-June and there are unlikely to be many possible games to play in July at all. Plus days such a Christmas are usually taken off from football.
 
 In terms of goals per day using 2019s calendar this looks like (plot made using the [openair package](https://cran.r-project.org/web/packages/openair/index.html): 
 
@@ -166,13 +168,13 @@ ronaldo %>%
   
 ```
 
-Which shows more deviation in scoring than I thought it would. Nethertheless, from Sepetember-May each year is pretty blocked out, though there is a run of Saturdays this December which could be fertile ground for increasing his total.
+Which shows more deviation in scoring than I thought it would. Nevertheless, from September-May each year is pretty blocked out, though there is a run of Saturdays this December which could be fertile ground for increasing his total.
 
 Next we need to get a list of likely players who could come close to matching Ronaldo's record.
 
 For this I took the first page of transfermarkt's top scorers of the year across all leagues. It's possible that a player might (e.g.) be on the second page each year and have scored a ton, but I don't think it's super likely.
 
-I run this through the top scorers page from 1995 (the earliest year available) to 2018 and grab each player id. Afterwards, save the scraped list as an .rds to preventneeding to continually rescrape the page and put extra load onto the server.
+I run this through the top scorers page from 1995 (the earliest year available) to 2018 and grab each player id. Afterwards, save the scraped list as an .rds to prevent needing to continually re scrape the page and put extra load onto the server.
 
 ```{r get_top_scorers, warning=FALSE,message=FALSE,eval=FALSE}
 #the url for the pages of top scorers
@@ -222,7 +224,7 @@ player_goals <- top_scorer_ids %>%
 saveRDS(player_goals, "top_scorer_goals.rds")
 ```
 
-Now we have a list of every goal scored by profilic strikers, we just have to group by each player and count how many dates they've scored on. To get the playest with the highest number of unique dates we group by their id and count the length of the unique dates they've scored on.
+Now we have a list of every goal scored by prolific strikers, we just have to group by each player and count how many dates they've scored on. To get the players with the highest number of unique dates we group by their id and count the length of the unique dates they've scored on.
 
 ```{r, load_scorer_goals, warning=FALSE,message=FALSE,echo=FALSE}
 player_goals <- readRDS("../../static/files/top_scorer_goals.rds")
@@ -247,7 +249,7 @@ days_per_player <- player_goals %>%
 
 so perhaps unsurprisingly, Ronaldo comes out on top. As expected given the data source, most of the top players are very recent strikers- all of the top 10 were active well into the 2010s. [Ulf Kirsten](https://en.wikipedia.org/wiki/Ulf_Kirsten) and [Toni Polster](https://en.wikipedia.org/wiki/Toni_Polster) are the torchbearers for strikers from the 90s.
 
-As always in these posts, I try to learn some new stuff as I do them. I thought this might be a good time to try some circular plotting. I don't think the resultan
+As always in these posts, I try to learn some new stuff as I do them. I thought this might be a good time to try some circular plotting. I don't think the resultant plots actually inform that much but they are cool to look at.
 
 ```{r plot_circular, warning=FALSE,message=FALSE}
 circular_data <- player_goals %>%
@@ -318,7 +320,7 @@ left_join(
   arrange(-proportion_unique)
 ```
 
-When sorted by how evenly their goals/date coverage is (i.e. the ideal ratio would be 1 goal on every day), Dirk Kuyt pops up again (and did in fact score many more goals than I had assumed). [Alberto Gilardino](https://en.wikipedia.org/wiki/Alberto_Gilardino) really stands out as a player who has maximum date coverage desite (relative to other members of the list!) a low number of total goals scored.
+When sorted by how evenly their goals/date coverage is (i.e. the ideal ratio would be 1 goal on every day), Dirk Kuyt pops up again (and did in fact score many more goals than I had assumed). [Alberto Gilardino](https://en.wikipedia.org/wiki/Alberto_Gilardino) really stands out as a player who has maximum date coverage despite (relative to other members of the list!) a low number of total goals scored.
 
 I'm not sure what, if any, insight that adds but is a cool piece of trivia.
 
@@ -326,6 +328,8 @@ I'm not sure what, if any, insight that adds but is a cool piece of trivia.
 
 <blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Which club holds the record for most 2nd place finishes in the English top flight?</p>&mdash; Tom Goddard (@Tom_Goddard_13) <a href="https://twitter.com/Tom_Goddard_13/status/1092785174046228480?ref_src=twsrc%5Etfw">February 5, 2019</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+### Answer: Manchester United in the top flight - 14 times
 
 The fist question this week where I get to dive back into [James Curley's engsoccerdata package](https://github.com/jalapic/engsoccerdata) asks which teams have finished second in their league the most. 
 
@@ -404,7 +408,7 @@ second_place <- final_positions %>%
 
 Perhaps unsurprisingly, most of the teams to finish second have finished second in the top flight. Manchester United lead the way with Arsenal and Liverpool following up. 
 
-Bristol City, Charlton Athletic, Oldham Athletic, Blackpool, QPR, Watford and Southampton have finished runners up in the top division without winning it, all having acheived this exactly once. 
+Bristol City, Charlton Athletic, Oldham Athletic, Blackpool, QPR, Watford and Southampton have finished runners up in the top division without winning it, all having achieved this exactly once. 
 
 Plymouth Argyle have perhaps the most heartbreaking run of all though- having finished second in the old 3rd Division South [SIX times in a row between 1922-1927](https://en.wikipedia.org/wiki/Plymouth_Argyle_F.C.#Honours) before finally winning it in 1929.
 
@@ -450,6 +454,8 @@ There's probably too much data to graph here, but it's still a fun way to look a
 
 <blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">As we&#39;re starting to reach that time of season (we&#39;ll, we are at <a href="https://twitter.com/hashtag/itfc?src=hash&amp;ref_src=twsrc%5Etfw">#itfc</a>)... What&#39;s the earliest *collectively* a team from each of the top 4 English leagues has been relegated?</p>&mdash; Philip Genochio (@philipgenochio) <a href="https://twitter.com/philipgenochio/status/1092782376852156416?ref_src=twsrc%5Etfw">February 5, 2019</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+### Answer: Rochdale with 8 games to go in Division 3 in 1973/1974
 
 A similar question involves the earliest teams to get relegated. Obviously for this first we need to know how many teams are relegated from each league per season. Having only really started watching football around the turn of the millenium I was a bit surprised how much this has changed over the years (n.b. I'm only counting automatic relegation- playoffs and re-elections don't count).
 
@@ -520,7 +526,7 @@ possible_positions <- eng_data %>%
 
 ```
 
-Then it's a simple case of finding teams in the relgation zone and finding the point at which they can no longer catch the lowest safe team
+Then it's a simple case of finding teams in the relegation zone and finding the point at which they can no longer catch the lowest safe team
 
 ```{r relegations_secured, warning=FALSE,message=FALSE}
 relegation_secured <- possible_positions %>%
@@ -560,7 +566,7 @@ head(data.frame(certain_final_positions), 15)
 
 ```
 
-Spare a thought for fans of Bradford Park Avenue in 1968-1969 who knew their team would finish bottom of the 3rd Division North with 7 matches (of 46) remaining. Luckily they wern't relegated as they were already in the bottom division of the football league and we re-elected for the next season. They repeated this feat, now in Division 4, 5 years later, finishing bottom with 6 games to go.
+Spare a thought for fans of Bradford Park Avenue in 1968-1969 who knew their team would finish bottom of the 3rd Division North with 7 matches (of 46) remaining. Luckily they weren't relegated as they were already in the bottom division of the football league and we re-elected for the next season. They repeated this feat, now in Division 4, 5 years later, finishing bottom with 6 games to go.
 
 Most of these involve teams either winning or finishing bottom of their league. If we filter these out we're left with:
 
@@ -572,11 +578,15 @@ certain_final_positions %>%
   head(., 15)
 ```
 
-Which really emphasises how only exceptionally good/bad teams are ever really certain of their position before the end of the season.
+Which really emphasizes how only exceptionally good/bad teams are ever really certain of their position before the end of the season.
 
 # Draw Me Like One of Your Top Flight Teams
 
 ["“Tottenham have currently played 29 consecutive Premier League games without drawing one,” notes Wouter van Dael. “What is the longest ever such league run?”"](https://www.theguardian.com/football/2019/feb/06/what-are-the-lowest-xg-scoring-football-matches-in-history-expected-goals-the-knowledge-football)
+
+### Answer: Aston Villa - 50 games in 1891/1892, but otherwise Spurs in modern football
+
+(N.b. the engsoccerdata package only has data up until the 2016/2017 season, so Tottenham's run won't appear in the results below)
 
 To do this we just need to select every game with a non-zero goal difference (i.e. a draw) and then find consecutive runs for teams.
 
@@ -609,7 +619,7 @@ head(data.frame(draws), 25)
 
 ```
 
-Tottenham's run without a draw doesn't even make the top 25 such runs! ANd they still would have to wait until at least next season until they can match Aston Villa's run from New Years Day 1891 until Christmas Eve in 1892, a run of 50 matches without a draw- a run that included 23 losses, and 27 wins. It is the longest for quite sometime though- there's few similar runs in the post-war years.
+Tottenham's run without a draw doesn't even make the top 25 such runs! And they still would have to wait until at least next season until they can match Aston Villa's run from New Years Day 1891 until Christmas Eve in 1892, a run of 50 matches without a draw- a run that included 23 losses, and 27 wins. It is the longest for quite sometime though- there's few similar runs in the post-war years.
 
 We can restrict this easily to just runs in the top division my modifying one line
 
