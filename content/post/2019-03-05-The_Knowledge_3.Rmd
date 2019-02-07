@@ -1,14 +1,14 @@
 ---
-title: THe Knowledge 3
+title: The Knowledge 7th February 2019
 author: Robert Hickman
-date: '2019-02-05'
-slug: knowledge_3
+date: '2019-02-07'
+slug: the-knowledge-7th-february-2019/
 output: pdf_document
 categories: []
 tags:
-  - maps
-  - pubs
-  - cambridge
+  - rstas
+  - football
+  - the_knowledge
 header:
   caption: ''
   image: ''
@@ -27,12 +27,17 @@ Getting the data for this is the main problem. The best (free) source I tend to 
 Nonetheless, it should at least gives us some ideas
 
 ```{r libraries, warning=FALSE,message=FALSE}
-library(rvest)
+#munging
 library(tidyverse)
-library(zoo)
-library(openair)
-library(engsoccerdata)
 library(data.table)
+library(zoo)
+#english football data
+library(engsoccerdata)
+#web data scraping
+library(rvest)
+#plotting
+library(openair)
+
 ```
 
 For each player sampled we're going to want the data for each goal scored both for their club and country. Saving the competition data is also useful as it also allows us to sort out friendlies which may or may not count depending on interpretation of the question.
@@ -291,11 +296,11 @@ circular_data %>%
   
 ```
 
-One nice thin that pops out is how Kirsten rarely scored in December/January- probably due to the Bundesliga mid season break.
+One nice thing that pops out is how Kirsten rarely scored in December/January- probably due to the Bundesliga mid season break.
 
 I also found it interesting that [Dirk Kuyt](https://en.wikipedia.org/wiki/Dirk_Kuyt) featured in the top 16, despite not being renowned as a great goalscorer.
 
-```{r}
+```{r proportion_unique_goals, warning=FALSE,message=FALSE}
 #count total goals per player
 left_join(
   days_per_player,
@@ -321,7 +326,7 @@ I'm not sure what, if any, insight that adds but is a cool piece of trivia.
 <blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Which club holds the record for most 2nd place finishes in the English top flight?</p>&mdash; Tom Goddard (@Tom_Goddard_13) <a href="https://twitter.com/Tom_Goddard_13/status/1092785174046228480?ref_src=twsrc%5Etfw">February 5, 2019</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-The fist question this week involving final positions ask which teams have finished second the most. 
+The fist question this week where I get to dive back into [James Curley's engsoccerdata package](https://github.com/jalapic/engsoccerdata) asks which teams have finished second in their league the most. 
 
 First lets load up the engsoccerdata for English leagues 1882-2016. I've munged it in a pretty verbose way; there's definitely a faster way to do it but that's not really necessary. All we need are the indicators used to sort the league (points, goal difference, and goal scored) for every match in a long format.
 
@@ -365,7 +370,7 @@ eng_data <- engsoccerdata::england %>%
 
 Then find the final positions of each team in each season of English football sorted by points, goal difference and goals for
 
-```{r}
+```{r final_league_positions, warning=FALSE,message=FALSE}
 final_positions <- eng_data %>%
   setDT() %>%
   #find the match number
@@ -387,7 +392,7 @@ final_positions <- eng_data %>%
 
 Then we can filter out those who have finished second most
 
-```{r}
+```{r second_placed_positions, warning=FALSE,message=FALSE}
 second_place <- final_positions %>%
   #filter out second place finishes
   .[final_position == 2] %>%
@@ -400,14 +405,16 @@ Perhaps unsurprisingly, most of the teams to finish second have finished second 
 
 Bristol City, Charlton Athletic, Oldham Athletic, Blackpool, QPR, Watford and Southampton have finished runners up in the top division without winning it, all having acheived this exactly once. 
 
-Plymouth Argyle have perhaps the most heartbreaking run of all though- having finished second in the old 3rd Division South SIX times in a row between 1922-1927 before finally winning it in 1929.
+Plymouth Argyle have perhaps the most heartbreaking run of all though- having finished second in the old 3rd Division South [SIX times in a row between 1922-1927](https://en.wikipedia.org/wiki/Plymouth_Argyle_F.C.#Honours) before finally winning it in 1929.
 
 I thought I might as well also plot every teams league finishes as a proportion of their season in the league. Position here refers to total overall position (so 1st in Division two might be 21st overall). The darker the colour, the more likely the team was the end the season in that position. All teams have been sorted by their mean final league position.
 
-```{r}
+```{r all_final_positions, warning=FALSE,message=FALSE}
 eng_data %>%
+  #filter out modern era
   filter(season > 1991) %>%
   setDT() %>%
+  #find finish positions and count as above
   .[, match := 1:.N, by = c("season", "team")] %>%
   .[, season_points := cumsum(points), by = c("season", "team")] %>%
   .[, season_gd := cumsum(goal_diff), by = c("season", "team")] %>%
@@ -421,8 +428,10 @@ eng_data %>%
   .[, team_appearances := .N, by = c("team")] %>%
   .[, mean_pos := sum(total_position)/team_appearances, by = c("team")] %>%
   unique() %>%
+  #order by mean position
   .[order(mean_pos)] %>%
   .[, team := fct_rev(fct_relevel(as.factor(team), unique(.$team)))] %>%
+  #plot
   ggplot(., aes(x = total_position, y = team)) + 
   geom_tile(aes(alpha = pos_count/team_appearances), fill = "blue") +
   scale_alpha_continuous(guide = FALSE) +
@@ -433,6 +442,8 @@ eng_data %>%
   theme(axis.text.y = element_text(angle = 10))
 
 ```
+
+There's probably too much data to graph here, but it's still a fun way to look at 140 years of English football
 
 # Slip Slidin' Away
 
@@ -521,8 +532,10 @@ relegation_secured <- possible_positions %>%
           "matches_remaining", "possible_points", "lowest_safe_points")] %>%
   .[order(-matches_remaining)] %>%
   #remove duplicates
-  .[!duplicated(paste0(season, division, team))] %>%
-  print()
+  .[!duplicated(paste0(season, division, team))]
+
+head(data.frame(relegation_secured), 15)
+
 ```
 
 So Rochdale hold the questionable honour of being the team knowing they are doomed with the most matches to go (with 8 in division 3 in 1973). There's quite a large chasing pack of teams who have known with 7 or 6 matches left too. Ipswich are currently 'only' 8 points off of safety with 16 games left to go so seems unlikely to beat 8 but it could be close...
@@ -540,8 +553,9 @@ certain_final_positions <- possible_positions %>%
       matches_remaining > 0] %>%
   #order and select columns
   .[order(-matches_remaining)] %>%
-  .[, c("division", "season", "team", "position", "matches_remaining", "teams")] %>%
-  print()
+  .[, c("division", "season", "team", "position", "matches_remaining", "teams")]
+
+head(data.frame(certain_final_positions), 15)
 
 ```
 
@@ -551,27 +565,75 @@ Most of these involve teams either winning or finishing bottom of their league. 
 
 ```{r filter_top_bottom, warning=FALSE,message=FALSE}
 certain_final_positions %>%
-  .[position != 1 & position != teams]
+  #filter off bottom or top teams
+  .[position != 1 & position != teams] %>%
+  data.frame() %>%
+  head(., 15)
 ```
 
 Which really emphasises how only exceptionally good/bad teams are ever really certain of their position before the end of the season.
 
-# Draw Me Like One of Your
+# Draw Me Like One of Your Top Flight Teams
 
 ["“Tottenham have currently played 29 consecutive Premier League games without drawing one,” notes Wouter van Dael. “What is the longest ever such league run?”"](https://www.theguardian.com/football/2019/feb/06/what-are-the-lowest-xg-scoring-football-matches-in-history-expected-goals-the-knowledge-football)
 
-```{r}
+To do this we just need to select every game with a non-zero goal difference (i.e. a draw) and then find consecutive runs for teams.
+
+```{r find_drawless_runs, warning=FALSE,message=FALSE}
 draws <- eng_data %>%
+  setDT() %>%
+  .[order(team, date)] %>%
+  #give each match a consecutive 'id'
+  .[, game_id := 1:.N, by = team] %>%
+  #find matches with a non zero goal difference (not a draw)
+  .[goal_diff != 0] %>%
+  #find consecutive matches with non zero goal difference
+  .[, consecutive := lead(game_id) - game_id, by = team] %>%
+  .[consecutive != 1, consecutive := NA] %>%
+  #count all consecutive runs
+  .[, count := .N*!is.na(consecutive), rleid(!is.na(consecutive))] %>%
+  #find the start and end of each run
+  .[count != lead(count) | count != lag(count)] %>%
+  .[order(-count, team, date)] %>%
+  #set the start points and end point and spread to separate columns
+  .[, run_point := c("start", "end")] %>%
+  spread(run_point, date) %>%
+  .[, start := na.locf(start)] %>%
+  .[!is.na(end) & !is.na(start)] %>%
+  #select columns to print
+  .[, c("start", "end", "division", "team", "count")] %>%
+  .[order(-count)]
+
+head(data.frame(draws), 25)
+
+```
+
+Tottenham's run without a draw doesn't even make the top 25 such runs! ANd they still would have to wait until at least next season until they can match Aston Villa's run from New Years Day 1891 until Christmas Eve in 1892, a run of 50 matches without a draw- a run that included 23 losses, and 27 wins. It is the longest for quite sometime though- there's few similar runs in the post-war years.
+
+We can restrict this easily to just runs in the top division my modifying one line
+
+```{r top_flight_drawless_runs, warning=FALSE,message=FALSE}
+draws <- eng_data %>%
+  setDT() %>%
   .[order(team, date)] %>%
   .[, game_id := 1:.N, by = team] %>%
+  #filter out only the top division matches
+  .[division == 1] %>%
   .[goal_diff != 0] %>%
   .[, consecutive := lead(game_id) - game_id, by = team] %>%
   .[consecutive != 1, consecutive := NA] %>%
   .[, count := .N*!is.na(consecutive), rleid(!is.na(consecutive))] %>%
-  .[count != lead(count)] %>%
-  .[, c("date", "season", "division", "team", "count")] %>%
-  .[order(-count)] %>%
-  print()
+  .[count != lead(count) | count != lag(count)] %>%
+  .[order(-count, team, date)] %>%
+  .[, run_point := c("start", "end")] %>%
+  spread(run_point, date) %>%
+  .[, start := na.locf(start)] %>%
+  .[!is.na(end) & !is.na(start)] %>%
+  .[, c("start", "end", "division", "team", "count")] %>%
+  .[order(-count)]
+
+head(data.frame(draws), 10)
+
 ```
 
-Tottenham's run without a draw doesn't even make the top 25 such runs! ANd they still would have to wait until at least next season until they can match Aston Villa's run from New Years Day 1891 until Christmas Eve in 1892, a run of 50 matches without a draw- a run that included 23 losses, and 27 wins.
+Where we can see that Spurs' run is at least the longest modern top flight drawless run.
