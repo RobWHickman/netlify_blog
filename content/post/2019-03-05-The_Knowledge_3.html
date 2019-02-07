@@ -16,18 +16,8 @@ header:
 
 
 
-<div id="section" class="section level1">
-<h1></h1>
-<p>The first question this week concerns players scoring on (or nearest to) every day of the year</p>
-<blockquote class="twitter-tweet" data-lang="en">
-<p lang="en" dir="ltr">
-Has any player played/or even scored on every date in a calendar year. What’s the nearest anyone has come?
-</p>
-— David Thomson (<span class="citation">@thomsonionioni</span>) <a href="https://twitter.com/thomsonionioni/status/1090206478479298560?ref_src=twsrc%5Etfw">January 29, 2019</a>
-</blockquote>
-<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-<p>Getting the data for this is the main problem. The best (free) source I tend to use is transfermarkt.com, but data there becomes less reliable from before 2000 (and only has a few years of data from more obscure years where I could believe some players are banging in goals for fun).</p>
-<p>Nonetheless, it should at least gives us some ideas</p>
+<p>In what is becoming a <a href="http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/">repeated</a> <a href="http://www.robert-hickman.eu/post/counties_league_points/">series</a>, I enjoy answering trivia questions from The Guardian’s <a href="https://www.theguardian.com/football/series/theknowledge">The Knowledge</a> football trivia column.</p>
+<p>There’s a few questions that built up that seemed ammenable to coding answers so I’ve taken a stab at them here</p>
 <pre class="r"><code>#munging
 library(tidyverse)
 library(data.table)
@@ -38,6 +28,17 @@ library(engsoccerdata)
 library(rvest)
 #plotting
 library(openair)</code></pre>
+<div id="calendar-boys" class="section level1">
+<h1>Calendar Boys</h1>
+<p>The first question this week concerns players scoring on (or nearest to) every day of the year</p>
+<blockquote class="twitter-tweet" data-lang="en">
+<p lang="en" dir="ltr">
+Has any player played/or even scored on every date in a calendar year. What’s the nearest anyone has come?
+</p>
+— David Thomson (<span class="citation">@thomsonionioni</span>) <a href="https://twitter.com/thomsonionioni/status/1090206478479298560?ref_src=twsrc%5Etfw">January 29, 2019</a>
+</blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<p>Getting the data for this is the main problem. The best (free) source I tend to use is transfermarkt.com, but data there becomes less reliable from before 2000 (and only has a few years of data from more obscure years where I could believe some players are banging in goals for fun). Nonetheless, it should at least gives us some ideas</p>
 <p>For each player sampled we’re going to want the data for each goal scored both for their club and country. Saving the competition data is also useful as it also allows us to sort out friendlies which may or may not count depending on interpretation of the question.</p>
 <p>Two quick functions will do this for any given player id</p>
 <pre class="r"><code>#create a data frame of club goals
