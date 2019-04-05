@@ -7,10 +7,21 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
-    <lastBuildDate>Mon, 21 Jan 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 07 Feb 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/the_knowledge/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>The Knowledge 7th February 2019</title>
+      <link>/post/the-knowledge-7th-february-2019/</link>
+      <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/the-knowledge-7th-february-2019/</guid>
+      <description>In what is becoming a repeated series, I enjoy answering trivia questions from The Guardian’s The Knowledge football trivia column.
+There’s a few questions that built up that seemed amenable to coding answers so I’ve taken a stab at them here
+#munginglibrary(tidyverse)library(data.table)library(zoo)#english football datalibrary(engsoccerdata)#web data scrapinglibrary(rvest)#plottinglibrary(openair)Calendar BoysThe first question this week concerns players scoring on (or nearest to) every day of the year</description>
+    </item>
     
     <item>
       <title>Which English County Has Won the Most Points</title>

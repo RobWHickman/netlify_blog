@@ -16,7 +16,10 @@
       <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/the-knowledge-7th-february-2019/</guid>
-      <description>&lt;p&gt;In what is becoming a &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;repeated&lt;/a&gt; &lt;a href=&#34;http://www.robert-hickman.eu/post/counties_league_points/&#34;&gt;series&lt;/a&gt;, I enjoy answering trivia questions from The Guardian’s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; football trivia column.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;In what is becoming a &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;repeated&lt;/a&gt; &lt;a href=&#34;http://www.robert-hickman.eu/post/counties_league_points/&#34;&gt;series&lt;/a&gt;, I enjoy answering trivia questions from The Guardian’s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; football trivia column.&lt;/p&gt;
 &lt;p&gt;There’s a few questions that built up that seemed amenable to coding answers so I’ve taken a stab at them here&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#munging
 library(tidyverse)
@@ -682,7 +685,10 @@ head(data.frame(draws), 10)&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Sun, 03 Feb 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/riddler-1st-feb-2019/</guid>
-      <description>&lt;div id=&#34;riddler-classic&#34; class=&#34;section level1&#34;&gt;
+      <description>
+
+
+&lt;div id=&#34;riddler-classic&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;Riddler Classic&lt;/h1&gt;
 &lt;p&gt;In my spare time &lt;a href=&#34;http://www.robert-hickman.eu/post/riddler-27th-april-2018/&#34;&gt;I enjoy solving&lt;/a&gt; &lt;a href=&#34;https://fivethirtyeight.com/tag/the-riddler/&#34;&gt;538’s The Riddler column&lt;/a&gt;. This week I had a spare few hours waiting for the Superbowl to start and decided to code up a solution to the latest problem to keep me busy.&lt;/p&gt;
 &lt;p&gt;The question revolves around a card game in which whatever choice a player makes, they are likely to lose to a con artist. Formally this is phrased as:&lt;/p&gt;
@@ -850,7 +856,10 @@ microbenchmark(
       <pubDate>Mon, 21 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/counties_league_points/</guid>
-      <description>&lt;p&gt;Every so often a question on The Guardian’s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; football trivia section piques my interest and is amenable to analysis using R. Previously, I looked at &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;club name suffixes and young World Cup winners&lt;/a&gt; last August. This week (give or take), a question posed on twitter caught my attention:&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Every so often a question on The Guardian’s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; football trivia section piques my interest and is amenable to analysis using R. Previously, I looked at &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;club name suffixes and young World Cup winners&lt;/a&gt; last August. This week (give or take), a question posed on twitter caught my attention:&lt;/p&gt;
 &lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en&#34;&gt;
 &lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
 &lt;a href=&#34;https://twitter.com/TheKnowledge_GU?ref_src=twsrc%5Etfw&#34;&gt;&lt;span class=&#34;citation&#34;&gt;@TheKnowledge_GU&lt;/span&gt;&lt;/a&gt; was just chatting to some colleagues in the kitchen at work about why Essex doesn&#39;t have many big football clubs and it got me thinking. If you combined all the points from every league team in the ceremonial counties in England, which county would be on top?
@@ -1146,7 +1155,10 @@ county_points &amp;lt;- county_match_data %&amp;gt;%
       <pubDate>Fri, 04 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/wsl-prediction-1/</guid>
-      <description>&lt;p&gt;Over the last few years since I started coding I’d always been interested in how data science could help predict football results/ identify footballing talents, and just generally ‘solve’ football.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Over the last few years since I started coding I’d always been interested in how data science could help predict football results/ identify footballing talents, and just generally ‘solve’ football.&lt;/p&gt;
 &lt;p&gt;One of the major problems with analysing football had been the availability of data. Though there’s a lot of great published stuff freely available to read, a lot of the cutting edge work revolves around &lt;a href=&#34;https://www.optasports.com/services/analytics/advanced-metrics/&#34;&gt;advanced metrics&lt;/a&gt;, such as expected goals, which it’s hard to get the data for.&lt;/p&gt;
 &lt;p&gt;Over the summer StatsBomb committed to sharing &lt;a href=&#34;https://statsbomb.com/resource-centre/&#34;&gt;free data&lt;/a&gt; on (amongst others) the &lt;a href=&#34;http://www.fawsl.com/index.html&#34;&gt;Women’s Super League&lt;/a&gt; (the top women’s competition in England), and I’d been interested in looking into this since then.&lt;/p&gt;
 &lt;p&gt;This post is basically just a reproduction of two blogs by the excellent &lt;a href=&#34;https://twitter.com/torvaney?lang=en&#34;&gt;Ben Torvaney&lt;/a&gt;, using the &lt;a href=&#34;https://dashee87.github.io/football/python/predicting-football-results-with-statistical-modelling-dixon-coles-and-time-weighting/&#34;&gt;Dixon-Coles method&lt;/a&gt; to predict the the final positions of teams at the end of a football season.&lt;/p&gt;
@@ -1524,7 +1536,10 @@ simulated_tables %&amp;gt;%
       <pubDate>Wed, 02 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/tidytuesday-2019-1/</guid>
-      <description>&lt;p&gt;Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).&lt;/p&gt;
 &lt;p&gt;A quick way to get something to work with that can be published unpolished is &lt;a href=&#34;https://github.com/rfordatascience/tidytuesday&#34;&gt;#TidyTuesday&lt;/a&gt; on twitter which (as far as I know/can tell) is organised by &lt;a href=&#34;https://twitter.com/thomas_mock&#34;&gt;Thomas Mock&lt;/a&gt; from RStudio.&lt;/p&gt;
 &lt;p&gt;This week, the data comes in the form of a massive corpus of every tweet using the #rstats hashtag, curated by rtweet package creator Mike Kearney.&lt;/p&gt;
 &lt;p&gt;I’m only going to leave sparse notes as this is just a post from some lunchtime work cleaned up and published after. I probably won’t fully spellcheck it either.&lt;/p&gt;
@@ -1768,7 +1783,10 @@ rstats_clustering %&amp;gt;%
       <pubDate>Thu, 22 Nov 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/cambridge_pub_crawl/</guid>
-      <description>&lt;p&gt;A few weeks ago I went on the first pub crawl I’d been on in years around my city of Cambridge. Around the same time I had also been visiting &lt;a href=&#34;https://www.google.co.uk/maps/@52.2046202,0.1289874,18z&#34;&gt;4 very good pubs within ~200m of each other&lt;/a&gt; tucked away in a quiet neighbourhood of the town. Together, I wondered if it was possible with freely avaiable data to plan an optimal pub crawl around any town/area of the UK, and also, if it would be feasbile to visit every pub within the city in a single day if travelling optimally.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;A few weeks ago I went on the first pub crawl I’d been on in years around my city of Cambridge. Around the same time I had also been visiting &lt;a href=&#34;https://www.google.co.uk/maps/@52.2046202,0.1289874,18z&#34;&gt;4 very good pubs within ~200m of each other&lt;/a&gt; tucked away in a quiet neighbourhood of the town. Together, I wondered if it was possible with freely avaiable data to plan an optimal pub crawl around any town/area of the UK, and also, if it would be feasbile to visit every pub within the city in a single day if travelling optimally.&lt;/p&gt;
 &lt;p&gt;Once again, I found that the simple features library (sf) for R basically can do all of this pretty simply, with igraph picking up most of the networking slack. In fact, overall it was much much simpler than I thought it would be. In total, I only needed 9 libraries (though granted tidyverse is one).&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#data munging
 library(tidyverse)
@@ -2266,7 +2284,10 @@ shortest_tour &amp;lt;- journeys[which(journeys$journey %in% tour_strings$journe
       <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/getis-ord-heatmaps-tutorial/</guid>
-      <description>&lt;p&gt;Whilst &lt;del&gt;getting some work done&lt;/del&gt; browsing twitter at work today, I came across &lt;a href=&#34;https://twitter.com/jburnmurdoch/status/1047470445459644416&#34;&gt;this tweet&lt;/a&gt; from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Whilst &lt;del&gt;getting some work done&lt;/del&gt; browsing twitter at work today, I came across &lt;a href=&#34;https://twitter.com/jburnmurdoch/status/1047470445459644416&#34;&gt;this tweet&lt;/a&gt; from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.&lt;/p&gt;
 &lt;p&gt;For instance, lets load some mapping libraries&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
 library(sf)
@@ -2393,7 +2414,10 @@ plot(p3)&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Sun, 09 Sep 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/sf.schlorodot/</guid>
-      <description>&lt;p&gt;Recently, I’d seen two tweets with stunning examples of maps by Paul Campbell &lt;a href=&#34;https://twitter.com/PaulCampbell91/status/992043182996193280&#34;&gt;here&lt;/a&gt; and (taken inspiration from the first) by Imer Muhović &lt;a href=&#34;https://twitter.com/ImerM1/status/1037358973807210498&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Recently, I’d seen two tweets with stunning examples of maps by Paul Campbell &lt;a href=&#34;https://twitter.com/PaulCampbell91/status/992043182996193280&#34;&gt;here&lt;/a&gt; and (taken inspiration from the first) by Imer Muhović &lt;a href=&#34;https://twitter.com/ImerM1/status/1037358973807210498&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;The basic idea of the dot chloropleths is to visualise not only the location clustering of each variable but the number of observations (something traditional ‘filled’ chloropleths don’t do). More importantly than this, the maps also just look really really cool.&lt;/p&gt;
 &lt;p&gt;I had a spare few minutes during work on Friday which I tidied up into a package to calculate the random position of dots for such maps which can be found &lt;a href=&#34;https://github.com/RobWHickman/sf.chlorodot&#34;&gt;on my github&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Below, I’ll outline the code for the South African example used in the package README. Data comes from Adrian Frith’s &lt;a href=&#34;https://census2011.adrianfrith.com/&#34;&gt;very good 2011 census site&lt;/a&gt; and &lt;a href=&#34;https://gadm.org/download_country_v3.html&#34;&gt;gadm&lt;/a&gt; for the shapefiles.&lt;/p&gt;
@@ -2502,7 +2526,10 @@ p &amp;lt;- ggplot() +
       <pubDate>Sat, 04 Aug 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/the-knowledge-4th-august-2018/</guid>
-      <description>&lt;p&gt;The Guardian publish a weekly set of questions and answers on a variety of football minutiae at &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt;. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;The Guardian publish a weekly set of questions and answers on a variety of football minutiae at &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt;. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(rvest)
 library(dplyr)
 library(magrittr)
@@ -2845,7 +2872,10 @@ youngest_players_appeared %&amp;lt;&amp;gt;% .[, diff := age - no]&lt;/code&gt;&
       <pubDate>Sun, 10 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_6/</guid>
-      <description>&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
 &lt;p&gt;I &lt;a href=&#34;http://www.robert-hickman.eu/post/yorkshire_world_cup_1/&#34;&gt;published&lt;/a&gt; the complete code for that article on this blog this week. However, one question which I kept being asked was how a ‘All of the UK’ team would do (i.e. if the country wasn’t split up into England, Wales, Scotland, and Northern Ireland). Listening to the latest &lt;a href=&#34;https://twitter.com/doublepivotpod?lang=en&#34;&gt;Double Pivot Podcast&lt;/a&gt;, drafting plyers not going to the World Cup, I also wondered what a ‘Rest of the World’ 11 would look like/fare.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
 library(magrittr)
@@ -3032,7 +3062,10 @@ plot(p)&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Sat, 09 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_5/</guid>
-      <description>&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
 &lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 5 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Now that we’ve picked the teams for each nation and county, it’s finally time to make predictions about the World Cup.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
 library(magrittr)
@@ -3387,7 +3420,10 @@ plot(p)&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Fri, 08 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_4/</guid>
-      <description>&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
 &lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. In the last post, we located the place and county of birth for British players, which we’ll use to pick teams for counties now.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
 library(magrittr)
@@ -3604,7 +3640,10 @@ plot(p)&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Thu, 07 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_3/</guid>
-      <description>&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
 &lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 5 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we found the position abilities of each player using LASSO regression. This time, we’ll geolocate the birthplace of the British players in our dataset to find which county team they’d be eligible for.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
 library(magrittr)
@@ -3853,7 +3892,10 @@ table(british_player_birthplaces$county)&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Wed, 06 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_2/</guid>
-      <description>&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
 &lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we got the shapefiles for the historic counties of the UK and scraped the player data we’ll use to build the teams&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
 library(magrittr)
@@ -4069,7 +4111,10 @@ head(select(all_players_data, c(1, 49:60)))&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Tue, 05 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_1/</guid>
-      <description>&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
 &lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.&lt;/p&gt;
 &lt;p&gt;To start, there are 95 historic counts of Great Britain + the 6 counties of Northern Ireland which I included for completeness. These are of a wide variety of sizes and &lt;a href=&#34;https://www.citymetric.com/horizons/which-historic-english-county-has-highest-population-3386&#34;&gt;approximate population&lt;/a&gt; and demographic, so it’s not clear how each would do simply from inspection.&lt;/p&gt;
 &lt;p&gt;The data for this comes from &lt;a href=&#34;https://www.ordnancesurvey.co.uk/business-and-government/products/boundary-line.html&#34;&gt;Boundary Line&lt;/a&gt; and the &lt;a href=&#34;https://www.opendatani.gov.uk/dataset?q=boundary&#34;&gt;Northern Irish Boundary Database&lt;/a&gt;, I’ve put them together already, but its simple enough to do it in sf.&lt;/p&gt;
