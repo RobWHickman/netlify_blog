@@ -12,7 +12,7 @@ weight = 5
   interests = [
     "Neuroscience",
     "RStats",
-    "Scientific Writing"
+    "Behavioural Economics"
   ]
 
 # List your qualifications (such as academic degrees).
@@ -30,4 +30,4 @@ weight = 5
 
 # Biography
 
-I'm currently a first year PhD Student in the lab of Wolfram Schultz at the University of Cambridge. I study decision making in simple economic tasks in non-human primates, and in my spare time enjoy practising my coding- mostly in R- and writing about neuroscience and AI. This website serves as a hub for small pieces of work relating to both those interests.
+I'm currently a first year PhD Student in the lab of Wolfram Schultz at the University of Cambridge. I study decision making in simple economic tasks in non-human primates, and in my spare time enjoy practising my coding- mostly in R. This website serves as a hub for small pieces of work relating to this.
