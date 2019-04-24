@@ -22,7 +22,6 @@
 &lt;p&gt;load up tidyverse for some verbose data munging&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;load in the data (Vicer bundle choice data from March)&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;data_directory &amp;lt;- &amp;quot;C:/Users/robwh/Desktop/rum_data&amp;quot;&lt;/code&gt;&lt;/pre&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;data &amp;lt;- dir(data_directory) %&amp;gt;%
   #load in all .csvs
   #trial by trial results

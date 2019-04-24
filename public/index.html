@@ -678,7 +678,7 @@ MathJax.Hub.Config({
     
     load up tidyverse for some verbose data munging
 library(tidyverse)load in the data (Vicer bundle choice data from March)
-data_directory &lt;- &quot;C:/Users/robwh/Desktop/rum_data&quot;data &lt;- dir(data_directory) %&gt;%#load in all .csvs#trial by trial results.[grepl(&quot;\\.csv$&quot;, .)] %&gt;%file.path(data_directory, .) %&gt;%lapply(., read.csv, stringsAsFactors = FALSE) %&gt;%#bind data togethermap_df(I)table(data$date)## ## 2019-19-03 2019-20-03 2019-21-03 ## 272 278 262We have data from 3 separate days, but I’m just going to pool them together for larger n
+data &lt;- dir(data_directory) %&gt;%#load in all .csvs#trial by trial results.[grepl(&quot;\\.csv$&quot;, .)] %&gt;%file.path(data_directory, .) %&gt;%lapply(., read.csv, stringsAsFactors = FALSE) %&gt;%#bind data togethermap_df(I)table(data$date)## ## 2019-19-03 2019-20-03 2019-21-03 ## 272 278 262We have data from 3 separate days, but I’m just going to pool them together for larger n
     
   </div>
   <p class="read-more" itemprop="mainEntityOfPage">

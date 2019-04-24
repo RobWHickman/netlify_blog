@@ -20,7 +20,7 @@ library(tidyverse)
 ```
 
 load in the data (Vicer bundle choice data from March)
-```{r data_directory, warning=FALSE,message=FALSE}
+```{r data_directory, warning=FALSE,message=FALSE,include=FALSE}
 data_directory <- "C:/Users/robwh/Desktop/rum_data"
 ```
 
