@@ -1,0 +1,94 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+---
+title: "Untitled"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+load up tidyverse for some verbose data munging
+
+```{r libraries, warning=FALSE,message=FALSE}
+library(tidyverse)
+```
+
+load in the data (Vicer bundle choice data from March)
+
+```{r load_data, warning=FALSE,message=FALSE}
+data <- dir(".") %>%
+  #load in all .csvs
+  #trial by trial results
+  .[grepl("\\.csv$", .)] %>%
+  file.path(".", .) %>%
+  lapply(., read.csv, stringsAsFactors = FALSE) %>%
+  #bind data together
+  map_df(I)
+
+table(data$date)
+```
+
+We have data from 3 separate days, but I'm just going to pool them together for larger n
+
+Plot the data in the standard bundle choice logistic regression format
+
+```{r plot_bundle_choices, warning=FALSE,message=FALSE}
+bcb_data <- data %>%
+  #only want data pertaining to bundle choice task
+  filter(subtask == "bundle_choice") %>%
+  #select only interesting variables
+  mutate(bundle_water_ml = second_budget_value * budget_magnitude,
+         non_bundle_water_ml = budget_value * budget_magnitude) %>%
+  select(bundle_water_ml, non_bundle_water_ml, juice_ml = reward_magnitude, results) %>%
+  #binary yes/no for choosing the bundle or not
+  mutate(bundle_chosen = case_when(
+    grepl("fractal_chosen", results) ~ 1,
+    grepl("budget_chosen", results) ~ 0
+  )) %>%
+  #remove trials where neither is chosen
+  #i.e. errors
+  filter(!is.na(bundle_chosen))
+  
+#nice quick function for plotting a logistic regression curve
+binomial_smooth <- function(...) {
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), ...)
+}
+
+p <- bcb_data %>%
+  #group data by bundle combinations of reward and water
+  group_by(juice_ml, bundle_water_ml) %>%
+  #what fraction of the time is the bundle chosen
+  summarise(fraction_bundle_choice = mean(bundle_chosen)) %>%
+  #pipe into a plot
+  ggplot(., aes(x = bundle_water_ml, y = fraction_bundle_choice, colour = factor(juice_ml))) +
+  #plot the likelihood of choosing the bundle for each juice/water combination
+  geom_point() +
+  #add in the logistic fit line
+  #n.b. se is calculated per point so is massive
+  binomial_smooth(se = FALSE) +
+  #add in the colour scale
+  scale_colour_manual(values = c("red", "blue", "green"), 
+                      name = "reward juice (/ml)") +
+  #add in some labels
+  labs(title = "Bundle Choice Logistic Regression",
+       subtitle = "data from Vicer on bundle choice task in March",
+       x = "bundle water (/ml)",
+       y = "% chooses bundle") +
+  #remove extra stuff
+  theme_minimal()
+
+#plot it
+p
+
+```
+
+ $$ p(A) = \frac{1}{e^{-\phi(u(A) - u(B))} $$ 
+
+
+$$p(A)$$ 
+
+
+
