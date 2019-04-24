@@ -244,6 +244,63 @@ MathJax.Hub.Config({
   
   
   <h3 class="article-title" itemprop="headline">
+    <a href="/post/rum_draft/" itemprop="url">RANDOM UTILITY MODELS DRAFT</a>
+  </h3>
+  
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2019-04-24 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Apr 24, 2019
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    4 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+
+</div>
+
+  <div class="article-style" itemprop="articleBody">
+    
+    load up tidyverse for some verbose data munging
+library(tidyverse)load in the data (Vicer bundle choice data from March)
+data &lt;- dir(&quot;C:/Users/robwh/Desktop/rum_data&quot;) %&gt;%#load in all .csvs#trial by trial results.[grepl(&quot;\\.csv$&quot;, .)] %&gt;%file.path(&quot;C:/Users/robwh/Desktop/rum_data&quot;, .) %&gt;%lapply(., read.csv, stringsAsFactors = FALSE) %&gt;%#bind data togethermap_df(I)table(data$date)## ## 2019-19-03 2019-20-03 2019-21-03 ## 272 278 262We have data from 3 separate days, but I’m just going to pool them together for larger n
+    
+  </div>
+  <p class="read-more" itemprop="mainEntityOfPage">
+    <a href="/post/rum_draft/" class="btn btn-primary btn-outline">
+      CONTINUE READING
+    </a>
+  </p>
+</div>
+
+  
+    
+    
+
+<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
+  
+  
+  <h3 class="article-title" itemprop="headline">
     <a href="/post/the-knowledge-7th-february-2019/" itemprop="url">The Knowledge 7th February 2019</a>
   </h3>
   
@@ -738,62 +795,6 @@ library(rvest)library(dplyr)library(magrittr)library(data.table)library(zoo)
   </div>
   <p class="read-more" itemprop="mainEntityOfPage">
     <a href="/post/the-knowledge-4th-august-2018/" class="btn btn-primary btn-outline">
-      CONTINUE READING
-    </a>
-  </p>
-</div>
-
-  
-    
-    
-
-<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
-  
-  
-  <h3 class="article-title" itemprop="headline">
-    <a href="/post/yorkshire_world_cup_6/" itemprop="url">Could an Independent Yorkshire Win the World Cup - Rest of the World/UK</a>
-  </h3>
-  
-
-<div class="article-metadata">
-
-  <span class="article-date">
-    
-    <time datetime="2018-06-10 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
-      Jun 10, 2018
-    </time>
-  </span>
-  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
-    <meta itemprop="name" content="Robert Hickman">
-  </span>
-
-  
-  <span class="middot-divider"></span>
-  <span class="article-reading-time">
-    6 min read
-  </span>
-  
-
-  
-  
-
-  
-  
-  
-  
-
-  
-
-</div>
-
-  <div class="article-style" itemprop="articleBody">
-    
-    Recently, a Yorkshire national football team appeared in a league of national teams for stateless people. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
-I published the complete code for that article on this blog this week. However, one question which I kept being asked was how a ‘All of the UK’ team would do (i.
-    
-  </div>
-  <p class="read-more" itemprop="mainEntityOfPage">
-    <a href="/post/yorkshire_world_cup_6/" class="btn btn-primary btn-outline">
       CONTINUE READING
     </a>
   </p>

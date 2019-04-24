@@ -11,6 +11,157 @@
     <atom:link href="/" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>RANDOM UTILITY MODELS DRAFT</title>
+      <link>/post/rum_draft/</link>
+      <pubDate>Wed, 24 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/rum_draft/</guid>
+      <description>
+
+
+&lt;p&gt;load up tidyverse for some verbose data munging&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;load in the data (Vicer bundle choice data from March)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;data &amp;lt;- dir(&amp;quot;C:/Users/robwh/Desktop/rum_data&amp;quot;) %&amp;gt;%
+  #load in all .csvs
+  #trial by trial results
+  .[grepl(&amp;quot;\\.csv$&amp;quot;, .)] %&amp;gt;%
+  file.path(&amp;quot;C:/Users/robwh/Desktop/rum_data&amp;quot;, .) %&amp;gt;%
+  lapply(., read.csv, stringsAsFactors = FALSE) %&amp;gt;%
+  #bind data together
+  map_df(I)
+
+table(data$date)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 
+## 2019-19-03 2019-20-03 2019-21-03 
+##        272        278        262&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We have data from 3 separate days, but I’m just going to pool them together for larger n&lt;/p&gt;
+&lt;p&gt;Plot the data in the standard bundle choice logistic regression format&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;bcb_data &amp;lt;- data %&amp;gt;%
+  #only want data pertaining to bundle choice task
+  filter(subtask == &amp;quot;bundle_choice&amp;quot;) %&amp;gt;%
+  #select only interesting variables
+  mutate(bundle_water_ml = second_budget_value * budget_magnitude,
+         non_bundle_water_ml = budget_value * budget_magnitude) %&amp;gt;%
+  select(bundle_water_ml, non_bundle_water_ml, juice_ml = reward_magnitude, results) %&amp;gt;%
+  #binary yes/no for choosing the bundle or not
+  mutate(bundle_chosen = case_when(
+    grepl(&amp;quot;fractal_chosen&amp;quot;, results) ~ 1,
+    grepl(&amp;quot;budget_chosen&amp;quot;, results) ~ 0
+  )) %&amp;gt;%
+  #remove trials where neither is chosen
+  #i.e. errors
+  filter(!is.na(bundle_chosen))
+  
+#nice quick function for plotting a logistic regression curve
+binomial_smooth &amp;lt;- function(...) {
+  geom_smooth(method = &amp;quot;glm&amp;quot;, method.args = list(family = &amp;quot;binomial&amp;quot;), ...)
+}
+
+p &amp;lt;- bcb_data %&amp;gt;%
+  #group data by bundle combinations of reward and water
+  group_by(juice_ml, bundle_water_ml) %&amp;gt;%
+  #what fraction of the time is the bundle chosen
+  summarise(fraction_bundle_choice = mean(bundle_chosen)) %&amp;gt;%
+  #pipe into a plot
+  ggplot(., aes(x = bundle_water_ml, y = fraction_bundle_choice, colour = factor(juice_ml))) +
+  #plot the likelihood of choosing the bundle for each juice/water combination
+  geom_point() +
+  #add in the logistic fit line
+  #n.b. se is calculated per point so is massive
+  binomial_smooth(se = FALSE) +
+  #add in the colour scale
+  scale_colour_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;green&amp;quot;), 
+                      name = &amp;quot;reward juice (/ml)&amp;quot;) +
+  #add in some labels
+  labs(title = &amp;quot;Bundle Choice Logistic Regression&amp;quot;,
+       subtitle = &amp;quot;data from Vicer on bundle choice task in March&amp;quot;,
+       x = &amp;quot;bundle water (/ml)&amp;quot;,
+       y = &amp;quot;% chooses bundle&amp;quot;) +
+  #remove extra stuff
+  theme_minimal()
+
+#plot it
+p&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/random_utility_stuff_files/figure-html/plot_bundle_choices-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[p(A) = \frac{1}{1+e^{-\theta(u(A_{i}) - u(B_{i}))}}\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[LL(\theta,y) = \sum_{i=1}^{I} y_{i}\log(p(A)) + (1-y_{i})\log(1-p(A))\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;where&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[Max_{\theta}L(\theta|y)\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;transform the data into a simple binary choice paradigm between and amount of juice and an amount of water (obviously only for toy example and not serious as removes interaction effects)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;binary_choice_model &amp;lt;- bcb_data %&amp;gt;%
+  #water choice is the difference in water between full water amount and bundle water
+  mutate(water_ml = (non_bundle_water_ml- bundle_water_ml)) %&amp;gt;%
+  select(juice_ml, water_ml, juice_chosen = bundle_chosen)
+
+head(binary_choice_model)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##   juice_ml water_ml juice_chosen
+## 1     1.05     0.60            1
+## 2     0.70     0.84            0
+## 3     0.35     0.12            1
+## 4     1.05     0.24            1
+## 5     1.05     0.96            0
+## 6     1.05     0.36            1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;plotting this gives&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p &amp;lt;- binary_choice_model %&amp;gt;%
+  #group data by bundle combinations of reward and water
+  group_by(juice_ml, water_ml) %&amp;gt;%
+  #what fraction of the time is the bundle chosen
+  summarise(fraction_juice_choice = mean(juice_chosen)) %&amp;gt;%
+  #pipe into a plot
+  ggplot(., aes(x = water_ml, y = fraction_juice_choice, colour = factor(juice_ml))) +
+  #plot the likelihood of choosing the bundle for each juice/water combination
+  geom_point() +
+  #add in the logistic fit line
+  #n.b. se is calculated per point so is massive
+  binomial_smooth(se = FALSE) +
+  #add in the colour scale
+  scale_colour_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;green&amp;quot;), 
+                      name = &amp;quot;juice (/ml)&amp;quot;) +
+  #add in some labels
+  labs(title = &amp;quot;Binary Choice Logistic Regression&amp;quot;,
+       subtitle = &amp;quot;data from Vicer on bundle choice task in March&amp;quot;,
+       x = &amp;quot;water (/ml)&amp;quot;,
+       y = &amp;quot;% chooses juice&amp;quot;) +
+  #remove extra stuff
+  theme_minimal()
+
+#plot it
+p&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/random_utility_stuff_files/figure-html/plot_bc-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;For a choice between juice and water with a utility function (rho_juice and rho_water) where we assume the utility of juice &amp;gt; utility of water, with a softmax temperature of theta&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;parameters &amp;lt;- c(1, 1, 1)
+names(parameters) &amp;lt;- c(&amp;quot;rho_juice&amp;quot;, &amp;quot;rho_water&amp;quot;, &amp;quot;theta&amp;quot;)
+
+total_utility &amp;lt;- function(parameters, data) {
+  theta &amp;lt;- parameters[&amp;quot;theta&amp;quot;]
+  j_rho &amp;lt;- parameters[&amp;quot;rho_juice&amp;quot;]
+  w_rho &amp;lt;- parameters[&amp;quot;rho_water&amp;quot;]
+  
+  trial_j_utility &amp;lt;- data$juice_ml * j_rho
+  trial_w_utility &amp;lt;- data$water_ml * w_rho
+  delta_utility &amp;lt;- trial_j_utility - trial_w_utility
+  
+  p_a &amp;lt;- 1 / (1 + exp(-theta*delta_utility))
+  
+  log_lik &amp;lt;- (data$juice_chosen * log(p_a)) + ((1-data$juice_chosen) * log(1-p_a))
+  
+  return(sum(log_lik))
+}
+
+optim_params &amp;lt;- stats::optim(par = parameters,
+                             fn = total_utility,
+                             data = binary_choice_model,
+                             method = &amp;quot;Nelder-Mead&amp;quot;,
+                             control = list(fnscale = -1))
+
+optim_params$par&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## rho_juice rho_water     theta 
+##  1.836937  2.229300  4.408849&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
       <title>The Knowledge 7th February 2019</title>
       <link>/post/the-knowledge-7th-february-2019/</link>
       <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
@@ -4101,110 +4252,6 @@ head(select(all_players_data, c(1, 49:60)))&lt;/code&gt;&lt;/pre&gt;
 ## 5 47.58404 49.47508 34.07456 42.88950 35.23432 44.42806 35.91158
 ## 6 44.18874 46.37230 34.44230 42.30995 36.35090 41.15741 36.12737&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Now we have the ability of each player to perform in any position we can use it to build teams. First however, we need to sort British players into the county of their birth, which we’ll do in the next post.&lt;/p&gt;
-&lt;/div&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Could an Independent Yorkshire Win the World Cup - Data &amp; Scraping</title>
-      <link>/post/yorkshire_world_cup_1/</link>
-      <pubDate>Tue, 05 Jun 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/yorkshire_world_cup_1/</guid>
-      <description>
-
-
-&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
-&lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.&lt;/p&gt;
-&lt;p&gt;To start, there are 95 historic counts of Great Britain + the 6 counties of Northern Ireland which I included for completeness. These are of a wide variety of sizes and &lt;a href=&#34;https://www.citymetric.com/horizons/which-historic-english-county-has-highest-population-3386&#34;&gt;approximate population&lt;/a&gt; and demographic, so it’s not clear how each would do simply from inspection.&lt;/p&gt;
-&lt;p&gt;The data for this comes from &lt;a href=&#34;https://www.ordnancesurvey.co.uk/business-and-government/products/boundary-line.html&#34;&gt;Boundary Line&lt;/a&gt; and the &lt;a href=&#34;https://www.opendatani.gov.uk/dataset?q=boundary&#34;&gt;Northern Irish Boundary Database&lt;/a&gt;, I’ve put them together already, but its simple enough to do it in sf.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
-library(rvest)
-library(data.table)
-library(ggplot2)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p &amp;lt;- ggplot(data = uk_counties) +
-  geom_sf() +
-  theme_void()
-
-plot(p)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_1_files/figure-html/historic_counties-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;In order to calculate how good each county team would be, I needed a measure of the ability of all of the players they could field. For this I turned to the FIFA18 video game which rates players along a variety of scales.&lt;/p&gt;
-&lt;div id=&#34;scrape-player-data&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Scrape Player Data&lt;/h1&gt;
-&lt;p&gt;To get data on every player in the game I wrote a quick scraping function. This finds the links to every player on all 602 pages of &lt;a href=&#34;https://www.fifaindex.com/players/&#34; class=&#34;uri&#34;&gt;https://www.fifaindex.com/players/&lt;/a&gt; and then downloads all the data required on each player.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#both steps here take a fair amount of time
-#about 10mins and an hour respectively
-
-#get the links to each players page
-all_player_links &amp;lt;- unlist(lapply(paste0(&amp;quot;https://www.fifaindex.com/players/&amp;quot;, 1:602), function(x) {
-  player_link &amp;lt;- read_html(x) %&amp;gt;%
-    html_nodes(&amp;quot;td:nth-child(4) a&amp;quot;) %&amp;gt;%
-    html_attr(&amp;quot;href&amp;quot;)
-  })) %&amp;gt;%
-  paste0(&amp;quot;https://www.fifaindex.com/&amp;quot;, .)
-
-#big function to scrape every piece of data we could want of each players page
-get_player_data &amp;lt;- function(link) {
-  #read the players web page
-  read &amp;lt;- read_html(link)
-  
-  #basic data
-  name &amp;lt;- read %&amp;gt;%html_nodes(&amp;quot;.big&amp;quot;) %&amp;gt;% html_text()
-  club &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.panel-title a+ a&amp;quot;) %&amp;gt;% html_text() %&amp;gt;% .[length(.)]
-  if(length(club) == 0) {
-    club &amp;lt;- NA
-  }
-  nationality &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.subtitle a&amp;quot;) %&amp;gt;% html_text()
-  
-  #general info on the player
-  height &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(1) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
-    gsub(&amp;quot; cm&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;% as.numeric()
-  weight &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(2) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
-    gsub(&amp;quot; kg&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;% as.numeric()
-  foot &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(3) .pull-right&amp;quot;) %&amp;gt;% html_text()
-  birthdate &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(4) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
-    as.Date(&amp;quot;%m/%d/%Y&amp;quot;)
-  age &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(5) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
-    as.numeric()
-  main_position &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;body &amp;gt; div.container.main &amp;gt; div:nth-child(3) &amp;gt; div.col-md-8 &amp;gt; div:nth-child(3) &amp;gt; div.col-lg-5.col-sm-6 &amp;gt; div &amp;gt; div.panel-body &amp;gt; p:nth-child(6) &amp;gt; span &amp;gt; a&amp;quot;) %&amp;gt;% 
-    .[1] %&amp;gt;% html_attr(&amp;quot;title&amp;quot;)
-  work_rate &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(7) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;% 
-    str_split(., &amp;quot; / &amp;quot;) %&amp;gt;% unlist()
-  
-  #the players rating for each skill
-  ratings &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.rating&amp;quot;) %&amp;gt;% html_text() %&amp;gt;% as.numeric() %&amp;gt;%
-    as.matrix() %&amp;gt;% t() %&amp;gt;% as.data.frame()
-  names(ratings) &amp;lt;- c(&amp;quot;overall&amp;quot;,&amp;quot;specific&amp;quot;,&amp;quot;ball_control&amp;quot;,&amp;quot;dribbling&amp;quot;,&amp;quot;marking&amp;quot;,&amp;quot;slide_tackle&amp;quot;,&amp;quot;stand_tackle&amp;quot;,
-                      &amp;quot;aggression&amp;quot;,&amp;quot;reactions&amp;quot;,&amp;quot;positioning&amp;quot;,&amp;quot;interceptions&amp;quot;,&amp;quot;vision&amp;quot;,&amp;quot;composure&amp;quot;,&amp;quot;crossing&amp;quot;,
-                      &amp;quot;short_pass&amp;quot;,&amp;quot;long_pass&amp;quot;,&amp;quot;acceleration&amp;quot;,&amp;quot;stamina&amp;quot;,&amp;quot;strength&amp;quot;,&amp;quot;balance&amp;quot;,&amp;quot;sprint_speed&amp;quot;,
-                      &amp;quot;agility&amp;quot;,&amp;quot;jumping&amp;quot;,&amp;quot;heading&amp;quot;,&amp;quot;shot_power&amp;quot;,&amp;quot;finishing&amp;quot;,&amp;quot;long_shots&amp;quot;,&amp;quot;curve&amp;quot;,&amp;quot;free_kicks&amp;quot;,
-                      &amp;quot;penalties&amp;quot;,&amp;quot;volleys&amp;quot;,&amp;quot;gk_positioning&amp;quot;,&amp;quot;gk_diving&amp;quot;,&amp;quot;gk_handling&amp;quot;,&amp;quot;gk_kicking&amp;quot;,&amp;quot;gk_reflexes&amp;quot;)
-  
-  #stick everything into a dataframe to be output
-  df &amp;lt;- data.frame(name = name, club = club, nationality = nationality,
-                   height = height, weight = weight, foot = foot, birthdate = birthdate, age = age,
-                   main_position = main_position, work_rate1 = work_rate[1], work_rate2 = work_rate[2]) %&amp;gt;%
-    cbind(ratings)
-  return(df)
-}
-
-#scrape the info on all players
-all_players_data &amp;lt;- rbindlist(lapply(all_player_links, get_player_data)) %&amp;gt;%
-  setDT() %&amp;gt;%
-  #add an id column for each player
-  .[, id := 1:.N]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Once that’s scraped and bound we can take a peek at the data. There’s 18k players in total and 48 variables for each so we’ll just look at a few for now.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#show a selection of the some key info for each player
-#the id we gave them, their name, nationality, and their overall ability
-head(select(all_players_data, id, name, nationality, overall))&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##    id              name nationality overall
-## 1:  1      Lionel Messi   Argentina      94
-## 2:  2 Cristiano Ronaldo    Portugal      94
-## 3:  3            Neymar      Brazil      92
-## 4:  4       Luis Suárez     Uruguay      92
-## 5:  5      Manuel Neuer     Germany      92
-## 6:  6            De Gea       Spain      91&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Over the course of the next posts, we’ll use this data to calculate a player’s ability in any position on the field. This will then be used to select optimal teams for each nation (or each historic British county). Finally we’ll take the average ability of these optimal teams and use them to simulate the World Cup to get the chance each team has to win the tournament.&lt;/p&gt;
 &lt;/div&gt;
 </description>
     </item>

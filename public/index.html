@@ -318,19 +318,6 @@ MathJax.Hub.Config({
     <div class="row">
 
       
-      <div class="col-sm-5">
-        <h3>Interests</h3>
-        <ul class="ul-interests">
-          
-          <li>Neuroscience</li>
-          
-          <li>RStats</li>
-          
-          <li>Behavioural Economics</li>
-          
-        </ul>
-      </div>
-      
 
       
       <div class="col-sm-7">
@@ -642,6 +629,80 @@ MathJax.Hub.Config({
       
           
       
+
+      
+      
+        
+        
+
+<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
+  
+  
+  <h3 class="article-title" itemprop="headline">
+    <a href="/post/rum_draft/" itemprop="url">RANDOM UTILITY MODELS DRAFT</a>
+  </h3>
+  
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2019-04-24 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Apr 24, 2019
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    4 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+
+</div>
+
+  <div class="article-style" itemprop="articleBody">
+    
+    load up tidyverse for some verbose data munging
+library(tidyverse)load in the data (Vicer bundle choice data from March)
+data &lt;- dir(&quot;C:/Users/robwh/Desktop/rum_data&quot;) %&gt;%#load in all .csvs#trial by trial results.[grepl(&quot;\\.csv$&quot;, .)] %&gt;%file.path(&quot;C:/Users/robwh/Desktop/rum_data&quot;, .) %&gt;%lapply(., read.csv, stringsAsFactors = FALSE) %&gt;%#bind data togethermap_df(I)table(data$date)## ## 2019-19-03 2019-20-03 2019-21-03 ## 272 278 262We have data from 3 separate days, but I’m just going to pool them together for larger n
+    
+  </div>
+  <p class="read-more" itemprop="mainEntityOfPage">
+    <a href="/post/rum_draft/" class="btn btn-primary btn-outline">
+      CONTINUE READING
+    </a>
+  </p>
+</div>
+
+      
+
+      
+
+        
+
+        
+        
+
+        
+        
+          
+      
+          
+      
           
       
 
@@ -931,82 +992,6 @@ One of the major problems with analysing football had been the availability of d
       
 
       
-
-        
-
-        
-        
-
-        
-        
-          
-      
-          
-      
-          
-      
-
-      
-      
-        
-        
-
-<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
-  
-  
-  <h3 class="article-title" itemprop="headline">
-    <a href="/post/tidytuesday-2019-1/" itemprop="url">TidyTuesday Week One</a>
-  </h3>
-  
-
-<div class="article-metadata">
-
-  <span class="article-date">
-    
-    <time datetime="2019-01-02 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
-      Jan 2, 2019
-    </time>
-  </span>
-  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
-    <meta itemprop="name" content="Robert Hickman">
-  </span>
-
-  
-  <span class="middot-divider"></span>
-  <span class="article-reading-time">
-    8 min read
-  </span>
-  
-
-  
-  
-
-  
-  
-  
-  
-
-  
-
-</div>
-
-  <div class="article-style" itemprop="articleBody">
-    
-    Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).
-A quick way to get something to work with that can be published unpolished is #TidyTuesday on twitter which (as far as I know/can tell) is organised by Thomas Mock from RStudio.
-This week, the data comes in the form of a massive corpus of every tweet using the #rstats hashtag, curated by rtweet package creator Mike Kearney.
-    
-  </div>
-  <p class="read-more" itemprop="mainEntityOfPage">
-    <a href="/post/tidytuesday-2019-1/" class="btn btn-primary btn-outline">
-      CONTINUE READING
-    </a>
-  </p>
-</div>
-
-      
-
-      
     
 
   </div>
@@ -1162,6 +1147,13 @@ This week, the data comes in the form of a massive corpus of every tweet using t
           
           
           
+          <a href="/tags/behaviour" style="font-size:0.8rem">behaviour</a>
+        
+          
+          
+          
+          
+          
           <a href="/tags/buses" style="font-size:0.8rem">buses</a>
         
           
@@ -1191,6 +1183,13 @@ This week, the data comes in the form of a massive corpus of every tweet using t
           
           
           <a href="/tags/demo" style="font-size:0.8rem">demo</a>
+        
+          
+          
+          
+          
+          
+          <a href="/tags/economics" style="font-size:0.8rem">economics</a>
         
           
           

@@ -13,6 +13,17 @@
     
     
     <item>
+      <title>RANDOM UTILITY MODELS DRAFT</title>
+      <link>/post/rum_draft/</link>
+      <pubDate>Wed, 24 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/rum_draft/</guid>
+      <description>load up tidyverse for some verbose data munging
+library(tidyverse)load in the data (Vicer bundle choice data from March)
+data &amp;lt;- dir(&amp;quot;C:/Users/robwh/Desktop/rum_data&amp;quot;) %&amp;gt;%#load in all .csvs#trial by trial results.[grepl(&amp;quot;\\.csv$&amp;quot;, .)] %&amp;gt;%file.path(&amp;quot;C:/Users/robwh/Desktop/rum_data&amp;quot;, .) %&amp;gt;%lapply(., read.csv, stringsAsFactors = FALSE) %&amp;gt;%#bind data togethermap_df(I)table(data$date)## ## 2019-19-03 2019-20-03 2019-21-03 ## 272 278 262We have data from 3 separate days, but I’m just going to pool them together for larger n</description>
+    </item>
+    
+    <item>
       <title>The Knowledge 7th February 2019</title>
       <link>/post/the-knowledge-7th-february-2019/</link>
       <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>

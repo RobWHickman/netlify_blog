@@ -1,0 +1,156 @@
+---
+title: RANDOM UTILITY MODELS DRAFT
+author: Robert Hickman
+date: '2019-04-24'
+slug: rum_draft
+output: pdf_document
+categories: []
+tags:
+  - economics
+  - behaviour
+header:
+  caption: ''
+  image: ''
+---
+
+
+
+<p>load up tidyverse for some verbose data munging</p>
+<pre class="r"><code>library(tidyverse)</code></pre>
+<p>load in the data (Vicer bundle choice data from March)</p>
+<pre class="r"><code>data &lt;- dir(&quot;C:/Users/robwh/Desktop/rum_data&quot;) %&gt;%
+  #load in all .csvs
+  #trial by trial results
+  .[grepl(&quot;\\.csv$&quot;, .)] %&gt;%
+  file.path(&quot;C:/Users/robwh/Desktop/rum_data&quot;, .) %&gt;%
+  lapply(., read.csv, stringsAsFactors = FALSE) %&gt;%
+  #bind data together
+  map_df(I)
+
+table(data$date)</code></pre>
+<pre><code>## 
+## 2019-19-03 2019-20-03 2019-21-03 
+##        272        278        262</code></pre>
+<p>We have data from 3 separate days, but I’m just going to pool them together for larger n</p>
+<p>Plot the data in the standard bundle choice logistic regression format</p>
+<pre class="r"><code>bcb_data &lt;- data %&gt;%
+  #only want data pertaining to bundle choice task
+  filter(subtask == &quot;bundle_choice&quot;) %&gt;%
+  #select only interesting variables
+  mutate(bundle_water_ml = second_budget_value * budget_magnitude,
+         non_bundle_water_ml = budget_value * budget_magnitude) %&gt;%
+  select(bundle_water_ml, non_bundle_water_ml, juice_ml = reward_magnitude, results) %&gt;%
+  #binary yes/no for choosing the bundle or not
+  mutate(bundle_chosen = case_when(
+    grepl(&quot;fractal_chosen&quot;, results) ~ 1,
+    grepl(&quot;budget_chosen&quot;, results) ~ 0
+  )) %&gt;%
+  #remove trials where neither is chosen
+  #i.e. errors
+  filter(!is.na(bundle_chosen))
+  
+#nice quick function for plotting a logistic regression curve
+binomial_smooth &lt;- function(...) {
+  geom_smooth(method = &quot;glm&quot;, method.args = list(family = &quot;binomial&quot;), ...)
+}
+
+p &lt;- bcb_data %&gt;%
+  #group data by bundle combinations of reward and water
+  group_by(juice_ml, bundle_water_ml) %&gt;%
+  #what fraction of the time is the bundle chosen
+  summarise(fraction_bundle_choice = mean(bundle_chosen)) %&gt;%
+  #pipe into a plot
+  ggplot(., aes(x = bundle_water_ml, y = fraction_bundle_choice, colour = factor(juice_ml))) +
+  #plot the likelihood of choosing the bundle for each juice/water combination
+  geom_point() +
+  #add in the logistic fit line
+  #n.b. se is calculated per point so is massive
+  binomial_smooth(se = FALSE) +
+  #add in the colour scale
+  scale_colour_manual(values = c(&quot;red&quot;, &quot;blue&quot;, &quot;green&quot;), 
+                      name = &quot;reward juice (/ml)&quot;) +
+  #add in some labels
+  labs(title = &quot;Bundle Choice Logistic Regression&quot;,
+       subtitle = &quot;data from Vicer on bundle choice task in March&quot;,
+       x = &quot;bundle water (/ml)&quot;,
+       y = &quot;% chooses bundle&quot;) +
+  #remove extra stuff
+  theme_minimal()
+
+#plot it
+p</code></pre>
+<p><img src="/post/random_utility_stuff_files/figure-html/plot_bundle_choices-1.png" width="672" /></p>
+<p><span class="math display">\[p(A) = \frac{1}{1+e^{-\theta(u(A_{i}) - u(B_{i}))}}\]</span></p>
+<p><span class="math display">\[LL(\theta,y) = \sum_{i=1}^{I} y_{i}\log(p(A)) + (1-y_{i})\log(1-p(A))\]</span></p>
+<p>where</p>
+<p><span class="math display">\[Max_{\theta}L(\theta|y)\]</span></p>
+<p>transform the data into a simple binary choice paradigm between and amount of juice and an amount of water (obviously only for toy example and not serious as removes interaction effects)</p>
+<pre class="r"><code>binary_choice_model &lt;- bcb_data %&gt;%
+  #water choice is the difference in water between full water amount and bundle water
+  mutate(water_ml = (non_bundle_water_ml- bundle_water_ml)) %&gt;%
+  select(juice_ml, water_ml, juice_chosen = bundle_chosen)
+
+head(binary_choice_model)</code></pre>
+<pre><code>##   juice_ml water_ml juice_chosen
+## 1     1.05     0.60            1
+## 2     0.70     0.84            0
+## 3     0.35     0.12            1
+## 4     1.05     0.24            1
+## 5     1.05     0.96            0
+## 6     1.05     0.36            1</code></pre>
+<p>plotting this gives</p>
+<pre class="r"><code>p &lt;- binary_choice_model %&gt;%
+  #group data by bundle combinations of reward and water
+  group_by(juice_ml, water_ml) %&gt;%
+  #what fraction of the time is the bundle chosen
+  summarise(fraction_juice_choice = mean(juice_chosen)) %&gt;%
+  #pipe into a plot
+  ggplot(., aes(x = water_ml, y = fraction_juice_choice, colour = factor(juice_ml))) +
+  #plot the likelihood of choosing the bundle for each juice/water combination
+  geom_point() +
+  #add in the logistic fit line
+  #n.b. se is calculated per point so is massive
+  binomial_smooth(se = FALSE) +
+  #add in the colour scale
+  scale_colour_manual(values = c(&quot;red&quot;, &quot;blue&quot;, &quot;green&quot;), 
+                      name = &quot;juice (/ml)&quot;) +
+  #add in some labels
+  labs(title = &quot;Binary Choice Logistic Regression&quot;,
+       subtitle = &quot;data from Vicer on bundle choice task in March&quot;,
+       x = &quot;water (/ml)&quot;,
+       y = &quot;% chooses juice&quot;) +
+  #remove extra stuff
+  theme_minimal()
+
+#plot it
+p</code></pre>
+<p><img src="/post/random_utility_stuff_files/figure-html/plot_bc-1.png" width="672" /></p>
+<p>For a choice between juice and water with a utility function (rho_juice and rho_water) where we assume the utility of juice &gt; utility of water, with a softmax temperature of theta</p>
+<pre class="r"><code>parameters &lt;- c(1, 1, 1)
+names(parameters) &lt;- c(&quot;rho_juice&quot;, &quot;rho_water&quot;, &quot;theta&quot;)
+
+total_utility &lt;- function(parameters, data) {
+  theta &lt;- parameters[&quot;theta&quot;]
+  j_rho &lt;- parameters[&quot;rho_juice&quot;]
+  w_rho &lt;- parameters[&quot;rho_water&quot;]
+  
+  trial_j_utility &lt;- data$juice_ml * j_rho
+  trial_w_utility &lt;- data$water_ml * w_rho
+  delta_utility &lt;- trial_j_utility - trial_w_utility
+  
+  p_a &lt;- 1 / (1 + exp(-theta*delta_utility))
+  
+  log_lik &lt;- (data$juice_chosen * log(p_a)) + ((1-data$juice_chosen) * log(1-p_a))
+  
+  return(sum(log_lik))
+}
+
+optim_params &lt;- stats::optim(par = parameters,
+                             fn = total_utility,
+                             data = binary_choice_model,
+                             method = &quot;Nelder-Mead&quot;,
+                             control = list(fnscale = -1))
+
+optim_params$par</code></pre>
+<pre><code>## rho_juice rho_water     theta 
+##  1.836937  2.229300  4.408849</code></pre>

@@ -7,13 +7,7 @@ date = "2018-01-05T00:00:00"
 # Order that this section will appear in.
 weight = 5
 
-# List your academic interests.
-[interests]
-  interests = [
-    "Neuroscience",
-    "RStats",
-    "Behavioural Economics"
-  ]
+
 
 # List your qualifications (such as academic degrees).
 [[education.courses]]

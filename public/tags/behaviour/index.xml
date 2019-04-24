@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>behaviour on Robert Hickman</title>
+    <link>/tags/behaviour/</link>
+    <description>Recent content in behaviour on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Wed, 24 Apr 2019 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/behaviour/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>RANDOM UTILITY MODELS DRAFT</title>
+      <link>/post/rum_draft/</link>
+      <pubDate>Wed, 24 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/rum_draft/</guid>
+      <description>load up tidyverse for some verbose data munging
+library(tidyverse)load in the data (Vicer bundle choice data from March)
+data &amp;lt;- dir(&amp;quot;C:/Users/robwh/Desktop/rum_data&amp;quot;) %&amp;gt;%#load in all .csvs#trial by trial results.[grepl(&amp;quot;\\.csv$&amp;quot;, .)] %&amp;gt;%file.path(&amp;quot;C:/Users/robwh/Desktop/rum_data&amp;quot;, .) %&amp;gt;%lapply(., read.csv, stringsAsFactors = FALSE) %&amp;gt;%#bind data togethermap_df(I)table(data$date)## ## 2019-19-03 2019-20-03 2019-21-03 ## 272 278 262We have data from 3 separate days, but I’m just going to pool them together for larger n</description>
+    </item>
+    
+  </channel>
+</rss>
