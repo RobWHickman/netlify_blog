@@ -18,11 +18,12 @@ header:
 <p>load up tidyverse for some verbose data munging</p>
 <pre class="r"><code>library(tidyverse)</code></pre>
 <p>load in the data (Vicer bundle choice data from March)</p>
-<pre class="r"><code>data &lt;- dir(&quot;C:/Users/robwh/Desktop/rum_data&quot;) %&gt;%
+<pre class="r"><code>data_directory &lt;- &quot;C:/Users/robwh/Desktop/rum_data&quot;</code></pre>
+<pre class="r"><code>data &lt;- dir(data_directory) %&gt;%
   #load in all .csvs
   #trial by trial results
   .[grepl(&quot;\\.csv$&quot;, .)] %&gt;%
-  file.path(&quot;C:/Users/robwh/Desktop/rum_data&quot;, .) %&gt;%
+  file.path(data_directory, .) %&gt;%
   lapply(., read.csv, stringsAsFactors = FALSE) %&gt;%
   #bind data together
   map_df(I)
@@ -80,16 +81,13 @@ p &lt;- bcb_data %&gt;%
 #plot it
 p</code></pre>
 <p><img src="/post/random_utility_stuff_files/figure-html/plot_bundle_choices-1.png" width="672" /></p>
-<p><span class="math display">\[p(A) = \frac{1}{1+e^{-\theta(u(A_{i}) - u(B_{i}))}}\]</span></p>
-<p><span class="math display">\[LL(\theta,y) = \sum_{i=1}^{I} y_{i}\log(p(A)) + (1-y_{i})\log(1-p(A))\]</span></p>
-<p>where</p>
-<p><span class="math display">\[Max_{\theta}L(\theta|y)\]</span></p>
-<p>transform the data into a simple binary choice paradigm between and amount of juice and an amount of water (obviously only for toy example and not serious as removes interaction effects)</p>
+<p>notation from <a href="https://imai.fas.harvard.edu/teaching/files/discrete.pdf" class="uri">https://imai.fas.harvard.edu/teaching/files/discrete.pdf</a></p>
+<p>Binary model such that <span class="math display">\[Y_{i} \in {0,1}\]</span> Where X is the difference in utility between the choices A and B on each trial, i</p>
+<p><span class="math display">\[X_{i} = u(A_{i}) - u(B_{i})\]</span> using a logit model such that <span class="math display">\[\pi_{i} = \frac{1}{1 + e^{-\beta X_{i})}}\]</span> maximise the log likelihood <span class="math display">\[\mathcal l_{n}(\beta|Y,X) = \sum_{i=1}^{n} Y_{i} log(\pi_{i}) + (1-Y_{i})log(1-\pi_{i})\]</span></p>
 <pre class="r"><code>binary_choice_model &lt;- bcb_data %&gt;%
   #water choice is the difference in water between full water amount and bundle water
   mutate(water_ml = (non_bundle_water_ml- bundle_water_ml)) %&gt;%
   select(juice_ml, water_ml, juice_chosen = bundle_chosen)
-
 head(binary_choice_model)</code></pre>
 <pre><code>##   juice_ml water_ml juice_chosen
 ## 1     1.05     0.60            1
@@ -121,14 +119,12 @@ head(binary_choice_model)</code></pre>
        y = &quot;% chooses juice&quot;) +
   #remove extra stuff
   theme_minimal()
-
 #plot it
 p</code></pre>
 <p><img src="/post/random_utility_stuff_files/figure-html/plot_bc-1.png" width="672" /></p>
 <p>For a choice between juice and water with a utility function (rho_juice and rho_water) where we assume the utility of juice &gt; utility of water, with a softmax temperature of theta</p>
 <pre class="r"><code>parameters &lt;- c(1, 1, 1)
 names(parameters) &lt;- c(&quot;rho_juice&quot;, &quot;rho_water&quot;, &quot;theta&quot;)
-
 total_utility &lt;- function(parameters, data) {
   theta &lt;- parameters[&quot;theta&quot;]
   j_rho &lt;- parameters[&quot;rho_juice&quot;]
@@ -144,13 +140,11 @@ total_utility &lt;- function(parameters, data) {
   
   return(sum(log_lik))
 }
-
 optim_params &lt;- stats::optim(par = parameters,
                              fn = total_utility,
                              data = binary_choice_model,
                              method = &quot;Nelder-Mead&quot;,
                              control = list(fnscale = -1))
-
 optim_params$par</code></pre>
 <pre><code>## rho_juice rho_water     theta 
 ##  1.836937  2.229300  4.408849</code></pre>

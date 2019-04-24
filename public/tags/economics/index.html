@@ -253,11 +253,12 @@ MathJax.Hub.Config({
       <p>load up tidyverse for some verbose data munging
 library(tidyverse)
 load in the data (Vicer bundle choice data from March)
-data &lt;- dir(&quot;C:/Users/robwh/Desktop/rum_data&quot;) %&gt;%
+data_directory &lt;- &quot;C:/Users/robwh/Desktop/rum_data&quot;
+data &lt;- dir(data_directory) %&gt;%
 #load in all .csvs
 #trial by trial results
 .[grepl(&quot;\.csv$&quot;, .)] %&gt;%
-file.path(&quot;C:/Users/robwh/Desktop/rum_data&quot;, .) %&gt;%
+file.path(data_directory, .) %&gt;%
 lapply(., read.csv, stringsAsFactors = FALSE) %&gt;%
 #bind data together
 map_df(I)

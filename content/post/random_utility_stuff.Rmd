@@ -20,13 +20,16 @@ library(tidyverse)
 ```
 
 load in the data (Vicer bundle choice data from March)
+```{r data_directory, warning=FALSE,message=FALSE}
+data_directory <- "C:/Users/robwh/Desktop/rum_data"
+```
 
 ```{r load_data, warning=FALSE,message=FALSE}
-data <- dir("C:/Users/robwh/Desktop/rum_data") %>%
+data <- dir(data_directory) %>%
   #load in all .csvs
   #trial by trial results
   .[grepl("\\.csv$", .)] %>%
-  file.path("C:/Users/robwh/Desktop/rum_data", .) %>%
+  file.path(data_directory, .) %>%
   lapply(., read.csv, stringsAsFactors = FALSE) %>%
   #bind data together
   map_df(I)
@@ -88,24 +91,26 @@ p
 
 ```
 
-$$p(A) = \frac{1}{1+e^{-\theta(u(A_{i}) - u(B_{i}))}}$$ 
+notation from https://imai.fas.harvard.edu/teaching/files/discrete.pdf
 
-$$LL(\theta,y) = \sum_{i=1}^{I} y_{i}\log(p(A)) + (1-y_{i})\log(1-p(A))$$ 
+Binary model such that
+$$Y_{i} \in {0,1}$$
+Where X is the difference in utility between the choices A and B on each trial, i
 
-where
+$$X_{i} = u(A_{i}) - u(B_{i})$$
+using a logit model such that
+$$\pi_{i} = \frac{1}{1 + e^{-\beta X_{i})}}$$
+maximise the log likelihood
+$$\mathcal l_{n}(\beta|Y,X) = \sum_{i=1}^{n} Y_{i} log(\pi_{i}) + (1-Y_{i})log(1-\pi_{i})$$ 
 
-$$Max_{\theta}L(\theta|y)$$
 
-transform the data into a simple binary choice paradigm between and amount of juice and an amount of water (obviously only for toy example and not serious as removes interaction effects)
 
 ```{r transform_to_BC, warning=FALSE,message=FALSE}
 binary_choice_model <- bcb_data %>%
   #water choice is the difference in water between full water amount and bundle water
   mutate(water_ml = (non_bundle_water_ml- bundle_water_ml)) %>%
   select(juice_ml, water_ml, juice_chosen = bundle_chosen)
-
 head(binary_choice_model)
-
 ```
 plotting this gives
 
@@ -132,10 +137,8 @@ p <- binary_choice_model %>%
        y = "% chooses juice") +
   #remove extra stuff
   theme_minimal()
-
 #plot it
 p
-
 ```
 
 
@@ -145,7 +148,6 @@ For a choice between juice and water with a utility function (rho_juice and rho_
 ```{r max_likelihood, warning=FALSE,message=FALSE}
 parameters <- c(1, 1, 1)
 names(parameters) <- c("rho_juice", "rho_water", "theta")
-
 total_utility <- function(parameters, data) {
   theta <- parameters["theta"]
   j_rho <- parameters["rho_juice"]
@@ -161,12 +163,10 @@ total_utility <- function(parameters, data) {
   
   return(sum(log_lik))
 }
-
 optim_params <- stats::optim(par = parameters,
                              fn = total_utility,
                              data = binary_choice_model,
                              method = "Nelder-Mead",
                              control = list(fnscale = -1))
-
 optim_params$par
 ```
