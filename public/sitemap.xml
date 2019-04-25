@@ -5,7 +5,7 @@
     
     <url>
     
-      <loc>/post/rum_draft/</loc>
+      <loc>/post/dca_1/</loc>
       <lastmod>2019-04-24T00:00:00+00:00</lastmod>
     </url>
     
@@ -240,65 +240,6 @@
     
     <url>
     
-      <loc>/categories/</loc>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/dixon-coles/</loc>
-      <lastmod>2019-01-04T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/project/</loc>
-      <lastmod>2018-01-05T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/publication_types/</loc>
-      <lastmod>2013-07-01T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/</loc>
-      <lastmod>2018-01-05T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/</loc>
-      <lastmod>2017-01-01T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
       <loc>/tags/behaviour/</loc>
       <lastmod>2019-04-24T00:00:00+00:00</lastmod>
       <priority>0</priority>
@@ -329,6 +270,15 @@
     
     <url>
     
+      <loc>/categories/</loc>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/tags/chess/</loc>
       <lastmod>2018-05-01T00:00:00+00:00</lastmod>
       <priority>0</priority>
@@ -351,6 +301,16 @@
     
       <loc>/tags/demo/</loc>
       <lastmod>2018-01-05T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/dixon-coles/</loc>
+      <lastmod>2019-01-04T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -399,8 +359,38 @@
     
     <url>
     
+      <loc>/tags/models/</loc>
+      <lastmod>2019-04-24T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/tags/package/</loc>
       <lastmod>2018-09-09T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/project/</loc>
+      <lastmod>2018-01-05T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/publication_types/</loc>
+      <lastmod>2013-07-01T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -421,6 +411,16 @@
     
       <loc>/tags/riddler/</loc>
       <lastmod>2019-02-03T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/</loc>
+      <lastmod>2018-01-05T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -451,6 +451,16 @@
     
       <loc>/tags/sf/</loc>
       <lastmod>2018-09-09T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/</loc>
+      <lastmod>2017-01-01T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
