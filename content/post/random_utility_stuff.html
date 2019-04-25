@@ -191,7 +191,9 @@ log_likelihood_func &lt;- function(parameters, data) {
   return(sum(log_likelihood))
 }</code></pre>
 <p>We can start out with a parameter assuming the two utilities are equal</p>
-<pre class="r"><code>initial_parameters &lt;- c(1, 1, 1) %&gt;%
+<pre class="r"><code>#make up initial parameters
+#1, 1, 1 is unlikely but a reasonable starting point
+initial_parameters &lt;- c(1, 1, 1) %&gt;%
   `names&lt;-`(c(&quot;beta&quot;, &quot;rho_a&quot;, &quot;rho_b&quot;))
 
 initial_parameters</code></pre>
@@ -199,7 +201,8 @@ initial_parameters</code></pre>
 ##     1     1     1</code></pre>
 <p>then we can use the optim function which will pass the parameter vector into the log likelihood funtion and iteratively change the values in the parameter vector until the greatest sum is returned. We’re looking for the greatest sum as the log likelihood per trial boils down to log(phi / 1-phi) where phi is between 0 and 1 and is greatest where the utility parameters make the post-hoc choice most clear. E.g. when choosing the buzz cola the log likelihood = log(phi) and we want to maximise phi.</p>
 <p>Taking the log of x between 0 and 1 will give a negative number that approaches 0 as x approaches 1. So the total sum of log likelihood terms will approach 0 as the parameters maximise the phi term.</p>
-<pre class="r"><code>trial_data_binary &lt;- trial_data %&gt;%
+<pre class="r"><code>#add a binary variable for the choice of buzz_cola
+trial_data_binary &lt;- trial_data %&gt;%
   mutate(buzz_cola_choice = case_when(
     choice == &quot;buzz_cola&quot; ~ 1,
     choice == &quot;slurm&quot; ~ 0
@@ -246,15 +249,21 @@ p2 &lt;- vals %&gt;%
 
 p2</code></pre>
 <p><img src="/post/random_utility_stuff_files/figure-html/plot_parameter_optimisation-1.gif" /><!-- --></p>
-<pre class="r"><code>p3 &lt;- unlist(sumloglik) %&gt;%
+<pre class="r"><code>#unlist the log likelihood sum per iteration
+p3 &lt;- unlist(sumloglik) %&gt;%
+  #add the iteration number as a variable
   data.frame(sum = .,
              iteration = 1:length(.)) %&gt;%
+  #plot it
   ggplot(., aes(x = iteration, y = sum)) +
   geom_line() +
   labs(title = &quot;how optim maximises the sum of the log likelihood&quot;,
        x = &quot;iteration&quot;,
        y = &quot;sum of the log likelihoods per trial&quot;) +
-  theme_minimal()</code></pre>
+  theme_minimal()
+
+p3</code></pre>
+<p><img src="/post/random_utility_stuff_files/figure-html/plot_optimisation_errors-1.png" width="672" /></p>
 <p>The final maximised value of -400 is still some way off 0 but seems to be the highest it will go. Looking at p1, we can see that the curves are some way off a step function that would mean that no ‘sub-optimal’ choices would be made (there’s some threshold of slurm vs buzz cola that means only one or the other is chosen).</p>
 <p>We can then get the optimised paramters from the object returned from optimisation function</p>
 <pre class="r"><code>#print the optimised parameters

@@ -239,6 +239,8 @@ log_likelihood_func <- function(parameters, data) {
 We can start out with a parameter assuming the two utilities are equal
 
 ```{r initial_parameters, warning=FALSE,message=FALSE}
+#make up initial parameters
+#1, 1, 1 is unlikely but a reasonable starting point
 initial_parameters <- c(1, 1, 1) %>%
   `names<-`(c("beta", "rho_a", "rho_b"))
 
@@ -250,6 +252,7 @@ then we can use the optim function which will pass the parameter vector into the
 Taking the log of x between 0 and 1 will give a negative number that approaches 0 as x approaches 1. So the total sum of log likelihood terms will approach 0 as the parameters maximise the phi term.
 
 ```{r optimise_parameters, warning=FALSE,message=FALSE}
+#add a binary variable for the choice of buzz_cola
 trial_data_binary <- trial_data %>%
   mutate(buzz_cola_choice = case_when(
     choice == "buzz_cola" ~ 1,
@@ -304,15 +307,20 @@ p2
 ```
 
 ```{r plot_optimisation_errors, warning=FALSE,message=FALSE}
+#unlist the log likelihood sum per iteration
 p3 <- unlist(sumloglik) %>%
+  #add the iteration number as a variable
   data.frame(sum = .,
              iteration = 1:length(.)) %>%
+  #plot it
   ggplot(., aes(x = iteration, y = sum)) +
   geom_line() +
   labs(title = "how optim maximises the sum of the log likelihood",
        x = "iteration",
        y = "sum of the log likelihoods per trial") +
   theme_minimal()
+
+p3
 ```
 
 The final maximised value of -400 is still some way off 0 but seems to be the highest it will go. Looking at p1, we can see that the curves are some way off a step function that would mean that no 'sub-optimal' choices would be made (there's some threshold of slurm vs buzz cola that means only one or the other is chosen).
