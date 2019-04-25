@@ -17,7 +17,7 @@
       
     
   
-  <meta name="description" content="When studying why people make the economic choices they do, we need some way of quanitfying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:
+  <meta name="description" content="When studying why people make the economic choices they do, we need some way of quantifying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:
 the utility of taking the busthe utility of riding my bikeFor instance, if it looks like it might rain, I’m more likely to take the bus as getting soaked reduces the utility of cycling to work.">
 
   
@@ -79,7 +79,7 @@
   <meta property="og:site_name" content="Robert Hickman">
   <meta property="og:url" content="/post/dca_1/">
   <meta property="og:title" content="An Introduction to Discrete Choice Analysis in R | Robert Hickman">
-  <meta property="og:description" content="When studying why people make the economic choices they do, we need some way of quanitfying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:
+  <meta property="og:description" content="When studying why people make the economic choices they do, we need some way of quantifying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:
 the utility of taking the busthe utility of riding my bikeFor instance, if it looks like it might rain, I’m more likely to take the bus as getting soaked reduces the utility of cycling to work.">
   <meta property="og:locale" content="en-us">
   
@@ -327,20 +327,20 @@ MathJax.Hub.Config({
 
 
       <div class="article-style" itemprop="articleBody">
-        <p>When studying why people make the economic choices they do, we need some way of quanitfying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:</p>
+        <p>When studying why people make the economic choices they do, we need some way of quantifying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:</p>
 <ul>
 <li>the utility of taking the bus</li>
 <li>the utility of riding my bike</li>
 </ul>
 <p>For instance, if it looks like it might rain, I’m more likely to take the bus as getting soaked reduces the utility of cycling to work. Conversely, if I glance at my watch and see that I’ve just missed a bus, the utility of taking the bus decreases as I don’t want to have to wait at the bus stop.</p>
-<p>A frquent criticism of economics is that it assumes some <em>homo economicus</em> who will always choose that which maximises this utility. Lets say the utilities of the two commute choices were onyl governed by p(rain) and e(wait time) respectively, then for a set probability of rain and expected wait time for the bus, I should always choose the same mode of transport. This is clearly not how humans (or any other animal) work and so for the last 50 years <a href="https://eml.berkeley.edu/~mcfadden/discrete/ch5.pdf">models of probabilistic choice</a> have been used instead.</p>
+<p>A frequent criticism of economics is that it assumes some <em>homo economicus</em> who will always choose that which maximizes this utility. Lets say the utilities of the two commute choices were only governed by p(rain) and e(wait time) respectively, then for a set probability of rain and expected wait time for the bus, I should always choose the same mode of transport. This is clearly not how humans (or any other animal) work and so for the last 50 years <a href="https://eml.berkeley.edu/~mcfadden/discrete/ch5.pdf">models of probabilistic choice</a> have been used instead.</p>
 <p>The advantage to this is that by studying the % of times I decide to ride my bike into work vs catching the bus, for any set of parameters, it’s possible to derive the relative utility of that method of transportation. Then if a novel combination of rain/waiting comes up, it’s possible to predict the chance I will choose to ride my bike and the chance I will take the bus.</p>
 <p>However, many of these models are fairly dense to approach without formal economic training, so I wanted to write a guide to deriving and using them in R. For the first post, I’ll consider a toy problem with a simple binary choice paradigm to get some of the basic ideas of random utility modelling down and hopefully build from that in later posts.</p>
 <div id="example-problem" class="section level1">
 <h1>Example Problem</h1>
 <p>Summer is here and it’s time for the annual Behavioural Economics departmental picnic! Due to the collapsing global climate, this year is the hottest yet and you are eagerly anticipating sitting in <a href="https://en.wikipedia.org/wiki/Grantchester_Meadows">Granchester Meadows</a> with your favourite chilled soft drink and discussing your research.</p>
-<p>Unfortuantely, you’ve been stuck in the office for most of the afternoon coding up your latest model and will arrive late. Due to the hot weather, most of the drinks have already been consumed and what’s left needs to be rationed. Luckily, you are all very rational behavioural economists who know that if you can find everyone’s utility for the two remainnig drinks flavours, you can apportion them appropriately.</p>
-<p>The two remaining drinks are <a href="https://media2.giphy.com/media/3oriffxcqE2syOd5Ty/giphy.gif">buzz cola</a> which comes in cans of 330ml which is very tasy, and <a href="https://comb.io/qbzoUv.gif">slurm</a> which comes in 2 litre bottles (which can be poured into any amount).</p>
+<p>Unfortunately, you’ve been stuck in the office for most of the afternoon coding up your latest model and will arrive late. Due to the hot weather, most of the drinks have already been consumed and what’s left needs to be rationed. Luckily, you are all very rational behavioural economists who know that if you can find everyone’s utility for the two remaining drinks flavours, you can apportion them appropriately.</p>
+<p>The two remaining drinks are <a href="https://media2.giphy.com/media/3oriffxcqE2syOd5Ty/giphy.gif">buzz cola</a> which comes in cans of 330ml which is very tasty, and <a href="https://comb.io/qbzoUv.gif">slurm</a> which comes in 2 litre bottles (which can be poured into any amount).</p>
 <p>Someone quickly codes up a binary choice task where PhD students have to choose between 1,2, or 3 330ml cans of the desirable Buzz Cola, or some amount between 0 and 2000ml of the slightly less valued Slurm.</p>
 <p>Having spent 10 minutes and 1800 trials doing the task your data looks like</p>
 <pre class="r"><code>#show the first ten trials
@@ -358,7 +358,7 @@ head(trial_data, 10)</code></pre>
 ## 266          1   800     slurm</code></pre>
 <p>If we group by each combination of n(buzz cola cans),ml(slurm) we can work out the proportion of buzz cola choices</p>
 <pre class="r"><code>choice_data &lt;- trial_data %&gt;%
-  #code a buzz cola choice as a binary variable
+  #code buzz cola choice as a binary variable
   mutate(buzz_cola_choice = case_when(
     choice == &quot;buzz_cola&quot; ~ 1,
     choice == &quot;slurm&quot; ~ 0
@@ -413,7 +413,7 @@ p1 &lt;- choice_data %&gt;%
 
 p1</code></pre>
 <p><img src="/post/random_utility_stuff_files/figure-html/plot_data-1.png" width="672" /></p>
-<p>We then need to solve your utilities of buzz cola and slurm. To do this we need to maximise the sum of the log likelihood of each choice you make.</p>
+<p>We then need to solve your utilities of buzz cola and slurm. To do this we need to maximize the sum of the log likelihood of each choice you make.</p>
 <p>Basically, for each trial when you are presented with x ml of buzz cola (the number of cans multiplied by 330ml per can) or y ml of slurm there are utility parameters (rho) for both of these which mean you have some total utility of offered buzz cola and total utility of offered slurm.</p>
 <p>As a rational econ PhD student, you are pretty much always going to choose whichever of these utilities is greater. E.g:</p>
 <pre class="r"><code>#make up some utility parameters
@@ -458,14 +458,14 @@ trial_utilities[1:10,]</code></pre>
 ## 8      slurm
 ## 9  buzz_cola
 ## 10     slurm</code></pre>
-<p>It’s clear to see that mostly the choices fall in line with these made up parameters. The two unexpected choices could be because of random participant mistakes, but is more likely due to our paramaters not yet being optimised (more on that in a sec), or because even rational actors may sometimes choose something which seems to have less utility (e.g. when sampling, or as utilities change e.g. via satiety).</p>
+<p>It’s clear to see that mostly the choices fall in line with these made up parameters. The two unexpected choices could be because of random participant mistakes, but is more likely due to our parameters not yet being optimized (more on that in a sec), or because even rational actors may sometimes choose something which seems to have less utility (e.g. when sampling, or as utilities change e.g. via satiety).</p>
 <p>In the above example, given the relative utilities of the two offered drinks, it’s possible to work out the probability that the participant will choose either of them using a simple logit model. (for these formulae I’m copying the notation from <a href="https://imai.fas.harvard.edu/teaching/files/discrete.pdf">here</a>).</p>
 <p>we have a binary model such that the choice of buzz cola can be represented by Y: <span class="math display">\[Y_{i} \in {0,1}\]</span></p>
 <p>Where X is the difference in utility between the choices A (buzz cola) and B (slurm) on each trial, i</p>
 <p><span class="math display">\[X_{i} = u(A_{i}) - u(B_{i})\]</span> using a logit model such that</p>
 <p><span class="math display">\[\phi_{i} = \frac{1}{1 + e^{-\beta X_{i})}}\]</span> where beta is the temperature of the logit curve (i.e. the steepness).</p>
-<p>The log probability of chossing A (buzz cola) is therefore the log(phi) when A is chosen, and log(1-phi) when B (slurm) is chosen. The Y/1-Y cancel the other term out as Y can either equal 1 (buzz cola choice) or 0 (slurm chosen).</p>
-<p>We want to sum this over every trial and find the parameters for beta and the rho for both goods A (buzz cola) and B (slurm) which maximise this total sum</p>
+<p>The log probability of choosing A (buzz cola) is therefore the log(phi) when A is chosen, and log(1-phi) when B (slurm) is chosen. The Y/1-Y cancel the other term out as Y can either equal 1 (buzz cola choice) or 0 (slurm chosen).</p>
+<p>We want to sum this over every trial and find the parameters for beta and the rho for both goods A (buzz cola) and B (slurm) which maximize this total sum</p>
 <p><span class="math display">\[\mathcal l_{n}(\beta|Y,X) = \sum_{i=1}^{n} Y_{i} log(\phi_{i}) + (1-Y_{i})log(1-\phi_{i})\]</span> In R this can be expressed as</p>
 <pre class="r"><code>#function to calulate the log likelihood per trial over data
 #parameters is a vector of beta,rho_a,rho_b
@@ -510,8 +510,8 @@ initial_parameters &lt;- c(1, 1, 1) %&gt;%
 initial_parameters</code></pre>
 <pre><code>##  beta rho_a rho_b 
 ##     1     1     1</code></pre>
-<p>then we can use the optim function which will pass the parameter vector into the log likelihood funtion and iteratively change the values in the parameter vector until the greatest sum is returned. We’re looking for the greatest sum as the log likelihood per trial boils down to log(phi / 1-phi) where phi is between 0 and 1 and is greatest where the utility parameters make the post-hoc choice most clear. E.g. when choosing the buzz cola the log likelihood = log(phi) and we want to maximise phi.</p>
-<p>Taking the log of x between 0 and 1 will give a negative number that approaches 0 as x approaches 1. So the total sum of log likelihood terms will approach 0 as the parameters maximise the phi term.</p>
+<p>then we can use the optim function which will pass the parameter vector into the log likelihood function and iteratively change the values in the parameter vector until the greatest sum is returned. We’re looking for the greatest sum as the log likelihood per trial boils down to log(phi / 1-phi) where phi is between 0 and 1 and is greatest where the utility parameters make the post-hoc choice most clear. E.g. when choosing the buzz cola the log likelihood = log(phi) and we want to maximize phi.</p>
+<p>Taking the log of x between 0 and 1 will give a negative number that approaches 0 as x approaches 1. So the total sum of log likelihood terms will approach 0 as the parameters maximize the phi term.</p>
 <pre class="r"><code>#add a binary variable for the choice of buzz_cola
 trial_data_binary &lt;- trial_data %&gt;%
   mutate(buzz_cola_choice = case_when(
@@ -534,8 +534,8 @@ optim_params &lt;- optim(par = initial_parameters,
                       #we are looking to maximise the sum
                       #so fnscale set to -1
                       control = list(fnscale = -1))</code></pre>
-<p>optim() works by taking a vector of parameters and slightly adjusting them every iteration until the output from fn = … is minimised via an algorithm (in this case <a href="https://en.wikipedia.org/wiki/Nelder%E2%80%93Mead_method">Nelder-Mead</a>).</p>
-<p>By collecting the parmater values it selects and the subsequent log likelihood sum for each iteration we can get a sense of how it works</p>
+<p>optim() works by taking a vector of parameters and slightly adjusting them every iteration until the output from fn = … is minimized via an algorithm (in this case <a href="https://en.wikipedia.org/wiki/Nelder%E2%80%93Mead_method">Nelder-Mead</a>).</p>
+<p>By collecting the parameter values it selects and the subsequent log likelihood sum for each iteration we can get a sense of how it works</p>
 <pre class="r"><code>#load gganimate
 library(gganimate)
 
@@ -575,8 +575,8 @@ p3 &lt;- unlist(sumloglik) %&gt;%
 
 p3</code></pre>
 <p><img src="/post/random_utility_stuff_files/figure-html/plot_optimisation_errors-1.png" width="672" /></p>
-<p>The final maximised value of -400 is still some way off 0 but seems to be the highest it will go. Looking at p1, we can see that the curves are some way off a step function that would mean that no ‘sub-optimal’ choices would be made (there’s some threshold of slurm vs buzz cola that means only one or the other is chosen).</p>
-<p>We can then get the optimised paramters from the object returned from optimisation function</p>
+<p>The final maximized value of -400 is still some way off 0 but seems to be the highest it will go. Looking at p1, we can see that the curves are some way off a step function that would mean that no ‘sub-optimal’ choices would be made (there’s some threshold of slurm vs buzz cola that means only one or the other is chosen).</p>
+<p>We can then get the optimized parameters from the object returned from optimization function</p>
 <pre class="r"><code>#print the optimised parameters
 optim_params$par</code></pre>
 <pre><code>##     beta    rho_a    rho_b 
