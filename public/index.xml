@@ -22,16 +22,16 @@
 &lt;li&gt;the utility of riding my bike&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;For instance, if it looks like it might rain, I’m more likely to take the bus as getting soaked reduces the utility of cycling to work. Conversely, if I glance at my watch and see that I’ve just missed a bus, the utility of taking the bus decreases as I don’t want to have to wait at the bus stop.&lt;/p&gt;
-&lt;p&gt;A frquent criticism of economics is that it assumes some &lt;em&gt;homo economicus&lt;/em&gt; who will always choose that which maximises this utility. Lets say the utilities of the two commute choices were onyl governed by p(rain) and e(wait time) respectively, then for a set probability of rain and expected wait time for the bus, I should always choose the same mode of transport. This is clearly not how humans (or any other animal) work and so for the last 50 years &lt;a href=&#34;https://eml.berkeley.edu/~mcfadden/discrete/ch5.pdf&#34;&gt;models of probabilistic choice&lt;/a&gt; have instead been used.&lt;/p&gt;
+&lt;p&gt;A frquent criticism of economics is that it assumes some &lt;em&gt;homo economicus&lt;/em&gt; who will always choose that which maximises this utility. Lets say the utilities of the two commute choices were onyl governed by p(rain) and e(wait time) respectively, then for a set probability of rain and expected wait time for the bus, I should always choose the same mode of transport. This is clearly not how humans (or any other animal) work and so for the last 50 years &lt;a href=&#34;https://eml.berkeley.edu/~mcfadden/discrete/ch5.pdf&#34;&gt;models of probabilistic choice&lt;/a&gt; have been used instead.&lt;/p&gt;
 &lt;p&gt;The advantage to this is that by studying the % of times I decide to ride my bike into work vs catching the bus, for any set of parameters, it’s possible to derive the relative utility of that method of transportation. Then if a novel combination of rain/waiting comes up, it’s possible to predict the chance I will choose to ride my bike and the chance I will take the bus.&lt;/p&gt;
-&lt;p&gt;However, many of these models are fairly dense to approach without formal economic training, so I wanted to write a guide to deriving and using them in R. For the first post, I’ll consider a toy problem with a simple binary choice paradigm to get some of the basic ideas of random utility modelling down and progress from there&lt;/p&gt;
-&lt;div id=&#34;problem&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Problem&lt;/h1&gt;
+&lt;p&gt;However, many of these models are fairly dense to approach without formal economic training, so I wanted to write a guide to deriving and using them in R. For the first post, I’ll consider a toy problem with a simple binary choice paradigm to get some of the basic ideas of random utility modelling down and hopefully build from that in later posts.&lt;/p&gt;
+&lt;div id=&#34;example-problem&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Example Problem&lt;/h1&gt;
 &lt;p&gt;Summer is here and it’s time for the annual Behavioural Economics departmental picnic! Due to the collapsing global climate, this year is the hottest yet and you are eagerly anticipating sitting in &lt;a href=&#34;https://en.wikipedia.org/wiki/Grantchester_Meadows&#34;&gt;Granchester Meadows&lt;/a&gt; with your favourite chilled soft drink and discussing your research.&lt;/p&gt;
 &lt;p&gt;Unfortuantely, you’ve been stuck in the office for most of the afternoon coding up your latest model and will arrive late. Due to the hot weather, most of the drinks have already been consumed and what’s left needs to be rationed. Luckily, you are all very rational behavioural economists who know that if you can find everyone’s utility for the two remainnig drinks flavours, you can apportion them appropriately.&lt;/p&gt;
 &lt;p&gt;The two remaining drinks are &lt;a href=&#34;https://media2.giphy.com/media/3oriffxcqE2syOd5Ty/giphy.gif&#34;&gt;buzz cola&lt;/a&gt; which comes in cans of 330ml which is very tasy, and &lt;a href=&#34;https://comb.io/qbzoUv.gif&#34;&gt;slurm&lt;/a&gt; which comes in 2 litre bottles (which can be poured into any amount).&lt;/p&gt;
 &lt;p&gt;Someone quickly codes up a binary choice task where PhD students have to choose between 1,2, or 3 330ml cans of the desirable Buzz Cola, or some amount between 0 and 2000ml of the slightly less valued Slurm.&lt;/p&gt;
-&lt;p&gt;Having spent 10 minutes doing the task your data looks like&lt;/p&gt;
+&lt;p&gt;Having spent 10 minutes and 1800 trials doing the task your data looks like&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#show the first ten trials
 head(trial_data, 10)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;##      buzz_cola slurm    choice
@@ -245,7 +245,7 @@ p2 &amp;lt;- vals %&amp;gt;%
   ease_aes(&amp;#39;cubic-in-out&amp;#39;)
 
 p2&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/random_utility_stuff_files/figure-html/plot_optimisation-1.gif&#34; /&gt;&lt;!-- --&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/post/random_utility_stuff_files/figure-html/plot_parameter_optimisation-1.gif&#34; /&gt;&lt;!-- --&gt;&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p3 &amp;lt;- unlist(sumloglik) %&amp;gt;%
   data.frame(sum = .,
              iteration = 1:length(.)) %&amp;gt;%
@@ -261,7 +261,97 @@ p2&lt;/code&gt;&lt;/pre&gt;
 optim_params$par&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;##     beta    rho_a    rho_b 
 ## 3.520318 2.563380 1.702415&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;and there we have it! you &lt;em&gt;do&lt;/em&gt; prefer buzz cola (rho_a) to slurm (rho_b)&lt;/p&gt;
+&lt;p&gt;and there we have it! you &lt;em&gt;do&lt;/em&gt; prefer buzz cola (rho_a) to slurm (rho_b). For every unit ml of both drinks you are offered, you prefer buzz cola ~1.5x as much.&lt;/p&gt;
+&lt;p&gt;We can plot your likelihood to choose the offered ml of buzz cola over the offered ml of slurm for ratios of slurm:buzz cola by changing around a few terms in our logit model&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#function to calculate likelihood of choosing good A given ratio B/A
+calc_likelihood &amp;lt;- function(beta = optim_params$par[&amp;quot;beta&amp;quot;],
+                            rho_a = optim_params$par[&amp;quot;rho_a&amp;quot;],
+                            rho_b = optim_params$par[&amp;quot;rho_b&amp;quot;],
+                            ratio_ba) {
+  #instead of working out the difference in utility by comparing offered amounts
+  #use the ratio of good b:good a
+  utility_term &amp;lt;- rho_a/rho_b - ratio_ba
+  
+  #calculate as before
+  phi &amp;lt;- 1 / (1 + exp(-beta* utility_term))
+}
+
+#plot this data for the rations 1:3 to 3:1
+p4 &amp;lt;- seq(1/3, 3, by = 0.1) %&amp;gt;%
+  data.frame(ratio_ba = .,
+             likelihood_a = calc_likelihood(ratio_ba = .)) %&amp;gt;%
+  ggplot(., aes(x = ratio_ba, y = likelihood_a)) +
+  geom_point() +
+  #show the indifference point ratio of B:A
+  geom_segment(aes(x = optim_params$par[&amp;quot;rho_a&amp;quot;]/optim_params$par[&amp;quot;rho_b&amp;quot;],
+                   xend = optim_params$par[&amp;quot;rho_a&amp;quot;]/optim_params$par[&amp;quot;rho_b&amp;quot;],
+                   y = 0.5,
+                   yend = 0)) +
+  geom_text(label = &amp;quot;50% likelihood at rho_a/rho_b&amp;quot;, x = 1, y = 0.2) +
+  #aesthetics
+  labs(title = &amp;quot;Utility curve for Buzz Cola vs Slurm&amp;quot;,
+       x = &amp;quot;ratio of ml Slurm:Buzz Cola&amp;quot;,
+       y = &amp;quot;likelihood of choosing buzz cola&amp;quot;) +
+  theme_minimal()
+
+p4&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/random_utility_stuff_files/figure-html/plot_utility_curve-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;div id=&#34;data-creation&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Data Creation&lt;/h2&gt;
+&lt;p&gt;All data in this post is generation using the normal distribution and is fake. However, it approximates what you’d expect real data to look like pretty well so is fine for a tutorial and saves the need to have to upload real lab data.&lt;/p&gt;
+&lt;p&gt;The code used to generate the data is provided below&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#set up
+library(tidyverse)
+set.seed(220892)
+
+#generally cumulative normal distribution curves
+#stand in for real choice curve data
+
+#seq over the range of 0-1 of slurm
+choice_data &amp;lt;- seq(0, 1, 0.2) %&amp;gt;%
+  #generate distributions
+  data.frame(x = .,
+             y1 = 1-pnorm(., 0.23, 0.15),
+             y2 = 1-pnorm(., 0.5, 0.175),
+             y3 = 1-pnorm(., 0.75, 0.125)) %&amp;gt;%
+  #melt data
+  gather(&amp;quot;group&amp;quot;, &amp;quot;dist&amp;quot;, - x) %&amp;gt;%
+  #rename data with our variables
+  #buzz cola and slurm
+  mutate(buzz_cola = case_when(
+    group == &amp;quot;y1&amp;quot; ~ 1,
+    group == &amp;quot;y2&amp;quot; ~ 2,
+    group == &amp;quot;y3&amp;quot; ~ 3
+  )) %&amp;gt;%
+  mutate(slurm = x * 2000) %&amp;gt;%
+  #round dist data
+  mutate(fraction_choose_cola = round(dist, 2))  %&amp;gt;%
+  select(buzz_cola, slurm, fraction_choose_cola)
+
+
+#create some fake trial data by stretching this choice data
+generate_trial_data &amp;lt;- function(combination_row) {
+  #for this combination how many times in cola chosen
+  cola_choice &amp;lt;- round(combination_row$fraction_choose_cola*100)
+  
+  #create a df of 100 trials for this combination
+  data.frame(buzz_cola = rep(combination_row$buzz_cola, 100),
+             slurm = rep(combination_row$slurm, 100),
+             choice = c(rep(&amp;quot;buzz_cola&amp;quot;, cola_choice),
+                        rep(&amp;quot;slurm&amp;quot;, 100 - cola_choice))
+             )
+}
+
+#split choice data by combination (row)
+trial_data &amp;lt;- choice_data %&amp;gt;%
+  split(f = seq(nrow(.))) %&amp;gt;%
+  #apply the stretching function
+  lapply(., generate_trial_data) %&amp;gt;%
+  #map together the data
+  map_df(I) %&amp;gt;%
+  #randomly shuffle the data
+  .[sample(nrow(.)),]&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
 &lt;/div&gt;
 </description>
     </item>

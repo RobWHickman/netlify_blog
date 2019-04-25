@@ -156,7 +156,7 @@ rain and expected wait time for the bus, I should always choose the same
 mode of transport. This is clearly not how humans (or any other animal)
 work and so for the last 50 years
 \href{https://eml.berkeley.edu/~mcfadden/discrete/ch5.pdf}{models of
-probabilistic choice} have instead been used.
+probabilistic choice} have been used instead.
 
 The advantage to this is that by studying the \% of times I decide to
 ride my bike into work vs catching the bus, for any set of parameters,
@@ -171,7 +171,7 @@ using them in R. For the first post, I'll consider a toy problem with a
 simple binary choice paradigm to get some of the basic ideas of random
 utility modelling down and progress from there
 
-\section{Problem}\label{problem}
+\section{Example Problem}\label{example-problem}
 
 Summer is here and it's time for the annual Behavioural Economics
 departmental picnic! Due to the collapsing global climate, this year is
@@ -197,7 +197,8 @@ Someone quickly codes up a binary choice task where PhD students have to
 choose between 1,2, or 3 330ml cans of the desirable Buzz Cola, or some
 amount between 0 and 2000ml of the slightly less valued Slurm.
 
-Having spent 10 minutes doing the task your data looks like
+Having spent 10 minutes and 1800 trials doing the task your data looks
+like
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -277,7 +278,7 @@ cans of buzz cola are worth in y ml of slurm
 \NormalTok{\}}
 
 \CommentTok{#plot the logistic regression on the entire choice data}
-\NormalTok{p <-}\StringTok{ }\NormalTok{choice_data }\OperatorTok{%>%}
+\NormalTok{p1 <-}\StringTok{ }\NormalTok{choice_data }\OperatorTok{%>%}
 \StringTok{  }\KeywordTok{ggplot}\NormalTok{(., }\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ slurm, }\DataTypeTok{y =}\NormalTok{ fraction_choose_cola, }\DataTypeTok{colour =} \KeywordTok{factor}\NormalTok{(buzz_cola))) }\OperatorTok{+}
 \StringTok{  }\KeywordTok{geom_point}\NormalTok{() }\OperatorTok{+}
 \StringTok{  }\KeywordTok{binomial_smooth}\NormalTok{(}\DataTypeTok{se =} \OtherTok{FALSE}\NormalTok{) }\OperatorTok{+}
@@ -289,7 +290,7 @@ cans of buzz cola are worth in y ml of slurm
        \DataTypeTok{y =} \StringTok{"fraction of buzz cola choices"}\NormalTok{) }\OperatorTok{+}
 \StringTok{  }\KeywordTok{theme_minimal}\NormalTok{()}
 
-\NormalTok{p}
+\NormalTok{p1}
 \end{Highlighting}
 \end{Shaded}
 
@@ -450,7 +451,15 @@ We can start out with a parameter assuming the two utilities are equal
 
 then we can use the optim function which will pass the parameter vector
 into the log likelihood funtion and iteratively change the values in the
-parameter vector until the greatest sum is returned
+parameter vector until the greatest sum is returned. We're looking for
+the greatest sum as the log likelihood per trial boils down to log(phi /
+1-phi) where phi is between 0 and 1 and is greatest where the utility
+parameters make the post-hoc choice most clear. E.g. when choosing the
+buzz cola the log likelihood = log(phi) and we want to maximise phi.
+
+Taking the log of x between 0 and 1 will give a negative number that
+approaches 0 as x approaches 1. So the total sum of log likelihood terms
+will approach 0 as the parameters maximise the phi term.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -492,7 +501,7 @@ likelihood sum for each iteration we can get a sense of how it works
 \KeywordTok{library}\NormalTok{(gganimate)}
 
 \CommentTok{#rbind the values per iteration}
-\NormalTok{anim <-}\StringTok{ }\NormalTok{vals }\OperatorTok{%>%}
+\NormalTok{p2 <-}\StringTok{ }\NormalTok{vals }\OperatorTok{%>%}
 \StringTok{  }\KeywordTok{do.call}\NormalTok{(rbind, .) }\OperatorTok{%>%}
 \StringTok{  }\CommentTok{#add a column for iteration number}
 \StringTok{  }\KeywordTok{as.data.frame}\NormalTok{() }\OperatorTok{%>%}
@@ -510,110 +519,32 @@ likelihood sum for each iteration we can get a sense of how it works
 \StringTok{  }\KeywordTok{transition_time}\NormalTok{(iteration) }\OperatorTok{+}
 \StringTok{  }\KeywordTok{ease_aes}\NormalTok{(}\StringTok{'cubic-in-out'}\NormalTok{)}
 
-\NormalTok{anim}
+\NormalTok{p2}
 \end{Highlighting}
 \end{Shaded}
 
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-1.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-2.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-3.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-4.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-5.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-6.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-7.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-8.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-9.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-10.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-11.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-12.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-13.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-14.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-15.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-16.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-17.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-18.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-19.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-20.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-21.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-22.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-23.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-24.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-25.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-26.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-27.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-28.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-29.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-30.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-31.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-32.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-33.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-34.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-35.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-36.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-37.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-38.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-39.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-40.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-41.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-42.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-43.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-44.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-45.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-46.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-47.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-48.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-49.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-50.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-51.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-52.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-53.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-54.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-55.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-56.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-57.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-58.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-59.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-60.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-61.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-62.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-63.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-64.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-65.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-66.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-67.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-68.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-69.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-70.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-71.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-72.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-73.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-74.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-75.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-76.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-77.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-78.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-79.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-80.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-81.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-82.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-83.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-84.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-85.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-86.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-87.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-88.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-89.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-90.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-91.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-92.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-93.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-94.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-95.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-96.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-97.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-98.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-99.pdf}
-\includegraphics{random_utility_stuff_files/figure-latex/plot_optimisation-100.pdf}
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p3 <-}\StringTok{ }\KeywordTok{unlist}\NormalTok{(sumloglik) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{data.frame}\NormalTok{(}\DataTypeTok{sum =}\NormalTok{ .,}
+             \DataTypeTok{iteration =} \DecValTok{1}\OperatorTok{:}\KeywordTok{length}\NormalTok{(.)) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{ggplot}\NormalTok{(., }\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ iteration, }\DataTypeTok{y =}\NormalTok{ sum)) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_line}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{labs}\NormalTok{(}\DataTypeTok{title =} \StringTok{"how optim maximises the sum of the log likelihood"}\NormalTok{,}
+       \DataTypeTok{x =} \StringTok{"iteration"}\NormalTok{,}
+       \DataTypeTok{y =} \StringTok{"sum of the log likelihoods per trial"}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{theme_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+The final maximised value of -400 is still some way off 0 but seems to
+be the highest it will go. Looking at p1, we can see that the curves are
+some way off a step function that would mean that no `sub-optimal'
+choices would be made (there's some threshold of slurm vs buzz cola that
+means only one or the other is chosen).
+
+We can then get the optimised paramters from the object returned from
+optimisation function
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -622,13 +553,34 @@ likelihood sum for each iteration we can get a sense of how it works
 \end{Highlighting}
 \end{Shaded}
 
-\begin{verbatim}
-##     beta    rho_a    rho_b 
-## 3.520318 2.563380 1.702415
-\end{verbatim}
-
 and there we have it! you \emph{do} prefer buzz cola (rho\_a) to slurm
 (rho\_b)
+
+\subsubsection{You didn't actually solve the
+problem}\label{you-didnt-actually-solve-the-problem}
+
+You're right, while we've now collected the parameters for your utility
+function in choosing between the two sodas, we now need to ration out
+the remaining drinks.
+
+Let's say there are 5 PhDs students (yourself included) left at the
+picnic.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{library}\NormalTok{(babynames)}
+
+\NormalTok{names <-}\StringTok{ }\NormalTok{babynames }\OperatorTok{%>%}
+\StringTok{  }\NormalTok{.[}\KeywordTok{sample}\NormalTok{(}\KeywordTok{nrow}\NormalTok{(.), }\DecValTok{5}\NormalTok{),] }\OperatorTok{%>%}
+\StringTok{  }\NormalTok{.}\OperatorTok{$}\NormalTok{name}
+
+\NormalTok{names}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Kristabelle" "Schaeffer"   "Marius"      "Coletta"     "Lanee"
+\end{verbatim}
 
 
 \end{document}
