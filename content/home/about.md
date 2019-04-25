@@ -7,8 +7,6 @@ date = "2018-01-05T00:00:00"
 # Order that this section will appear in.
 weight = 5
 
-
-
 # List your qualifications (such as academic degrees).
 [[education.courses]]
   course = "PhD in Neuroscience"
@@ -24,4 +22,4 @@ weight = 5
 
 # Biography
 
-I'm currently a first year PhD Student in the lab of Wolfram Schultz at the University of Cambridge. I study decision making in simple economic tasks in non-human primates, and in my spare time enjoy practising my coding- mostly in R. This website serves as a hub for small pieces of work relating to this.
+I'm currently a second year PhD Student in the lab of Wolfram Schultz at the University of Cambridge. I study decision making in simple economic tasks in non-human primates, and in my spare time enjoy practising my coding- mostly in R. This website serves as a hub for small pieces of work relating to this.
