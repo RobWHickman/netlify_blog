@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>models on Robert Hickman</title>
+    <link>/tags/models/</link>
+    <description>Recent content in models on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Wed, 24 Apr 2019 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/models/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>An Introduction to Discrete Choice Analysis in R</title>
+      <link>/post/dca_1/</link>
+      <pubDate>Wed, 24 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/dca_1/</guid>
+      <description>When studying why people make the economic choices they do, we need some way of quantifying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:
+the utility of taking the busthe utility of riding my bikeFor instance, if it looks like it might rain, I’m more likely to take the bus as getting soaked reduces the utility of cycling to work.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -364,17 +364,195 @@ p4 <- seq(1/3, 3, by = 0.1) %>%
   geom_text(label = "50% likelihood at rho_a/rho_b", x = 1, y = 0.2) +
   #aesthetics
   labs(title = "Utility curve for Buzz Cola vs Slurm",
-       x = "ratio of ml Slurm:Buzz Cola",
+       x = "ratio of ml slurm:buzz cola",
        y = "likelihood of choosing buzz cola") +
   theme_minimal()
 
 p4
 ```
 
+##How Parameters Vary
+
+Imagine that two of your colleagues, Andreas and Béatrice also arrive at the picnic and take part in the utility measurement.
+
+Béatrice is entirely indifferent between the two soft drinks, they both taste the same as far as she is concerned so 1ml of slurm == 1ml of buzz cola.
+
+Andreas, on the other hand, also prefers buzz cola to slurm, but is hyper-rational. Once the utility of one option exceeds the utility of another he will pretty much always choose the former and samples the lower utility option very rarely.
+
+```{r generate_colleagues_data, warning=FALSE,message=FALSE,include=FALSE}
+#seq over the range of 0-1 of slurm
+colleagues_choice_data <- seq(0, 1, 0.2) %>%
+  #generate distributions
+  data.frame(x = .,
+             a.y1 = 1-pnorm(., 0.30, 0),
+             a.y2 = 1-pnorm(., 0.58, 0),
+             a.y3 = 1-pnorm(., 0.95, 0),
+             b.y1 = 1-pnorm(., 0.165, 0.24),
+             b.y2 = 1-pnorm(., 0.33, 0.25),
+             b.y3 = 1-pnorm(., 0.495, 0.23)) %>%
+  #melt data
+  gather("group", "dist", -x) %>%
+  #separate out by person
+  separate(group, into = c("person", "group"), sep = "\\.") %>%
+  #rename data with our variables
+  #buzz cola and slurm
+  mutate(buzz_cola = case_when(
+    group == "y1" ~ 1,
+    group == "y2" ~ 2,
+    group == "y3" ~ 3
+  )) %>%
+  mutate(person = case_when(
+    grepl("a", person) ~ "Andreas",
+    grepl("b", person) ~ "Béatrice"
+  )) %>%
+  mutate(slurm = x * 2000) %>%
+  #round dist data
+  mutate(fraction_choose_cola = round(dist, 2))  %>%
+  select(person, buzz_cola, slurm, fraction_choose_cola)
+
+#create some fake trial data by stretching this choice data
+generate_colleagues_trial_data <- function(combination_row) {
+  #for this combination how many times in cola chosen
+  cola_choice <- round(combination_row$fraction_choose_cola*100)
+  
+  #create a df of 100 trials for this combination
+  data.frame(buzz_cola = rep(combination_row$buzz_cola, 100),
+             slurm = rep(combination_row$slurm, 100),
+             choice = c(rep("buzz_cola", cola_choice),
+                        rep("slurm", 100 - cola_choice)),
+             person = combination_row$person
+             )
+}
+
+colleagues_trial_data <- colleagues_choice_data %>%
+  split(f = seq(nrow(.))) %>%
+  #apply the stretching function
+  lapply(., generate_colleagues_trial_data) %>%
+  #map together the data
+  map_df(I) %>%
+  #randomly shuffle the data
+  .[sample(nrow(.)),]
+```
+
+If we plot their choice proportions we get similar curves as before, but with slightly different shapes:
+
+```{r plot_colleagues_choices, warning=FALSE,message=FALSE}
+p5 <- colleagues_choice_data %>%
+  ggplot(., aes(x = slurm, y = fraction_choose_cola, colour = factor(buzz_cola))) +
+  geom_point() +
+  binomial_smooth(se = FALSE) +
+  #add in some aesthetics
+  scale_colour_discrete(name = "buzz cola cans \n(x * 330ml)") +
+  labs(title = "what drink do you want for the departmental picnic?",
+       subtitle = "simulated data",
+       x = "slurm (/ml)",
+       y = "fraction of buzz cola choices") +
+  theme_minimal() +
+  facet_wrap(~person)
+
+p5
+
+```
+
+Andreas shows a step function in choosing between buzz cola and slurm, whereas Béatrice show much more linearity, with lines that pass 0.5 where ml slurm == ml buzz cola.
+
+I won't show the code for calculating the optimal parameters for these two as it's much the same as before, but upon calculation we get
+
+```{r calculate_colleague_parameters, warning=FALSE,message=FALSE,include=FALSE}
+colleagues_trial_data_binary <- colleagues_trial_data %>%
+  mutate(buzz_cola_choice = case_when(
+    choice == "buzz_cola" ~ 1,
+    choice == "slurm" ~ 0
+  )) %>%
+  #list by person to lapply
+  split(f = .$person)
+
+colleague_parameters <- colleagues_trial_data_binary %>%
+  lapply(., function(persons_choices) {
+    optim(par = initial_parameters,
+          #the functionise to optimise these over
+          fn = log_likelihood_func,
+          #other arguments to the function
+          data = persons_choices,
+          #optimisation algorithm to use
+          method = "Nelder-Mead",
+          #we are looking to maximise the sum
+          #so fnscale set to -1
+          control = list(fnscale = -1))
+  })
+
+```
+
+```{r colleague_optimal_parameters, warning=FALSE,message=FALSE}
+#the optimal parameters for Andreas and Béatrice
+lapply(colleague_parameters, function(x) x$par)
+```
+
+So we can see that Andreas has a much higher temperature (steepness) of his utility curve (beta), whereas Béatrice has a lower calculated beta.
+
+In contrast, while Andreas has a similar preference for buzz cola to you (rho_a / rho_b ~ 1.5, see below to refresh on your calculated optimal parameters from earlier), the relative utilities of the two sodas are equal (~1.3) for Béatrice, who is indifferent between them.
+
+```{r optimal_params, warning=FALSE,message=FALSE}
+#your optimal parameters for refreshing memory
+optim_params$par
+```
+
+Plotting the utility curves for these two also shows this
+
+```{r calculate_colleague_utility_curves, warning=FALSE,message=FALSE,include=FALSE}
+#slightly change function to allow lapply of peoples parameters
+calc_likelihood <- function(parameters,
+                            ratio_ba) {
+  
+  #get the single parameter values
+  beta = parameters$par["beta"]
+  rho_a = parameters$par["rho_a"]
+  rho_b = parameters$par["rho_b"]
+
+  #instead of working out the difference in utility by comparing offered amounts
+  #use the ratio of good b:good a
+  utility_term <- rho_a/rho_b - ratio_ba
+  
+  #calculate as before
+  phi <- 1 / (1 + exp(-beta* utility_term))
+}
+
+#calculate the utility curves per person
+p6 <- colleague_parameters %>%
+  lapply(., function(peronal_params) {
+    x_seq <- seq(1/3, 3, by = 0.1)
+    data.frame(ratio_ba = x_seq,
+               likelihood_a = calc_likelihood(parameters = peronal_params, ratio_ba = x_seq))
+  }) %>%
+  #map together with id by person
+  map_df(I, .id = "person") %>%
+  #plot the utility curves
+  ggplot(., aes(x = ratio_ba, y = likelihood_a)) +
+  geom_point() +
+  #plot a line between points
+  geom_line() +
+  labs(title = "Utility curve for Buzz Cola vs Slurm",
+       x = "ratio of ml slurm:buzz cola",
+       y = "likelihood of choosing buzz cola") +
+  theme_minimal() +
+  #separate by person
+  facet_wrap(~person)
+
+```
+
+```{r plot_colleague_utility_curves, warning=FALSE,message=FALSE}
+#plot the utility curves per colleague
+p6
+```
+Where I've used geom_line to link between the points. Andreas' curve is much steeper than yours which we plotted previously, but passes the indifference point (0.5 on the y axis) at roughly the same place. 
+
+Béatrice's is less steep but her indifference point is where the ml of the two sodas are equal (x == 1).
 
 ##Data Creation
 
 All data in this post is generation using the normal distribution and is fake. However, it approximates what you'd expect real data to look like pretty well so is fine for a tutorial and saves the need to have to upload real lab data. 
+
+I haven't included the data generation for Andreas and Béatrice's data, but it follows almost identical steps. Set the sd in pnorm = 0 to achieve the step function. 
 
 The code used to generate the data is provided below
 

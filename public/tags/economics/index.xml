@@ -13,14 +13,13 @@
     
     
     <item>
-      <title>RANDOM UTILITY MODELS DRAFT</title>
-      <link>/post/rum_draft/</link>
+      <title>An Introduction to Discrete Choice Analysis in R</title>
+      <link>/post/dca_1/</link>
       <pubDate>Wed, 24 Apr 2019 00:00:00 +0000</pubDate>
       
-      <guid>/post/rum_draft/</guid>
-      <description>load up tidyverse for some verbose data munging
-library(tidyverse)load in the data (Vicer bundle choice data from March)
-data &amp;lt;- dir(data_directory) %&amp;gt;%#load in all .csvs#trial by trial results.[grepl(&amp;quot;\\.csv$&amp;quot;, .)] %&amp;gt;%file.path(data_directory, .) %&amp;gt;%lapply(., read.csv, stringsAsFactors = FALSE) %&amp;gt;%#bind data togethermap_df(I)table(data$date)## ## 2019-19-03 2019-20-03 2019-21-03 ## 272 278 262We have data from 3 separate days, but I’m just going to pool them together for larger n</description>
+      <guid>/post/dca_1/</guid>
+      <description>When studying why people make the economic choices they do, we need some way of quantifying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:
+the utility of taking the busthe utility of riding my bikeFor instance, if it looks like it might rain, I’m more likely to take the bus as getting soaked reduces the utility of cycling to work.</description>
     </item>
     
   </channel>

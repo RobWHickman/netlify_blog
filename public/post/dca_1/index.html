@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="theme" content="hugo-academic">
-  <meta name="generator" content="Hugo 0.32.2" />
+  <meta name="generator" content="Hugo 0.54.0" />
   <meta name="author" content="Robert Hickman">
 
   
@@ -267,7 +267,7 @@ MathJax.Hub.Config({
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    13 min read
+    15 min read
   </span>
   
 
@@ -327,7 +327,10 @@ MathJax.Hub.Config({
 
 
       <div class="article-style" itemprop="articleBody">
-        <p>When studying why people make the economic choices they do, we need some way of quantifying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:</p>
+        
+
+
+<p>When studying why people make the economic choices they do, we need some way of quantifying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:</p>
 <ul>
 <li>the utility of taking the bus</li>
 <li>the utility of riding my bike</li>
@@ -610,15 +613,60 @@ p4 &lt;- seq(1/3, 3, by = 0.1) %&gt;%
   geom_text(label = &quot;50% likelihood at rho_a/rho_b&quot;, x = 1, y = 0.2) +
   #aesthetics
   labs(title = &quot;Utility curve for Buzz Cola vs Slurm&quot;,
-       x = &quot;ratio of ml Slurm:Buzz Cola&quot;,
+       x = &quot;ratio of ml slurm:buzz cola&quot;,
        y = &quot;likelihood of choosing buzz cola&quot;) +
   theme_minimal()
 
 p4</code></pre>
 <p><img src="/post/random_utility_stuff_files/figure-html/plot_utility_curve-1.png" width="672" /></p>
+<div id="how-parameters-vary" class="section level2">
+<h2>How Parameters Vary</h2>
+<p>Imagine that two of your colleagues, Andreas and Béatrice also arrive at the picnic and take part in the utility measurement.</p>
+<p>Béatrice is entirely indifferent between the two soft drinks, they both taste the same as far as she is concerned so 1ml of slurm == 1ml of buzz cola.</p>
+<p>Andreas, on the other hand, also prefers buzz cola to slurm, but is hyper-rational. Once the utility of one option exceeds the utility of another he will pretty much always choose the former and samples the lower utility option very rarely.</p>
+<p>If we plot their choice proportions we get similar curves as before, but with slightly different shapes:</p>
+<pre class="r"><code>p5 &lt;- colleagues_choice_data %&gt;%
+  ggplot(., aes(x = slurm, y = fraction_choose_cola, colour = factor(buzz_cola))) +
+  geom_point() +
+  binomial_smooth(se = FALSE) +
+  #add in some aesthetics
+  scale_colour_discrete(name = &quot;buzz cola cans \n(x * 330ml)&quot;) +
+  labs(title = &quot;what drink do you want for the departmental picnic?&quot;,
+       subtitle = &quot;simulated data&quot;,
+       x = &quot;slurm (/ml)&quot;,
+       y = &quot;fraction of buzz cola choices&quot;) +
+  theme_minimal() +
+  facet_wrap(~person)
+
+p5</code></pre>
+<p><img src="/post/random_utility_stuff_files/figure-html/plot_colleagues_choices-1.png" width="672" /></p>
+<p>Andreas shows a step function in choosing between buzz cola and slurm, whereas Béatrice show much more linearity, with lines that pass 0.5 where ml slurm == ml buzz cola.</p>
+<p>I won’t show the code for calculating the optimal parameters for these two as it’s much the same as before, but upon calculation we get</p>
+<pre class="r"><code>#the optimal parameters for Andreas and Béatrice
+lapply(colleague_parameters, function(x) x$par)</code></pre>
+<pre><code>## $Andreas
+##     beta    rho_a    rho_b 
+## 6.208545 5.976904 3.501038 
+## 
+## $Béatrice
+##     beta    rho_a    rho_b 
+## 2.806346 1.321279 1.330345</code></pre>
+<p>So we can see that Andreas has a much higher temperature (steepness) of his utility curve (beta), whereas Béatrice has a lower calculated beta.</p>
+<p>In contrast, while Andreas has a similar preference for buzz cola to you (rho_a / rho_b ~ 1.5, see below to refresh on your calculated optimal parameters from earlier), the relative utilities of the two sodas are equal (~1.3) for Béatrice, who is indifferent between them.</p>
+<pre class="r"><code>#your optimal parameters for refreshing memory
+optim_params$par</code></pre>
+<pre><code>##     beta    rho_a    rho_b 
+## 3.520318 2.563380 1.702415</code></pre>
+<p>Plotting the utility curves for these two also shows this</p>
+<pre class="r"><code>#plot the utility curves per colleague
+p6</code></pre>
+<p><img src="/post/random_utility_stuff_files/figure-html/plot_colleague_utility_curves-1.png" width="672" /> Where I’ve used geom_line to link between the points. Andreas’ curve is much steeper than yours which we plotted previously, but passes the indifference point (0.5 on the y axis) at roughly the same place.</p>
+<p>Béatrice’s is less steep but her indifference point is where the ml of the two sodas are equal (x == 1).</p>
+</div>
 <div id="data-creation" class="section level2">
 <h2>Data Creation</h2>
 <p>All data in this post is generation using the normal distribution and is fake. However, it approximates what you’d expect real data to look like pretty well so is fine for a tutorial and saves the need to have to upload real lab data.</p>
+<p>I haven’t included the data generation for Andreas and Béatrice’s data, but it follows almost identical steps. Set the sd in pnorm = 0 to achieve the step function.</p>
 <p>The code used to generate the data is provided below</p>
 <pre class="r"><code>#set up
 library(tidyverse)
