@@ -1,0 +1,215 @@
+---
+title: "An Introduction to Modelling Soccer Matches in R (part 1)"
+author: "Robert Hickman"
+date: '2019-04-30'
+output:
+  html_document:
+    df_print: paged
+header:
+  caption: ''
+  image: ''
+slug: dixon_coles_1
+tags:
+- football
+- models
+categories: []
+---
+
+
+```{r libraries, warning=FALSE,message=FALSE}
+library(tidyverse)
+library(magrittr)
+
+set.seed(3459)
+```
+
+For this example I'm going to use a fictional league in a microstate that contains only 4 teams:
+  - Atletico Awesome are the reigning champions having won the league the last 7 times in a row
+  - Dinamo Decent are their main competition but rearely put up much of a title fight
+  - Inter Ineffectual find it fairly easy to be safe from relegation but difficult to move up into 2nd
+  - Torpedo Terrible were promoted to the top league last year and are extremely underprepared for this level
+  
+  (conviniently the teams are in alphabetical order of skill)
+
+```{r get_results, warning=FALSE,message=FALSE}
+teams <- c("Atletico Awesome", "Dinamo Decent", "Inter Ineffectual", "Torpedo Terrible") 
+
+results <- data.frame(home = rep(1:4, each = 3),
+                      away = c(2, 3, 4, 1, 3, 4, 1, 2, 4, 1, 2, 3),
+                      hgoal = c(3, 4, 6, 2, 3, 3, 0, 1, 2, 0, 0, 2),
+                      agoal = c(1, 0, 1, 2, 1, 1, 1, 1, 0, 3, 1, 2)) %>%
+    mutate_at(c("home", "away"), funs(teams[.]))
+
+```
+
+The data is made up (though if you want real match results they can be easily scraped, or found in the [engsoccerdata package](https://github.com/jalapic/engsoccerdata)).
+
+The small league means it's possible to glance all results at once and get a feel for how good the teams are relative to each other
+
+```{r results_matrix, warning=FALSE,message=FALSE}
+results_to_matrix <- function(results_df) {
+  results %>%
+    mutate(result = paste(hgoal, agoal, sep = "-")) %>%
+    select(home, away, result) %>%
+    complete(home, away) %>%
+    spread(away, result)
+}
+
+results_matrix <- results_to_matrix(results) %>%
+  print()
+
+```
+
+which we can also easily convert into a final league table:
+
+```{r league_table, warning=FALSE,message=FALSE}
+#melt the results data
+melted_results <- results %>%
+  gather(location, team,  -hgoal, -agoal) %>%
+  #calculate goals for/against the team
+  mutate(g_for = case_when(
+    location == "home" ~ hgoal,
+    location == "away" ~ agoal
+  )) %>%
+  mutate(g_ag = case_when(
+    location == "home" ~ agoal,
+    location == "away" ~ hgoal
+  ))
+
+#calculate the final league table from these results
+league_table <- melted_results %>%
+  #3 points for a win, 1 for a draw
+  mutate(points = case_when(
+    g_for > g_ag ~ 3,
+    g_ag > g_for ~ 0,
+    g_for == g_ag ~ 1
+  )) %>%
+  #calculate goal difference for each match
+  mutate(gd = g_for - g_ag) %>%
+  group_by(team) %>%
+  #get the final statistics per team
+  summarise(games_played = n(),
+            season_gd = sum(gd),
+            season_points = sum(points)) %>%
+  arrange(-season_points, -season_gd) %>%
+  print()
+
+```
+
+It's pretty clear that Atletico >> Dinamo >> Inter >> Torpedo, but let's say that due to an admin error, the matches the league needs to be rerun with the same fixtures and players. How can we best quantify the ability of each four teams to predict the most likely outcome of the replayed fixtures?
+
+Fortunately, packages already exist in R ( [1](https://github.com/opisthokonta/goalmodel), [2](https://github.com/Torvaney/regista), [3](https://cran.r-project.org/web/packages/fbRanks/index.html)) to do this very quickly and easily. All three of these work by assigning two ratings each team (in the 1997 Dixon & Coles paper they use α and β but I'm going to use 'attack'/'defence', or) 
+
+  - α - the team's attack rating, or how likely the team is to score goals
+  - δ - the team's defence rating, or how likely the team is to stop the opposition from scoring
+  
+(there's no reason that these variables have to be better as they increase positively*, but I think that that is conceptually easier as well)
+
+*indeed, the regista package by default has a greater _negative_ number indicating a stronger defence
+
+```{r dc_model, warning=FALSE,message=FALSE}
+library(goalmodel)
+
+#model the results to get attack/defense parameters for each team
+model <- goalmodel(results$hgoal, results$agoal, results$home, results$away)
+
+#print
+model$parameters
+```
+So we can see that for instance Atletico are much stronger in terms of attack and defense than every other team in the league, and so on. (I'll get onto what $intercept and $hfa represents here later).
+
+Plotting these parameters gives:
+
+```{r plot_parameters, warning=FALSE,message=FALSE}
+#munge the team parameters together
+params <- model$parameters %>%
+  #select team parameters
+  .[grepl("defense|attack", names(.))] %>%
+  do.call(cbind, .) %>%
+  as.data.frame() %>%
+  rownames_to_column("team")
+
+#munge the other parameters into text
+#the home field advantage and the intercept
+other_params <- model$parameters %>%
+  .[!grepl("defense|attack", names(.))] %>%
+  as.data.frame() %>%
+  mutate_if(is.numeric, round, 3) %>%
+  #glue into one object
+  glue::glue_data("intercept: {.$intercept},\n hfa: {.$hfa}")
+
+#plot team paramters over attack/defense axis
+p1 <- ggplot(params, aes(x = attack, y = defense, label = team)) +
+  #add a best fit linear regression line
+  stat_smooth(method = "lm", se = FALSE) +
+  geom_point() +
+  ggrepel::geom_text_repel(nudge_y = 0.1) +
+  #annotate the other parameters in
+  annotate("text", y = min(params$defense), x = max(params$attack)*0.6, label = other_params, hjust = 0) +
+  theme_minimal()
+
+p1
+
+```
+
+which shows the same thing. Also note the the best fit line goes through the origin, which is by design as we'll come onto.
+
+```{r goals_model, warning=FALSE,message=FALSE}
+#get the average goals scored/conceeded for each team
+goals_per_teams <- melted_results %>%
+  group_by(team) %>%
+  summarise(av_scored = mean(g_for),
+            av_conceeded = mean(g_ag))
+
+#choose two teams at random to demonstrate model
+teams_competing <- sample(length(teams),2)
+
+#get the home and away teams
+home <- teams[teams_competing[1]]
+away <- teams[teams_competing[2]]
+
+#get the predictions for this simple model
+home_goals <- mean(c(goals_per_teams$av_scored[goals_per_teams$team == home],
+                     goals_per_teams$av_conceeded[goals_per_teams$team == away]))
+
+away_goals <- mean(c(goals_per_teams$av_scored[goals_per_teams$team == away],
+                     goals_per_teams$av_conceeded[goals_per_teams$team == home]))
+
+#predict the match result
+result <- c(home_goals, away_goals) %>%
+  `names<-`(c(home, away)) %>%
+  print()
+```
+
+Where Atletico Awesome fairly handly beat Dinamo Decent.
+
+Of course, Atletico are almost certainly a better team than Dinamo so we might expect them to win, but if we peek at the results we see that they actually drew this game 2-2.
+
+```{r check_result, warning=FALSE,message=FALSE}
+results %>%
+  filter(home == "Dinamo Decent" & away == "Atletico Awesome")
+```
+
+This was the only game in the season that Atletico failed to win, despite our model expecting them to be better at both attack and defence than any other team.
+
+Something our model is clearly missing, which should be obvious to any real life football fans, is that _where_ the game takes place is also important. Teams [routinely do better at home](https://www.soccerstats.com/homeaway.asp?league=england) than they do on the road, so we're going to want to boost Dinamo Decent a little above what the model suggests by virtue of them playing this game in their home stadium.
+
+For the purposes of our simple model, this (termed hfa for Home Field Advantage) is just going to involve seeing how many more goals were scored at home than away in the 12 game season.
+
+```{r simple_hfa, warning=FALSE,message=FALSE}
+hfa <- mean(results$hgoal - results$agoal)
+```
+
+Reworking this into our simple model gives
+
+```{r add_hfa, warning=FALSE,message=FALSE}
+home_goals <- mean(c(goals_per_teams$av_scored[goals_per_teams$team == home],
+                     goals_per_teams$av_conceeded[goals_per_teams$team == away])) + hfa
+
+#predict the match result
+result <- c(home_goals, away_goals) %>%
+  `names<-`(c(home, away)) %>%
+  print()
+
+```
+
