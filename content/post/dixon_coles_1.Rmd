@@ -31,8 +31,44 @@ For this example I'm going to use a fictional league in a microstate that contai
   
   (conviniently the teams are in alphabetical order of skill)
 
+```{r generate_results, warning=FALSE,message=FALSE}
+teams <- c("Argentina", "Bosnia_&_Herzegovina", "Costa_Rica", "DR_Congo", "Estonia", "Fiji", "Gibraltar", "Holy_See")
+
+
+model$parameters <- list(attack = c(0.959,0.735,0.489,0.124,-0.157,-0.421,-0.762) %>%
+                           append(-sum(.)) %>%
+                           `names<-`(teams), 
+                         defense = c(0.959,0.735,0.489,0.124,-0.157,-0.421,-0.762) %>%
+                           append(-sum(.)) %>%
+                           `names<-`(teams), 
+                         intercept = 0, 
+                         hfa = 0.3)
+
+model$all_teams <- teams
+
+model$model <- "poisson"
+model$maxgoal <- 8
+
+fixtures <- crossing(teams, teams) %>%
+  rename(home = teams, away = teams1) %>%
+  filter(home != away)
+
+predictions <- predict_expg(model, fixtures$home, fixtures$away, return_df = TRUE) %>%
+  mutate(hgoal = round(expg1, 0),
+         agoal = round(expg2, 0)) %>%
+  select(home = team1, away = team2, hgoal, agoal) %>%
+  results_to_table()
+```
+
+
 ```{r get_results, warning=FALSE,message=FALSE}
-teams <- c("Atletico Awesome", "Dinamo Decent", "Inter Ineffectual", "Torpedo Terrible") 
+
+results <- c(
+  #argentina
+  "2-1",
+  "4-2",
+  ""
+  )
 
 results <- data.frame(home = rep(1:4, each = 3),
                       away = c(2, 3, 4, 1, 3, 4, 1, 2, 4, 1, 2, 3),
@@ -48,7 +84,7 @@ The small league means it's possible to glance all results at once and get a fee
 
 ```{r results_matrix, warning=FALSE,message=FALSE}
 results_to_matrix <- function(results_df) {
-  results %>%
+  results_df %>%
     mutate(result = paste(hgoal, agoal, sep = "-")) %>%
     select(home, away, result) %>%
     complete(home, away) %>%
@@ -62,22 +98,24 @@ results_matrix <- results_to_matrix(results) %>%
 
 which we can also easily convert into a final league table:
 
-```{r league_table, warning=FALSE,message=FALSE}
-#melt the results data
-melted_results <- results %>%
-  gather(location, team,  -hgoal, -agoal) %>%
-  #calculate goals for/against the team
-  mutate(g_for = case_when(
-    location == "home" ~ hgoal,
-    location == "away" ~ agoal
-  )) %>%
-  mutate(g_ag = case_when(
-    location == "home" ~ agoal,
-    location == "away" ~ hgoal
-  ))
+```{r league_table_func, warning=FALSE,message=FALSE}
+melt_results <- function(results_df) {
+  results_df %>%
+    gather(location, team,  -hgoal, -agoal) %>%
+    #calculate goals for/against the team
+    mutate(g_for = case_when(
+      location == "home" ~ hgoal,
+      location == "away" ~ agoal
+    )) %>%
+    mutate(g_ag = case_when(
+      location == "home" ~ agoal,
+      location == "away" ~ hgoal
+    )) 
+}
 
-#calculate the final league table from these results
-league_table <- melted_results %>%
+results_to_table <- function(results_df) {
+  results_df %>%
+    melt_results(.) %>%
   #3 points for a win, 1 for a draw
   mutate(points = case_when(
     g_for > g_ag ~ 3,
@@ -89,9 +127,19 @@ league_table <- melted_results %>%
   group_by(team) %>%
   #get the final statistics per team
   summarise(games_played = n(),
-            season_gd = sum(gd),
-            season_points = sum(points)) %>%
-  arrange(-season_points, -season_gd) %>%
+            gf = sum(g_for),
+            ga = sum(g_ag),
+            gd = sum(gd),
+            points = sum(points)) %>%
+  arrange(-points, -gd, -gf)
+}
+```
+
+
+```{r league_table, warning=FALSE,message=FALSE}
+#calculate the final league table from these results
+league_table <- results  %>%
+  results_to_table(.) %>%
   print()
 
 ```
@@ -156,7 +204,8 @@ which shows the same thing. Also note the the best fit line goes through the ori
 
 ```{r goals_model, warning=FALSE,message=FALSE}
 #get the average goals scored/conceeded for each team
-goals_per_teams <- melted_results %>%
+goals_per_teams <- results %>%
+  melt_results() %>%
   group_by(team) %>%
   summarise(av_scored = mean(g_for),
             av_conceeded = mean(g_ag))
@@ -210,6 +259,100 @@ home_goals <- mean(c(goals_per_teams$av_scored[goals_per_teams$team == home],
 result <- c(home_goals, away_goals) %>%
   `names<-`(c(home, away)) %>%
   print()
+
+```
+
+an expected score that falls within the range of plausibility.
+
+If we follow this method of prediction for every game 
+
+```{r run_simple_model, warning=FALSE,message=FALSE}
+simple_model <- function(home, away) {
+  #get the predictions for this simple model
+  home_goals <- mean(c(goals_per_teams$av_scored[goals_per_teams$team == home],
+                       goals_per_teams$av_conceeded[goals_per_teams$team == away])) + hfa
+  
+  away_goals <- mean(c(goals_per_teams$av_scored[goals_per_teams$team == away],
+                       goals_per_teams$av_conceeded[goals_per_teams$team == home]))
+  
+  result <- data.frame(home = home,
+                       away = away,
+                       hgoal = round(home_goals,1),
+                       agoal = round(away_goals,1))
+  
+}
+
+results_predicted <- map2_df(results$home, results$away, simple_model)
+
+results_matrix_predicted <- results_predicted %>%
+  results_to_matrix(.) %>%
+  print()
+```
+
+```{r print_actual_matrix, warning=FALSE,message=FALSE}
+results_matrix
+```
+
+These aren't bad! They capture that better teams score more and conceed less than poorer teams, and that teams at home do better than teams away.
+
+But intuitively we should know that this model is an oversimplification. Though passable for pub calculations I don't think anyone would agree that this is a valid way to accurately predict football results. It's most important quality is that it is _falsifiable_. We can quantify just how wrong we think this model is
+
+```{r}
+table_regression <- results_predicted %>%
+  results_to_table() %>%
+  rename_if(is.numeric,  funs(paste("pred", ., sep = "_"))) %>%
+  merge(.,
+        rename_if(league_table, is.numeric,  funs(paste("act", ., sep = "_"))),
+        by = "team") %>%
+  select_at(vars(-contains('played'))) %>%
+  gather("variable", "value", -team) %>%
+  separate(variable, into = c("source", "variable"), sep = "_") %>%
+  spread(source, value)
+
+p2 <- ggplot(table_regression, aes(x = act, y = pred)) +
+  stat_smooth(method = "lm") +
+  geom_point() +
+  theme_minimal() +
+  facet_wrap(~variable, scales = "free")
+
+```
+
+Looking at this we've got pretty good correlations for all 4 variables tested. We can take those R^2 values and pat ourselves on the back. But really we want to know just how correct our parmeters for α and δ and wehther or not this model can be improved upon.
+
+
+
+
+```{r}
+fixtures <- results %>%
+  crossing(home, away) %>%
+  filter(home != away)
+
+
+test <- goalmodel::predict_expg(model, fixtures$home, fixtures$away) %>%
+  map_df(I) %>%
+  cbind(fixtures, .) %>%
+  select(home, away, hgoal = expg1, agoal = expg2) %>%
+  results_to_table()
+
+test2 <- goalmodel::predict_expg(model, fixtures$home, fixtures$away) %>%
+  map_df(I) %>%
+  cbind(fixtures, .) %>%
+  select(home, away, hgoal = expg1, agoal = expg2) %>%
+  results_to_table() %>%
+  rename_if(is.numeric,  funs(paste("pred", ., sep = "_"))) %>%
+  merge(.,
+        rename_if(league_table, is.numeric,  funs(paste("act", ., sep = "_"))),
+        by = "team") %>%
+  select_at(vars(-contains('played'))) %>%
+  gather("variable", "value", -team) %>%
+  separate(variable, into = c("source", "variable"), sep = "_") %>%
+  spread(source, value)
+
+p3 <- ggplot(test2, aes(x = act, y = pred)) +
+  stat_smooth(method = "lm") +
+  geom_point() +
+  theme_minimal() +
+  facet_wrap(~variable, scales = "free")
 
 ```
 
