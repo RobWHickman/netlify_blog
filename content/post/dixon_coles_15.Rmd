@@ -1,0 +1,196 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r libraries, warning=FALSE,message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(goalmodel)
+
+set.seed(3459)
+```
+
+```{r teams, warning=FALSE,message=FALSE}
+teams <- c("Arsenal",
+           "Blackburn_Rovers",
+           "Coventry_City",
+           "Dover_Athletic",
+           "Enfield_Town",
+           "Frimley_Green")
+
+```
+
+
+```{r create_fixtures, warning=FALSE,message=FALSE,include=FALSE}
+#https://stackoverflow.com/questions/54099990/is-there-an-efficient-algorithm-to-create-this-type-of-schedule
+create_fixtures <- function(teams) {
+  team1 <- as.character(teams[1])
+  other_teams <- as.character(teams[!teams %in% team1])
+  length <- length(other_teams)
+  
+  for(week in seq((length(teams)-1)*2)) {
+    
+    if(week %% 2 == 0) {
+      fixtures <- data.frame(home = c(team1, other_teams[1:2]),
+                             away = other_teams[length:3],
+                             gameweek = week)
+    } else {
+      fixtures <- data.frame(home = other_teams[length:3],
+                             away = c(team1, other_teams[1:2]),
+                             gameweek = week)
+      
+    }
+    
+    if(week == 1) {
+      fixtures_df <- fixtures 
+    } else {
+      fixtures_df <- rbind(fixtures_df, fixtures)
+    }
+    
+    other_teams <- c(other_teams[length], other_teams[1:length-1])
+  }
+  
+  return(fixtures_df)
+}
+
+fixtures <- create_fixtures(teams)
+```
+
+```{r show_fixtures, warning=FALSE,message=FALSE}
+head(fixtures)
+```
+
+
+```{r create_results, warning=FALSE,message=FALSE,include=FALSE}
+model <- list()
+model$parameters <- list(attack = seq(1, -1 + 2/length(teams), by = -2/(length(teams)-1)) %>%
+                           append(-sum(.)) %>%
+                           `names<-`(teams), 
+                         defense = seq(1, -1 + 2/length(teams), by = -2/(length(teams)-1)) %>%
+                           append(-sum(.)) %>%
+                           `names<-`(teams), 
+                         intercept = 0, 
+                         hfa = 0.3)
+
+model$all_teams <- teams
+
+model$model <- "poisson"
+model$maxgoal <- 8
+
+results <- predict_expg(model, fixtures$home, fixtures$away, return_df = TRUE) %>%
+  mutate(noise1 = rnorm(nrow(.), 0, 0.6),
+         noise2 = rnorm(nrow(.), 0, 0.6)) %>%
+  mutate(hgoal = round(expg1 + noise1,0 ),
+         agoal = round(expg2 + noise2,0),
+         home = as.factor(team1),
+         away = as.factor(team2)) %>%
+  merge(., fixtures, by = c("home", "away")) %>%
+  mutate_at(vars(hgoal:agoal), funs(ifelse(gameweek > 8, NA, .))) %>%
+  mutate_at(vars(hgoal:agoal), funs(replace(., .<0, 0))) %>%
+  select(home, away, hgoal, agoal, gameweek) %>%
+  arrange(gameweek, home)
+
+results
+```
+
+
+```{r}
+p1 <- results %>%
+  filter(!is.na(hgoal)) %>%
+  ggplot(., aes(x = away, y = home, fill = hgoal-agoal)) +
+  geom_tile() +
+  geom_label(aes(label = paste(hgoal, agoal, sep = "-")), fill = "white") +
+  scale_fill_gradient(low = "darkred", high = "green", guide = FALSE) +
+  scale_x_discrete(limits = levels(results$home), position = "top") +
+  scale_y_discrete(limits = rev(levels(results$away))) +
+  theme_minimal()
+
+p1
+```
+
+
+```{r}
+melt_results <- function(results_df) {
+  results_df %>%
+    gather(location, team,  -hgoal, -agoal) %>%
+    #calculate goals for/against the team
+    mutate(g_for = case_when(
+      location == "home" ~ hgoal,
+      location == "away" ~ agoal
+    )) %>%
+    mutate(g_ag = case_when(
+      location == "home" ~ agoal,
+      location == "away" ~ hgoal
+    )) 
+}
+
+results_to_table <- function(results_df) {
+  results_df %>%
+    melt_results(.) %>%
+  #3 points for a win, 1 for a draw
+  mutate(points = case_when(
+    g_for > g_ag ~ 3,
+    g_ag > g_for ~ 0,
+    g_for == g_ag ~ 1
+  )) %>%
+  #calculate goal difference for each match
+  mutate(gd = g_for - g_ag) %>%
+  group_by(team) %>%
+  #get the final statistics per team
+  summarise(games_played = n(),
+            gf = sum(g_for),
+            ga = sum(g_ag),
+            gd = sum(gd),
+            points = sum(points)) %>%
+  arrange(-points, -gd, -gf)
+}
+
+league_table <- results  %>%
+  filter(!is.na(hgoal)) %>%
+  select(-gameweek) %>%
+  results_to_table(.) %>%
+  print()
+
+```
+
+```{r}
+model <- results  %>%
+  filter(!is.na(hgoal))
+         
+model <- goalmodel(model$hgoal, model$agoal,  model$home, model$away)
+
+model
+```
+
+```{r}
+params <- model$parameters %>%
+  #select team parameters
+  .[grepl("defense|attack", names(.))] %>%
+  do.call(cbind, .) %>%
+  as.data.frame() %>%
+  rownames_to_column("team")
+
+#munge the other parameters into text
+#the home field advantage and the intercept
+other_params <- model$parameters %>%
+  .[!grepl("defense|attack", names(.))] %>%
+  as.data.frame() %>%
+  mutate_if(is.numeric, round, 3) %>%
+  #glue into one object
+  glue::glue_data("intercept: {.$intercept},\n hfa: {.$hfa}")
+
+#plot team paramters over attack/defense axis
+p2 <- ggplot(params, aes(x = attack, y = defense, label = team)) +
+  #add a best fit linear regression line
+  stat_smooth(method = "lm", se = FALSE) +
+  geom_point() +
+  ggrepel::geom_text_repel(nudge_y = 0.1) +
+  #annotate the other parameters in
+  annotate("text", y = min(params$defense), x = max(params$attack)*0.6, label = other_params, hjust = 0) +
+  theme_minimal()
+
+p2
+
+```
+

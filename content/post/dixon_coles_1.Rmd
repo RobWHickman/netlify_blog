@@ -19,6 +19,7 @@ categories: []
 ```{r libraries, warning=FALSE,message=FALSE}
 library(tidyverse)
 library(magrittr)
+library(goalmodel)
 
 set.seed(3459)
 ```
@@ -34,7 +35,7 @@ For this example I'm going to use a fictional league in a microstate that contai
 ```{r generate_results, warning=FALSE,message=FALSE}
 teams <- c("Argentina", "Bosnia_&_Herzegovina", "Costa_Rica", "DR_Congo", "Estonia", "Fiji", "Gibraltar", "Holy_See")
 
-
+model <- list()
 model$parameters <- list(attack = c(0.959,0.735,0.489,0.124,-0.157,-0.421,-0.762) %>%
                            append(-sum(.)) %>%
                            `names<-`(teams), 
@@ -53,15 +54,19 @@ fixtures <- crossing(teams, teams) %>%
   rename(home = teams, away = teams1) %>%
   filter(home != away)
 
-predictions <- predict_expg(model, fixtures$home, fixtures$away, return_df = TRUE) %>%
-  mutate(hgoal = round(expg1, 0),
-         agoal = round(expg2, 0)) %>%
+results <- predict_expg(model, fixtures$home, fixtures$away, return_df = TRUE) %>%
+  mutate(noise1 = rnorm(nrow(.), 0, 0.5),
+         noise2 = rnorm(nrow(.), 0, 0.5)) %>%
+  mutate(hgoal = round(expg1 + noise1,0 ),
+         agoal = round(expg2 + noise2,0)) %>%
   select(home = team1, away = team2, hgoal, agoal) %>%
-  results_to_table()
+  mutate_each(funs(replace(., .<0, 0)))
+
+results
 ```
 
 
-```{r get_results, warning=FALSE,message=FALSE}
+```{r get_results, warning=FALSE,message=FALSE,eval=FALSE}
 
 results <- c(
   #argentina
@@ -82,7 +87,7 @@ The data is made up (though if you want real match results they can be easily sc
 
 The small league means it's possible to glance all results at once and get a feel for how good the teams are relative to each other
 
-```{r results_matrix, warning=FALSE,message=FALSE}
+```{r results_matrix, warning=FALSE,message=FALSE,eval=FALSE}
 results_to_matrix <- function(results_df) {
   results_df %>%
     mutate(result = paste(hgoal, agoal, sep = "-")) %>%
@@ -98,7 +103,7 @@ results_matrix <- results_to_matrix(results) %>%
 
 which we can also easily convert into a final league table:
 
-```{r league_table_func, warning=FALSE,message=FALSE}
+```{r league_table_func, warning=FALSE,message=FALSE,eval=FALSE}
 melt_results <- function(results_df) {
   results_df %>%
     gather(location, team,  -hgoal, -agoal) %>%
@@ -136,7 +141,7 @@ results_to_table <- function(results_df) {
 ```
 
 
-```{r league_table, warning=FALSE,message=FALSE}
+```{r league_table, warning=FALSE,message=FALSE,eval=FALSE}
 #calculate the final league table from these results
 league_table <- results  %>%
   results_to_table(.) %>%
@@ -155,7 +160,7 @@ Fortunately, packages already exist in R ( [1](https://github.com/opisthokonta/g
 
 *indeed, the regista package by default has a greater _negative_ number indicating a stronger defence
 
-```{r dc_model, warning=FALSE,message=FALSE}
+```{r dc_model, warning=FALSE,message=FALSE,eval=FALSE}
 library(goalmodel)
 
 #model the results to get attack/defense parameters for each team
@@ -168,7 +173,7 @@ So we can see that for instance Atletico are much stronger in terms of attack an
 
 Plotting these parameters gives:
 
-```{r plot_parameters, warning=FALSE,message=FALSE}
+```{r plot_parameters, warning=FALSE,message=FALSE,eval=FALSE}
 #munge the team parameters together
 params <- model$parameters %>%
   #select team parameters
@@ -202,7 +207,7 @@ p1
 
 which shows the same thing. Also note the the best fit line goes through the origin, which is by design as we'll come onto.
 
-```{r goals_model, warning=FALSE,message=FALSE}
+```{r goals_model, warning=FALSE,message=FALSE,eval=FALSE}
 #get the average goals scored/conceeded for each team
 goals_per_teams <- results %>%
   melt_results() %>%
@@ -234,7 +239,7 @@ Where Atletico Awesome fairly handly beat Dinamo Decent.
 
 Of course, Atletico are almost certainly a better team than Dinamo so we might expect them to win, but if we peek at the results we see that they actually drew this game 2-2.
 
-```{r check_result, warning=FALSE,message=FALSE}
+```{r check_result, warning=FALSE,message=FALSE,eval=FALSE}
 results %>%
   filter(home == "Dinamo Decent" & away == "Atletico Awesome")
 ```
@@ -245,13 +250,13 @@ Something our model is clearly missing, which should be obvious to any real life
 
 For the purposes of our simple model, this (termed hfa for Home Field Advantage) is just going to involve seeing how many more goals were scored at home than away in the 12 game season.
 
-```{r simple_hfa, warning=FALSE,message=FALSE}
+```{r simple_hfa, warning=FALSE,message=FALSE,eval=FALSE}
 hfa <- mean(results$hgoal - results$agoal)
 ```
 
 Reworking this into our simple model gives
 
-```{r add_hfa, warning=FALSE,message=FALSE}
+```{r add_hfa, warning=FALSE,message=FALSE,eval=FALSE}
 home_goals <- mean(c(goals_per_teams$av_scored[goals_per_teams$team == home],
                      goals_per_teams$av_conceeded[goals_per_teams$team == away])) + hfa
 
@@ -266,7 +271,7 @@ an expected score that falls within the range of plausibility.
 
 If we follow this method of prediction for every game 
 
-```{r run_simple_model, warning=FALSE,message=FALSE}
+```{r run_simple_model, warning=FALSE,message=FALSE,eval=FALSE}
 simple_model <- function(home, away) {
   #get the predictions for this simple model
   home_goals <- mean(c(goals_per_teams$av_scored[goals_per_teams$team == home],
@@ -289,7 +294,7 @@ results_matrix_predicted <- results_predicted %>%
   print()
 ```
 
-```{r print_actual_matrix, warning=FALSE,message=FALSE}
+```{r print_actual_matrix, warning=FALSE,message=FALSE,eval=FALSE}
 results_matrix
 ```
 
@@ -297,7 +302,7 @@ These aren't bad! They capture that better teams score more and conceed less tha
 
 But intuitively we should know that this model is an oversimplification. Though passable for pub calculations I don't think anyone would agree that this is a valid way to accurately predict football results. It's most important quality is that it is _falsifiable_. We can quantify just how wrong we think this model is
 
-```{r}
+```{r,eval=FALSE}
 table_regression <- results_predicted %>%
   results_to_table() %>%
   rename_if(is.numeric,  funs(paste("pred", ., sep = "_"))) %>%
@@ -322,7 +327,7 @@ Looking at this we've got pretty good correlations for all 4 variables tested. W
 
 
 
-```{r}
+```{r,eval=FALSE}
 fixtures <- results %>%
   crossing(home, away) %>%
   filter(home != away)
