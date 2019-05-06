@@ -54,7 +54,8 @@ create_fixtures <- function(teams) {
   return(fixtures_df)
 }
 
-fixtures <- create_fixtures(teams)
+fixtures <- create_fixtures(teams) %>%
+  mutate_if(is.factor, as.character)
 ```
 
 ```{r show_fixtures, warning=FALSE,message=FALSE}
@@ -86,10 +87,10 @@ results <- predict_expg(model, fixtures$home, fixtures$away, return_df = TRUE) %
          home = as.factor(team1),
          away = as.factor(team2)) %>%
   merge(., fixtures, by = c("home", "away")) %>%
-  mutate_at(vars(hgoal:agoal), funs(ifelse(gameweek > 8, NA, .))) %>%
   mutate_at(vars(hgoal:agoal), funs(replace(., .<0, 0))) %>%
   select(home, away, hgoal, agoal, gameweek) %>%
-  arrange(gameweek, home)
+  arrange(gameweek, home) %>%
+  filter(gameweek <= 8)
 
 results
 ```
@@ -113,6 +114,7 @@ p1
 ```{r}
 melt_results <- function(results_df) {
   results_df %>%
+    select(home, away, hgoal, agoal) %>%
     gather(location, team,  -hgoal, -agoal) %>%
     #calculate goals for/against the team
     mutate(g_for = case_when(
@@ -155,16 +157,13 @@ league_table <- results  %>%
 ```
 
 ```{r}
-model <- results  %>%
-  filter(!is.na(hgoal))
-         
-model <- goalmodel(model$hgoal, model$agoal,  model$home, model$away)
-
-model
+model <- goalmodel(results$hgoal, results$agoal,  results$home, results$away) %>%
+  .$parameters %>%
+  print()
 ```
 
 ```{r}
-params <- model$parameters %>%
+params <- model %>%
   #select team parameters
   .[grepl("defense|attack", names(.))] %>%
   do.call(cbind, .) %>%
@@ -173,7 +172,7 @@ params <- model$parameters %>%
 
 #munge the other parameters into text
 #the home field advantage and the intercept
-other_params <- model$parameters %>%
+other_params <- model %>%
   .[!grepl("defense|attack", names(.))] %>%
   as.data.frame() %>%
   mutate_if(is.numeric, round, 3) %>%
@@ -234,5 +233,146 @@ head(simulated_poisson)
 p3 + geom_density(data = simulated_poisson, aes(x = dist, fill = location), adjust = 10, alpha = 0.2) +
   scale_fill_manual(values = c("red", "blue"), guide = FALSE) +
   facet_wrap(~location)
+```
+
+```{r}
+basic_model <- results %>%
+  melt_results() %>%
+  group_by(team) %>%
+  summarise(av_goals = mean(g_for),
+            av_conceed = mean(g_ag)) %>%
+  print()
+```
+
+```{r}
+unplayed_games <- filter(fixtures, gameweek > 8)
+```
+
+```{r}
+coventry_games <- unplayed_games %>%
+  filter(grepl("Coventry_City", home)) %>%
+  print()
+
+```
+
+```{r}
+attack_parameters <- basic_model$av_goals %>% `names<-`(basic_model$team)
+
+e_results <- paste(attack_parameters[coventry_games$home],
+                   attack_parameters[coventry_games$away],
+                   sep = "-") %>%
+  `names<-`(c(paste(coventry_games$home, coventry_games$away, sep = "-"))) %>%
+  print()
+```
+
+```{r}
+defence_parameters <- basic_model$av_conceed %>% `names<-`(basic_model$team)
+
+e_results <- paste(attack_parameters[coventry_games$home]*defence_parameters[coventry_games$away],
+                   attack_parameters[coventry_games$away]*defence_parameters[coventry_games$home],
+                   sep = "-") %>%
+  `names<-`(c(paste(coventry_games$home, coventry_games$away, sep = "-"))) %>%
+  print()
+
+```
+```{r}
+home_advantage <- mean(results$hgoal, na.rm = TRUE) / mean(results$agoal, na.rm = TRUE)
+
+e_results <- paste(attack_parameters[coventry_games$home]*defence_parameters[coventry_games$away] * home_advantage,
+                   attack_parameters[coventry_games$away]*defence_parameters[coventry_games$home],
+                   sep = "-") %>%
+  `names<-`(c(paste(coventry_games$home, coventry_games$away, sep = "-"))) %>%
+  print()
+
+```
+
+```{r}
+predict_results <- function(home, away, parameters) {
+  e_goals_home <- parameters$attack[home] * parameters$defence[away] * home_advantage
+  e_goals_away <- parameters$attack[away] * parameters$defence[home]
+  
+  df <- data.frame(home = home, away = away, e_hgoal = e_goals_home, e_agoal = e_goals_away)
+  
+}
+
+basic_parameters <- basic_model %>%
+  rename_if(is.numeric, function(x) c("attack", "defence")) %>%
+  select(-team) %>%
+  as.list() %>%
+  lapply(., function(x){names(x) <- teams;return(x)}) %>%
+  print()
+  
+
+```
+
+```{r}
+results2 <- map2_df(unplayed_games$home, unplayed_games$away, 
+                    predict_results,
+                    basic_parameters)
+
+```
+
+```{r}
+e_results <- map2_df(results$home, results$away, 
+          predict_results,
+          basic_parameters) 
+```
+
+```{r}
+likelihoods <- data.frame(lik_hgoal = dpois(results$hgoal, e_results$e_hgoal, log = TRUE),
+                          lik_agoal = dpois(results$agoal, e_results$e_agoal, log = TRUE)) %>%
+  cbind(results, . ) %>%
+  merge(., e_results, by = c("home", "away")) %>%
+  select(home, away, hgoal, e_hgoal, lik_hgoal, agoal, e_agoal, lik_agoal)
+```
+
+```{r}
+log_likehood = sum(likelihoods$lik_hgoal, likelihoods$lik_agoal)
+```
+
+```{r}
+basic_parameters$hfa = 0.1
+starting_params <- unlist(basic_parameters)
+
+optimise_params <- function(params, results) {
+  attack_params <- params %>%
+    .[grepl("attack", names(.))] %>%
+    `names<-`(teams)
+  defence_params <- params %>%
+    .[grepl("defence", names(.))] %>%
+    `names<-`(teams)
+  hfa = params["hfa"]
+  
+  e_results <- map2_df(results$home,
+                       results$away,
+                       function(home, away, attack_params, defence_params) {
+                         e_home_goals = exp(log(attack_params[home]) + log(defence_params[away]) * log(hfa))
+                         e_away_goals = exp(log(attack_params[away]) + log(defence_params[home]))
+                         
+                         return(data.frame(e_home_goals, e_away_goals))
+
+                    },
+                    attack_params = attack_params, defence_params = defence_params)
+  
+  log_lik_terms <- sum(
+    stats::dpois(results$hgoal, lambda = e_results$e_home_goals),
+    stats::dpois(results$agoal, lambda = e_results$e_away_goals)
+  )
+  
+  i <<- i + 1
+  vals[[i]] <<- params
+  liks[[i]] <<- log_lik_terms
+
+  return(log_lik_terms)
+}
+i <- 0
+vals <- list()
+liks <- list()
+
+optim_res <- optim(par = starting_params, fn = optimise_params,
+                   results = results,
+                   method = "BFGS") %>%
+  .$par
+
 ```
 
