@@ -2,6 +2,7 @@
 title: "Untitled"
 output: html_document
 ---
+_There are various claims in this post that are not strictly true and indeed, this post does not even actaully model the main points of the Dixon and Coles 1997 paper, but please not the title says part 1 and some of these things will be addressed in later posts_
 
 ```{r libraries, warning=FALSE,message=FALSE}
 library(tidyverse)
@@ -10,6 +11,8 @@ library(goalmodel)
 
 set.seed(3459)
 ```
+
+##Set up
 
 Lets imagine a summer league between 6 English football clubs where each team plays each other twice (once at home and once away)
 
@@ -79,8 +82,8 @@ model$model <- "poisson"
 model$maxgoal <- 8
 
 results <- predict_expg(model, fixtures$home, fixtures$away, return_df = TRUE) %>%
-  mutate(noise1 = rnorm(nrow(.), 0, 0.6),
-         noise2 = rnorm(nrow(.), 0, 0.6)) %>%
+  mutate(noise1 = rnorm(nrow(.), 0, 0.5),
+         noise2 = rnorm(nrow(.), 0, 0.5)) %>%
   mutate(hgoal = round(expg1 + noise1,0 ),
          agoal = round(expg2 + noise2,0),
          home = as.factor(team1),
@@ -171,14 +174,86 @@ league_table <- results  %>%
 
 ```
 
-Where teams positions are nicely rank ordered.
+Where teams positions are nicely rank ordered (the data for this example is fairly curated so it's not that surprising).
 
-However, with two games to play each, there's an interesting
+##Predictions
 
-However, this still leave 
+With two rounds to go, there's still 6 fixtures we might want to predict (to try and judge which team will end up where, or just to bet on the remaining games).
+
+This are:
+
+```{r remaining_fixtures, warning=FALSE,message=FALSE}
+unplayed_games <- fixtures %>%
+  filter(gameweek > 8) %>%
+  print()
+```
+
+Before we can predict these though we need to understand how scoring in football is distributed.
+
+Using real data from the engsoccerdata package we can get the results of all 32576 English football league games between August 2000 and May 2016. If we melt this to get the goals scored by each team by their location we get a df of 65152 records such as:
+
+```{r real_world_data, warning=FALSE,message=FALSE}
+real_data <- engsoccerdata::england %>%
+  filter(Season > 1999) %>%
+  select(home, away = visitor, hgoal, agoal = vgoal) %>%
+  melt_results() %>%
+  select(-hgoal, -agoal) %>%
+  mutate(data = "real")
+
+head(real_data)
+```
+Plotting this shows a nice humped distribution with slightly offset peaks for home and away. 
+
+```{r plot_real_goal_distributions, warning=FALSE,message=FALSE}
+p2 <- real_data %>%
+  ggplot(., aes(x = g_for, fill = location)) +
+  geom_density(adjust = 8, alpha = 0.5) +
+  scale_fill_manual(values = c("red", "blue")) +
+  labs(title = "Goals scored at home and away in English football",
+       subtitle = "data from 32.5k matches 2000-2016",
+       x = "goals scored",
+       y = "density") +
+  theme_minimal()
+
+p2
+
+```
+
+That is to say, teams score more on average when playing at home than away.
+
+```{r}
+real_data_means <- real_data %>%
+    group_by(location) %>%
+    summarise(mean_scored = mean(g_for)) %>%
+  print()
+
+```
+
+Goals in games are both relatively sparse, and relatively stochastic, football is a low scoring game where goals are evenly distributed throughout the game. In theory any attack made by a team i has a probability of being scored dependent upon the strength of team i's attack (α~i~) which is independent of all the other attacks that team has made.
+
+(there is some reason to doubt this may be the case, but as I said above, for now this is a fine generalisation)
+
+By grouping all teams together into "home" and "away" categories (in a league setting each team will play each other home and away so this should average out) and taking the average number of goals scored per match as the Poisson mean (λ) we can see how well our above graph fits a simulated Poisson process.
+
+```{r simulated_poisson, warning=FALSE,message=FALSE}
+simulated_poisson <- real_data_means %>%
+  split(f = .$location) %>%
+  lapply(., function(x) df = data.frame(dist = rpois(100000, x$mean_scored),
+                                        location = x$location)) %>%
+  map_df(I) %>%
+  mutate(data = "simulated") 
+
+#add these distributions to the plot
+p2 + geom_density(data = simulated_poisson, aes(x = dist), fill = NA, adjust = 8, alpha = 0.2) +
+  scale_fill_manual(values = c("red", "blue"), guide = FALSE) +
+  facet_wrap(~location)
+
+```
+
+It's not perfect. But it's not a bad fit either
 
 ```{r, include = FALSE}
-model <- goalmodel(results$home, results$away, results$hgoal, results$agoal)
+model <- goalmodel(results$hgoal, results$agoal, results$home, results$away)$parameters
 
 params <- model %>%
   #select team parameters
