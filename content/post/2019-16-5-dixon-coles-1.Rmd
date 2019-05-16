@@ -1,7 +1,7 @@
 ---
 title: "An Introduction to Modelling Soccer Matches in R (part 1)"
 author: "Robert Hickman"
-date: '2019-04-30'
+date: '2019-05-16'
 output:
   html_document:
     df_print: paged
@@ -506,8 +506,8 @@ To get an idea of whether or not this is good, let's quickly run the model with 
 # do the same but set each teams attack and defence to 1
 # expect model to be worse as assumes all teams are equal
 equal_parameters <- list(
-  attack = rep(1, length(teams)) %>% `names<-`(teams),
-  defence = rep(1, length(teams)) %>% `names<-`(teams)
+  alpha = rep(1, length(teams)) %>% `names<-`(teams),
+  beta = rep(1, length(teams)) %>% `names<-`(teams)
 )
 
 # predict results and munge through to find sum of log likelihoods
@@ -527,7 +527,9 @@ worse_log_likelihood
 ```
 There will exist some parameters (α and β for each team, and γ for the home field advantage) that will minimise this negative log likehood. That is to say, they will predict the results of the already played games most accurately.
 
-If we want to find those 
+If we want to find those we can use the optim() function in the stats package. This will take a vector of paramaters and iterate while slightly changing their values until it gets the lowest value it can find as the output for a supplied function.
+
+The function that we want to minimise the value from is a combination of those above. First we want to relist parameters (as optim takes parameters as a vector), then use those parameters to predict the result. The negative log likelihood to be minised is then calculated from comparing those predicted and actual results.
 
 ```{r optim_function, warning=FALSE,message=FALSE}
 optimise_params <- function(parameters, results) {
@@ -559,6 +561,7 @@ optimise_params <- function(parameters, results) {
 
 ```
 
+The three separate functions are coded out separately so we can tinker with them shortly:
 
 ```{r optim_subfunctions, warning=FALSE,message=FALSE}
 # optim requires parameters to be supplied as a vector
@@ -567,14 +570,14 @@ relist_params <- function(parameters) {
   parameter_list <- list(
     # alpha = attack rating
     alpha = parameters %>%
-      .[grepl("attack", names(.))] %>%
+      .[grepl("alpha", names(.))] %>%
       `names<-`(teams),
     # beta = defence rating
     beta = parameters %>%
-      .[grepl("defence", names(.))] %>%
+      .[grepl("beta", names(.))] %>%
       `names<-`(teams),
     # gamma = home field advantage
-    gamma = parameters["hfa"]
+    gamma = parameters["gamma"]
   )
   
   return(parameter_list)
@@ -607,12 +610,14 @@ calculate_log_likelihood <- function(results, e_results) {
 }
 ```
 
+We'll supply parameters that are all equal to 1 to optim to stop it falling into local minima that might affect the 'optimal' parameters it finds. The unlisted parameters are then supplied to optim along with the optimise_parameters() function.
+
 ```{r basic_optimal_parameters, warning=FALSE,message=FALSE}
 # start with all parameters equal
 equal_parameters <- list(
-  attack = rep(1, length(teams)) %>% `names<-`(teams),
-  defence = rep(1, length(teams)) %>% `names<-`(teams),
-  hfa = 1
+  alpha = rep(1, length(teams)) %>% `names<-`(teams),
+  beta = rep(1, length(teams)) %>% `names<-`(teams),
+  gamma = 1
 )
 
 # run optim over the functions with these initial parameters
@@ -623,14 +628,36 @@ optimised_parameters <- optim(
   fn = optimise_params,
   # extra arguments to function
   results = results,
-  # BFGS equation with 10k iterations max
-  method = "BFGS",
+  # Nelder-Mead equation with 10k iterations max
+  method = "Nelder-Mead",
   control = list(maxit = 10000)
   )
 
 ```
 
-```{r inverted_beta_parameter, warning=FALSE,message=FALSE}
+We can take the $par element of the output of this to find the parameters for which the negative log likelihood is minimised
+
+```{r basic_optimisation, warning=FALSE,message=FALSE}
+# display the parameters found to minimise
+# the negative log likelihood
+optimised_parameters$par
+```
+
+As expected, alpha decreases as teams get worse, and beta increases. The found gamma (1.166) is only marginally higher than the 1.091 for our simple model.
+
+The $value element gives the negative log likelihood calculated for these parameters
+
+```{r basic_min_log_likelihood, warning=FALSE,message=FALSE}
+optimised_parameters$value
+```
+
+Which is much smaller than the ~100 we got from our very basic model.
+
+## Tinkering
+
+This is all very well but there's still some small improvements we can make.
+
+```{r inverted_beta_parameter, warning=FALSE,message=FALSE,eval=FALSE}
 # change prediction to inverse defence parameters
 predict_results <- function(home, away, param_list) {
   e_goals_home <- (param_list$alpha[home] / param_list$beta[away]) * param_list$gamma
@@ -647,7 +674,7 @@ optimised_parameters2 <- optim(
   par = unlist(equal_parameters),
   fn = optimise_params,
   results = results,
-  method = "BFGS",
+  method = "Nelder-Mead",
   control = list(maxit = 10000))
 ```
 
@@ -667,9 +694,9 @@ predict_results <- function(home, away, param_list) {
 # initialise parameters as all 0
 # log(1) = 0
 equal_parameters <- list(
-  attack = rep(0, length(teams)) %>% `names<-`(teams),
-  defence = rep(0, length(teams)) %>% `names<-`(teams),
-  hfa = 0
+  alpha = rep(0, length(teams)) %>% `names<-`(teams),
+  beta = rep(0, length(teams)) %>% `names<-`(teams),
+  gamma = 0
 )
 
 # re run using new subfunction
@@ -677,6 +704,8 @@ optimised_parameters3 <- optim(
   par = unlist(equal_parameters), 
   fn = optimise_params,
   results = results,
+  # using log will avoid non-finite differences 
+  # so can use BFGS model
   method = "BFGS",
   control = list(maxit = 10000))
 
@@ -688,14 +717,14 @@ optimised_parameters3 <- optim(
 relist_params <- function(parameters) {
   parameter_list <- list(
     alpha = parameters %>%
-      .[grepl("attack", names(.))] %>%
+      .[grepl("alpha", names(.))] %>%
       append(prod(sum(.), -1), .) %>%
       `names<-`(teams),
     beta = parameters %>%
-      .[grepl("defence", names(.))] %>%
+      .[grepl("beta", names(.))] %>%
       append(prod(sum(.), -1), .) %>%
       `names<-`(teams),
-    gamma = parameters["hfa"]
+    gamma = parameters["gamma"]
   )
   
   return(parameter_list)
@@ -703,9 +732,9 @@ relist_params <- function(parameters) {
 
 # remove the first team from the attack and defence ratings
 equal_parameters <- list(
-  attack = rep(0, length(teams)-1) %>% `names<-`(teams[2:length(teams)]),
-  defence = rep(0, length(teams)-1) %>% `names<-`(teams[2:length(teams)]),
-  hfa = 0
+  alpha = rep(0, length(teams)-1) %>% `names<-`(teams[2:length(teams)]),
+  beta = rep(0, length(teams)-1) %>% `names<-`(teams[2:length(teams)]),
+  gamma = 0
 )
 
 optimised_parameters4 <- optim(
@@ -722,15 +751,15 @@ optimised_parameters4 <- optim(
 relist_params <- function(parameters) {
   parameter_list <- list(
     alpha = parameters %>%
-      .[grepl("attack", names(.))] %>%
+      .[grepl("alpha", names(.))] %>%
       append(prod(sum(.), -1), .) %>%
       `names<-`(teams),
     beta = parameters %>%
-      .[grepl("defence", names(.))] %>%
+      .[grepl("beta", names(.))] %>%
       append(prod(sum(.), -1), .) %>%
       `names<-`(teams),
-    gamma = parameters["hfa"],
-    phi = parameters["intercept"]
+    gamma = parameters["gamma"],
+    phi = parameters["phi"]
   )
   return(parameter_list)
 }
@@ -747,7 +776,7 @@ predict_results <- function(home, away, param_list) {
 }
 
 # add intercept to the initial parameters
-equal_parameters$intercept = 0
+equal_parameters$phi = 0
 
 # initialise i to collect data about theoptimisation process at each iteration
 i <- 0
@@ -801,13 +830,17 @@ p4 <- optimised_parameters5$par %>%
   geom_point() +
   ggrepel::geom_text_repel(aes(label = team)) +
   stat_smooth(method = "lm", se = FALSE) +
+  labs(title = "Optimal parameters for teams",
+       subtitle = "given first 8 weeks of results",
+       x = "alpha (more likely to score ->)",
+       y = "beta (less likely to concede ->)") +
   theme_minimal()
 
 p4
 ```
 
 
-```{r predict_results, warning=FALSE,message=FALSE}
+```{r predict_results2, warning=FALSE,message=FALSE}
 predicted_results <- predict_results(unplayed_games$home,
                       unplayed_games$away, 
                       relist_params(optimised_parameters5$par)) %>%

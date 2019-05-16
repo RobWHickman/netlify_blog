@@ -1,0 +1,409 @@
+---
+title: An Introduction to Discrete Choice Analysis in R
+author: Robert Hickman
+date: '2019-04-24'
+slug: dca_1
+output: pdf_document
+categories: []
+tags:
+  - economics
+  - behaviour
+  - models
+header:
+  caption: ''
+  image: ''
+---
+
+
+
+<p>When studying why people make the economic choices they do, we need some way of quantifying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:</p>
+<ul>
+<li>the utility of taking the bus</li>
+<li>the utility of riding my bike</li>
+</ul>
+<p>For instance, if it looks like it might rain, I’m more likely to take the bus as getting soaked reduces the utility of cycling to work. Conversely, if I glance at my watch and see that I’ve just missed a bus, the utility of taking the bus decreases as I don’t want to have to wait at the bus stop.</p>
+<p>A frequent criticism of economics is that it assumes some <em>homo economicus</em> who will always choose that which maximizes this utility. Lets say the utilities of the two commute choices were only governed by p(rain) and e(wait time) respectively, then for a set probability of rain and expected wait time for the bus, I should always choose the same mode of transport. This is clearly not how humans (or any other animal) work and so for the last 50 years <a href="https://eml.berkeley.edu/~mcfadden/discrete/ch5.pdf">models of probabilistic choice</a> have been used instead.</p>
+<p>The advantage to this is that by studying the % of times I decide to ride my bike into work vs catching the bus, for any set of parameters, it’s possible to derive the relative utility of that method of transportation. Then if a novel combination of rain/waiting comes up, it’s possible to predict the chance I will choose to ride my bike and the chance I will take the bus.</p>
+<p>However, many of these models are fairly dense to approach without formal economic training, so I wanted to write a guide to deriving and using them in R. For the first post, I’ll consider a toy problem with a simple binary choice paradigm to get some of the basic ideas of random utility modelling down and hopefully build from that in later posts.</p>
+<div id="example-problem" class="section level1">
+<h1>Example Problem</h1>
+<p>Summer is here and it’s time for the annual Behavioural Economics departmental picnic! Due to the collapsing global climate, this year is the hottest yet and you are eagerly anticipating sitting in <a href="https://en.wikipedia.org/wiki/Grantchester_Meadows">Granchester Meadows</a> with your favourite chilled soft drink and discussing your research.</p>
+<p>Unfortunately, you’ve been stuck in the office for most of the afternoon coding up your latest model and will arrive late. Due to the hot weather, most of the drinks have already been consumed and what’s left needs to be rationed. Luckily, you are all very rational behavioural economists who know that if you can find everyone’s utility for the two remaining drinks flavours, you can apportion them appropriately.</p>
+<p>The two remaining drinks are <a href="https://media2.giphy.com/media/3oriffxcqE2syOd5Ty/giphy.gif">buzz cola</a> which comes in cans of 330ml which is very tasty, and <a href="https://comb.io/qbzoUv.gif">slurm</a> which comes in 2 litre bottles (which can be poured into any amount).</p>
+<p>Someone quickly codes up a binary choice task where PhD students have to choose between 1,2, or 3 330ml cans of the desirable Buzz Cola, or some amount between 0 and 2000ml of the slightly less valued Slurm.</p>
+<p>Having spent 10 minutes and 1800 trials doing the task your data looks like</p>
+<pre class="r"><code>#show the first ten trials
+head(trial_data, 10)</code></pre>
+<pre><code>##      buzz_cola slurm    choice
+## 1446         3   800 buzz_cola
+## 227          1   800     slurm
+## 209          1   800 buzz_cola
+## 1497         3   800 buzz_cola
+## 1542         3  1200 buzz_cola
+## 34           1     0 buzz_cola
+## 1493         3   800 buzz_cola
+## 1028         2  1600     slurm
+## 656          2     0 buzz_cola
+## 266          1   800     slurm</code></pre>
+<p>If we group by each combination of n(buzz cola cans),ml(slurm) we can work out the proportion of buzz cola choices</p>
+<pre class="r"><code>choice_data &lt;- trial_data %&gt;%
+  #code buzz cola choice as a binary variable
+  mutate(buzz_cola_choice = case_when(
+    choice == &quot;buzz_cola&quot; ~ 1,
+    choice == &quot;slurm&quot; ~ 0
+  )) %&gt;%
+  #group by combinations and find the proportion of buzz cola choices
+  group_by(buzz_cola, slurm) %&gt;%
+  summarise(fraction_choose_cola = mean(buzz_cola_choice))
+
+#show the grouped choice data
+choice_data</code></pre>
+<pre><code>## # A tibble: 18 x 3
+## # Groups:   buzz_cola [3]
+##    buzz_cola slurm fraction_choose_cola
+##        &lt;dbl&gt; &lt;dbl&gt;                &lt;dbl&gt;
+##  1         1    0                 0.94 
+##  2         1  400                 0.580
+##  3         1  800                 0.13 
+##  4         1 1200.                0.01 
+##  5         1 1600                 0    
+##  6         1 2000                 0    
+##  7         2    0                 1    
+##  8         2  400                 0.96 
+##  9         2  800                 0.72 
+## 10         2 1200.                0.28 
+## 11         2 1600                 0.04 
+## 12         2 2000                 0    
+## 13         3    0                 1    
+## 14         3  400                 1    
+## 15         3  800                 1    
+## 16         3 1200.                0.88 
+## 17         3 1600                 0.34 
+## 18         3 2000                 0.02</code></pre>
+<p>and we can plot a logistic regression of this data to see how much x cans of buzz cola are worth in y ml of slurm</p>
+<pre class="r"><code>#quick binomial smoothing function
+#from https://ggplot2.tidyverse.org/reference/geom_smooth.html
+binomial_smooth &lt;- function(...) {
+  geom_smooth(method = &quot;glm&quot;, method.args = list(family = &quot;binomial&quot;), ...)
+}
+
+#plot the logistic regression on the entire choice data
+p1 &lt;- choice_data %&gt;%
+  ggplot(., aes(x = slurm, y = fraction_choose_cola, colour = factor(buzz_cola))) +
+  geom_point() +
+  binomial_smooth(se = FALSE) +
+  #add in some aesthetics
+  scale_colour_discrete(name = &quot;buzz cola cans \n(x * 330ml)&quot;) +
+  labs(title = &quot;what drink do you want for the departmental picnic?&quot;,
+       subtitle = &quot;simulated data&quot;,
+       x = &quot;slurm (/ml)&quot;,
+       y = &quot;fraction of buzz cola choices&quot;) +
+  theme_minimal()
+
+p1</code></pre>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_data-1.png" width="672" /></p>
+<p>We then need to solve your utilities of buzz cola and slurm. To do this we need to maximize the sum of the log likelihood of each choice you make.</p>
+<p>Basically, for each trial when you are presented with x ml of buzz cola (the number of cans multiplied by 330ml per can) or y ml of slurm there are utility parameters (rho) for both of these which mean you have some total utility of offered buzz cola and total utility of offered slurm.</p>
+<p>As a rational econ PhD student, you are pretty much always going to choose whichever of these utilities is greater. E.g:</p>
+<pre class="r"><code>#make up some utility parameters
+buzz_cola_rho &lt;- 2
+slurm_rho &lt;- 1
+
+trial_utilities &lt;- trial_data %&gt;%
+  #total utility of each offer is the amount * utility_parameter
+  mutate(buzz_cola_utility = buzz_cola * 330 * buzz_cola_rho,
+         slurm_utility = slurm * slurm_rho) %&gt;%
+  #which utility is greater
+  mutate(greater_utility = case_when(
+    buzz_cola_utility &gt;= slurm_utility ~ &quot;buzz_cola&quot;,
+    slurm_utility &gt; buzz_cola_utility ~ &quot;slurm&quot;
+  )) %&gt;%
+  #organise columns
+  select(buzz_cola, buzz_cola_utility, 
+         slurm, slurm_utility,
+         greater_utility, choice)
+
+#print first 10 trials
+trial_utilities[1:10,]</code></pre>
+<pre><code>##    buzz_cola buzz_cola_utility slurm slurm_utility greater_utility
+## 1          3              1980   800           800       buzz_cola
+## 2          1               660   800           800           slurm
+## 3          1               660   800           800           slurm
+## 4          3              1980   800           800       buzz_cola
+## 5          3              1980  1200          1200       buzz_cola
+## 6          1               660     0             0       buzz_cola
+## 7          3              1980   800           800       buzz_cola
+## 8          2              1320  1600          1600           slurm
+## 9          2              1320     0             0       buzz_cola
+## 10         1               660   800           800           slurm
+##       choice
+## 1  buzz_cola
+## 2      slurm
+## 3  buzz_cola
+## 4  buzz_cola
+## 5  buzz_cola
+## 6  buzz_cola
+## 7  buzz_cola
+## 8      slurm
+## 9  buzz_cola
+## 10     slurm</code></pre>
+<p>It’s clear to see that mostly the choices fall in line with these made up parameters. The two unexpected choices could be because of random participant mistakes, but is more likely due to our parameters not yet being optimized (more on that in a sec), or because even rational actors may sometimes choose something which seems to have less utility (e.g. when sampling, or as utilities change e.g. via satiety).</p>
+<p>In the above example, given the relative utilities of the two offered drinks, it’s possible to work out the probability that the participant will choose either of them using a simple logit model. (for these formulae I’m copying the notation from <a href="https://imai.fas.harvard.edu/teaching/files/discrete.pdf">here</a>).</p>
+<p>we have a binary model such that the choice of buzz cola can be represented by Y: <span class="math display">\[Y_{i} \in {0,1}\]</span></p>
+<p>Where X is the difference in utility between the choices A (buzz cola) and B (slurm) on each trial, i</p>
+<p><span class="math display">\[X_{i} = u(A_{i}) - u(B_{i})\]</span> using a logit model such that</p>
+<p><span class="math display">\[\phi_{i} = \frac{1}{1 + e^{-\beta X_{i})}}\]</span> where beta is the temperature of the logit curve (i.e. the steepness).</p>
+<p>The log probability of choosing A (buzz cola) is therefore the log(phi) when A is chosen, and log(1-phi) when B (slurm) is chosen. The Y/1-Y cancel the other term out as Y can either equal 1 (buzz cola choice) or 0 (slurm chosen).</p>
+<p>We want to sum this over every trial and find the parameters for beta and the rho for both goods A (buzz cola) and B (slurm) which maximize this total sum</p>
+<p><span class="math display">\[\mathcal l_{n}(\beta|Y,X) = \sum_{i=1}^{n} Y_{i} log(\phi_{i}) + (1-Y_{i})log(1-\phi_{i})\]</span> In R this can be expressed as</p>
+<pre class="r"><code>#function to calulate the log likelihood per trial over data
+#parameters is a vector of beta,rho_a,rho_b
+#(a = buzz cola, b = slurm)
+#data is our trial data
+log_likelihood_func &lt;- function(parameters, data) {
+  #I want to plot how optim works so will gather the parameters
+  #it selects for each iteration
+  i &lt;&lt;- i + 1
+  vals[[i]] &lt;&lt;- parameters
+  
+  #pull the individual parameters out of the vector
+  beta &lt;- parameters[&quot;beta&quot;]
+  buzz_cola_rho &lt;- parameters[&quot;rho_a&quot;]
+  slurm_rho &lt;- parameters[&quot;rho_b&quot;]
+  
+  #find the trial utility of the offered buzz cola and slurm
+  trial_bc_utility &lt;- (data$buzz_cola * 330) / 1000 * buzz_cola_rho
+  trial_s_utility &lt;- (data$slurm/ 1000) * slurm_rho
+  #find the difference in utility between the two offered goods
+  delta_utility &lt;- trial_bc_utility - trial_s_utility
+  
+  #find the phi term for this trial
+  #using the logit model
+  phi &lt;- 1 / (1 + exp(-beta*delta_utility))
+  
+  #find the log likelihood for the choice made in each trial
+  log_likelihood &lt;- (data$buzz_cola_choice * log(phi)) + ((1-data$buzz_cola_choice) * log(1-phi))
+  
+  sumloglik[[i]] &lt;&lt;- sum(log_likelihood)
+  
+  #return the sum over every trial of these log likelihoods
+  #we want to vary the parameters to maximise this sum
+  return(sum(log_likelihood))
+}</code></pre>
+<p>We can start out with a parameter assuming the two utilities are equal</p>
+<pre class="r"><code>#make up initial parameters
+#1, 1, 1 is unlikely but a reasonable starting point
+initial_parameters &lt;- c(1, 1, 1) %&gt;%
+  `names&lt;-`(c(&quot;beta&quot;, &quot;rho_a&quot;, &quot;rho_b&quot;))
+
+initial_parameters</code></pre>
+<pre><code>##  beta rho_a rho_b 
+##     1     1     1</code></pre>
+<p>then we can use the optim function which will pass the parameter vector into the log likelihood function and iteratively change the values in the parameter vector until the greatest sum is returned. We’re looking for the greatest sum as the log likelihood per trial boils down to log(phi / 1-phi) where phi is between 0 and 1 and is greatest where the utility parameters make the post-hoc choice most clear. E.g. when choosing the buzz cola the log likelihood = log(phi) and we want to maximize phi.</p>
+<p>Taking the log of x between 0 and 1 will give a negative number that approaches 0 as x approaches 1. So the total sum of log likelihood terms will approach 0 as the parameters maximize the phi term.</p>
+<pre class="r"><code>#add a binary variable for the choice of buzz_cola
+trial_data_binary &lt;- trial_data %&gt;%
+  mutate(buzz_cola_choice = case_when(
+    choice == &quot;buzz_cola&quot; ~ 1,
+    choice == &quot;slurm&quot; ~ 0
+  ))
+
+#initialise a list to store the parameters over iterations
+i &lt;- 0
+vals &lt;- list()
+sumloglik &lt;- list()
+
+optim_params &lt;- optim(par = initial_parameters,
+                      #the functionise to optimise these over
+                      fn = log_likelihood_func,
+                      #other arguments to the function
+                      data = trial_data_binary,
+                      #optimisation algorithm to use
+                      method = &quot;Nelder-Mead&quot;,
+                      #we are looking to maximise the sum
+                      #so fnscale set to -1
+                      control = list(fnscale = -1))</code></pre>
+<p>optim() works by taking a vector of parameters and slightly adjusting them every iteration until the output from fn = … is minimized via an algorithm (in this case <a href="https://en.wikipedia.org/wiki/Nelder%E2%80%93Mead_method">Nelder-Mead</a>).</p>
+<p>By collecting the parameter values it selects and the subsequent log likelihood sum for each iteration we can get a sense of how it works</p>
+<pre class="r"><code>#load gganimate
+library(gganimate)
+
+#rbind the values per iteration
+p2 &lt;- vals %&gt;%
+  do.call(rbind, .) %&gt;%
+  #add a column for iteration number
+  as.data.frame() %&gt;%
+  mutate(iteration = 1:n()) %&gt;%
+  #gather for plotting
+  gather(&quot;parameter&quot;, &quot;value&quot;, -iteration) %&gt;%
+  #plt a bar chart of parameters over iterations
+  ggplot(., aes(x = parameter, y = value)) +
+  geom_bar(stat = &quot;identity&quot;) +
+  #show the iteration in the title
+  labs(title = &#39;iteration: {frame_time}&#39;) +
+  #aesthetics
+  theme_minimal() +
+  #gganimate
+  transition_time(iteration) +
+  ease_aes(&#39;cubic-in-out&#39;)
+
+p2</code></pre>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_parameter_optimisation-1.gif" /><!-- --></p>
+<pre class="r"><code>#unlist the log likelihood sum per iteration
+p3 &lt;- unlist(sumloglik) %&gt;%
+  #add the iteration number as a variable
+  data.frame(sum = .,
+             iteration = 1:length(.)) %&gt;%
+  #plot it
+  ggplot(., aes(x = iteration, y = sum)) +
+  geom_line() +
+  labs(title = &quot;how optim maximises the sum of the log likelihood&quot;,
+       x = &quot;iteration&quot;,
+       y = &quot;sum of the log likelihoods per trial&quot;) +
+  theme_minimal()
+
+p3</code></pre>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_optimisation_errors-1.png" width="672" /></p>
+<p>The final maximized value of -400 is still some way off 0 but seems to be the highest it will go. Looking at p1, we can see that the curves are some way off a step function that would mean that no ‘sub-optimal’ choices would be made (there’s some threshold of slurm vs buzz cola that means only one or the other is chosen).</p>
+<p>We can then get the optimized parameters from the object returned from optimization function</p>
+<pre class="r"><code>#print the optimised parameters
+optim_params$par</code></pre>
+<pre><code>##     beta    rho_a    rho_b 
+## 3.520318 2.563380 1.702415</code></pre>
+<p>and there we have it! you <em>do</em> prefer buzz cola (rho_a) to slurm (rho_b). For every unit ml of both drinks you are offered, you prefer buzz cola ~1.5x as much.</p>
+<p>We can plot your likelihood to choose the offered ml of buzz cola over the offered ml of slurm for ratios of slurm:buzz cola by changing around a few terms in our logit model</p>
+<pre class="r"><code>#function to calculate likelihood of choosing good A given ratio B/A
+calc_likelihood &lt;- function(beta = optim_params$par[&quot;beta&quot;],
+                            rho_a = optim_params$par[&quot;rho_a&quot;],
+                            rho_b = optim_params$par[&quot;rho_b&quot;],
+                            ratio_ba) {
+  #instead of working out the difference in utility by comparing offered amounts
+  #use the ratio of good b:good a
+  utility_term &lt;- rho_a/rho_b - ratio_ba
+  
+  #calculate as before
+  phi &lt;- 1 / (1 + exp(-beta* utility_term))
+}
+
+#plot this data for the rations 1:3 to 3:1
+p4 &lt;- seq(1/3, 3, by = 0.1) %&gt;%
+  data.frame(ratio_ba = .,
+             likelihood_a = calc_likelihood(ratio_ba = .)) %&gt;%
+  ggplot(., aes(x = ratio_ba, y = likelihood_a)) +
+  geom_point() +
+  #show the indifference point ratio of B:A
+  geom_segment(aes(x = optim_params$par[&quot;rho_a&quot;]/optim_params$par[&quot;rho_b&quot;],
+                   xend = optim_params$par[&quot;rho_a&quot;]/optim_params$par[&quot;rho_b&quot;],
+                   y = 0.5,
+                   yend = 0)) +
+  geom_text(label = &quot;50% likelihood at rho_a/rho_b&quot;, x = 1, y = 0.2) +
+  #aesthetics
+  labs(title = &quot;Utility curve for Buzz Cola vs Slurm&quot;,
+       x = &quot;ratio of ml slurm:buzz cola&quot;,
+       y = &quot;likelihood of choosing buzz cola&quot;) +
+  theme_minimal()
+
+p4</code></pre>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_utility_curve-1.png" width="672" /></p>
+<div id="how-parameters-vary" class="section level2">
+<h2>How Parameters Vary</h2>
+<p>Imagine that two of your colleagues, Andreas and Béatrice also arrive at the picnic and take part in the utility measurement.</p>
+<p>Béatrice is entirely indifferent between the two soft drinks, they both taste the same as far as she is concerned so 1ml of slurm == 1ml of buzz cola.</p>
+<p>Andreas, on the other hand, also prefers buzz cola to slurm, but is hyper-rational. Once the utility of one option exceeds the utility of another he will pretty much always choose the former and samples the lower utility option very rarely.</p>
+<p>If we plot their choice proportions we get similar curves as before, but with slightly different shapes:</p>
+<pre class="r"><code>p5 &lt;- colleagues_choice_data %&gt;%
+  ggplot(., aes(x = slurm, y = fraction_choose_cola, colour = factor(buzz_cola))) +
+  geom_point() +
+  binomial_smooth(se = FALSE) +
+  #add in some aesthetics
+  scale_colour_discrete(name = &quot;buzz cola cans \n(x * 330ml)&quot;) +
+  labs(title = &quot;what drink do you want for the departmental picnic?&quot;,
+       subtitle = &quot;simulated data&quot;,
+       x = &quot;slurm (/ml)&quot;,
+       y = &quot;fraction of buzz cola choices&quot;) +
+  theme_minimal() +
+  facet_wrap(~person)
+
+p5</code></pre>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_colleagues_choices-1.png" width="672" /></p>
+<p>Andreas shows a step function in choosing between buzz cola and slurm, whereas Béatrice show much more linearity, with lines that pass 0.5 where ml slurm == ml buzz cola.</p>
+<p>I won’t show the code for calculating the optimal parameters for these two as it’s much the same as before, but upon calculation we get</p>
+<pre class="r"><code>#the optimal parameters for Andreas and Béatrice
+lapply(colleague_parameters, function(x) x$par)</code></pre>
+<pre><code>## $Andreas
+##     beta    rho_a    rho_b 
+## 6.208545 5.976904 3.501038 
+## 
+## $Béatrice
+##     beta    rho_a    rho_b 
+## 2.806346 1.321279 1.330345</code></pre>
+<p>So we can see that Andreas has a much higher temperature (steepness) of his utility curve (beta), whereas Béatrice has a lower calculated beta.</p>
+<p>In contrast, while Andreas has a similar preference for buzz cola to you (rho_a / rho_b ~ 1.5, see below to refresh on your calculated optimal parameters from earlier), the relative utilities of the two sodas are equal (~1.3) for Béatrice, who is indifferent between them.</p>
+<pre class="r"><code>#your optimal parameters for refreshing memory
+optim_params$par</code></pre>
+<pre><code>##     beta    rho_a    rho_b 
+## 3.520318 2.563380 1.702415</code></pre>
+<p>Plotting the utility curves for these two also shows this</p>
+<pre class="r"><code>#plot the utility curves per colleague
+p6</code></pre>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_colleague_utility_curves-1.png" width="672" /> Where I’ve used geom_line to link between the points. Andreas’ curve is much steeper than yours which we plotted previously, but passes the indifference point (0.5 on the y axis) at roughly the same place.</p>
+<p>Béatrice’s is less steep but her indifference point is where the ml of the two sodas are equal (x == 1).</p>
+</div>
+<div id="data-creation" class="section level2">
+<h2>Data Creation</h2>
+<p>All data in this post is generation using the normal distribution and is fake. However, it approximates what you’d expect real data to look like pretty well so is fine for a tutorial and saves the need to have to upload real lab data.</p>
+<p>I haven’t included the data generation for Andreas and Béatrice’s data, but it follows almost identical steps. Set the sd in pnorm = 0 to achieve the step function.</p>
+<p>The code used to generate the data is provided below</p>
+<pre class="r"><code>#set up
+library(tidyverse)
+set.seed(220892)
+
+#generally cumulative normal distribution curves
+#stand in for real choice curve data
+
+#seq over the range of 0-1 of slurm
+choice_data &lt;- seq(0, 1, 0.2) %&gt;%
+  #generate distributions
+  data.frame(x = .,
+             y1 = 1-pnorm(., 0.23, 0.15),
+             y2 = 1-pnorm(., 0.5, 0.175),
+             y3 = 1-pnorm(., 0.75, 0.125)) %&gt;%
+  #melt data
+  gather(&quot;group&quot;, &quot;dist&quot;, - x) %&gt;%
+  #rename data with our variables
+  #buzz cola and slurm
+  mutate(buzz_cola = case_when(
+    group == &quot;y1&quot; ~ 1,
+    group == &quot;y2&quot; ~ 2,
+    group == &quot;y3&quot; ~ 3
+  )) %&gt;%
+  mutate(slurm = x * 2000) %&gt;%
+  #round dist data
+  mutate(fraction_choose_cola = round(dist, 2))  %&gt;%
+  select(buzz_cola, slurm, fraction_choose_cola)
+
+
+#create some fake trial data by stretching this choice data
+generate_trial_data &lt;- function(combination_row) {
+  #for this combination how many times in cola chosen
+  cola_choice &lt;- round(combination_row$fraction_choose_cola*100)
+  
+  #create a df of 100 trials for this combination
+  data.frame(buzz_cola = rep(combination_row$buzz_cola, 100),
+             slurm = rep(combination_row$slurm, 100),
+             choice = c(rep(&quot;buzz_cola&quot;, cola_choice),
+                        rep(&quot;slurm&quot;, 100 - cola_choice))
+             )
+}
+
+#split choice data by combination (row)
+trial_data &lt;- choice_data %&gt;%
+  split(f = seq(nrow(.))) %&gt;%
+  #apply the stretching function
+  lapply(., generate_trial_data) %&gt;%
+  #map together the data
+  map_df(I) %&gt;%
+  #randomly shuffle the data
+  .[sample(nrow(.)),]</code></pre>
+</div>
+</div>
