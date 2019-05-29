@@ -151,7 +151,7 @@ As the colour gradient (from bottom right to top left) shows, the teams we'd exp
 
 A good sense of teams relative abilities can be seen in the league table of results so far (assuming 3 points for a win, and 1 for a draw):
 
-```{r}
+```{r quick_useful_functions, warning=FALSE,message=FALSE}
 # function to melt results
 # returns df with team and goals for and against for each match
 melt_results <- function(results_df) {
@@ -287,7 +287,8 @@ simulated_poisson <- real_data_means %>%
   mutate(data = "simulated") 
 
 # add these distributions to the plot
-p2 + geom_density(data = simulated_poisson, aes(x = dist), fill = NA, adjust = 8, alpha = 0.2) +
+p2 + geom_density(data = simulated_poisson, aes(x = dist),
+                  fill = NA, adjust = 8, alpha = 0.2) +
   scale_fill_manual(values = c("red", "blue"), guide = FALSE) +
   facet_wrap(~location)
 
@@ -323,17 +324,17 @@ It's actually perhaps not as significant as might be expected given the sheer am
 
 If we think that goals scored represents some Poisson process, it can be modelled using the equation which underlies the Pisson distribution. For a given interval (one match), the probability of x events (goals scored) in that interval will be:
 
-$P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}$
+$$P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}$$
 
 The simplest model we can produce is to estimate λ as each team's attack rating (henceforth α~i~) which is equal to observed mean rate of goals for that team.
 
 That is the say the probability of team i scoring x goals against team j is:
 
-$P(X_{i,j} = x) = \frac{\alpha_{i}^{x}e^{-\alpha_{i}}}{x!}$
+$$P(X_{i,j} = x) = \frac{\alpha_{i}^{x}e^{-\alpha_{i}}}{x!}$$
 
 where α~i~ is the sum of all goals scored divided by the total number of matches:
 
-$\alpha_{i} = \frac{1}{N}\sum_{n=1}^{N} x$
+$$\alpha_{i} = \frac{1}{N}\sum_{n=1}^{N} x$$
 
 grouping by teams makes this easy to calculate:
 
@@ -410,7 +411,7 @@ It's pretty common knowledge that football teams do better at home, so we'll wan
 
 We'll call this parameter γ and can be formalised as the sum of home goals (which we'll refer to as X from now on) divided by the sum of away goals (Y)
 
-$\gamma = \frac{\sum{X}}{\sum{Y}}$
+$$\gamma = \frac{\sum{X}}{\sum{Y}}$$
 
 ```{r add_home_advantage, warning=FALSE,message=FALSE}
 # the home advantage is how much easier it is to score at home
@@ -457,6 +458,8 @@ basic_parameters <- basic_model %>%
   lapply(., function(x){names(x) <- teams;return(x)})
 
 # predict results using the function defined above and the list of parameters
+# could use e.g. mapply here but I prefer the map2 grammar
+# run the predict results function over each game consisting of $home and $away
 predicted_fixtures <- map2_df(unplayed_games$home, unplayed_games$away, 
                     predict_results,
                     # parameters forms an extra argument that does not vary
@@ -475,13 +478,13 @@ In order to do this we can use the results we have from the first 8 weeks of mat
 
 Remember that for the Poisson distribution, the probability of x goals in one match is 
 
-$P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}$
+$$P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}$$
 
 The expected value of the Poisson distribution is equal to λ, so we can plug λ as our predicted goals, and x as the actual goals, and calculate the probability of that results occuring _given_ the attack/defence/home advantage parameters that we think are correct.
 
 We then do this for all the matches played and get the likelihood for the home and away teams scores given the model:
 
-```{r predict_results, warning=FALSE,message=FALSE}
+```{r predict_games, warning=FALSE,message=FALSE}
 # 'predict' the already played matches using our function
 predicted_results <- map2_df(results$home, results$away, 
                     predict_results,
@@ -593,6 +596,19 @@ The three separate functions are coded out separately so we can tinker with them
 2) we then need to use these parameters to predict the results of past games. For each home and away team in a df of results we can predict the expected home and expected away goals. These are then bound into a df of home and away teams and these predicted gaols for each
 
 3) finally, we need to calculate the negative log likelihood by calculating the log probability of the observed goals given the predicted goals and summing these. We then multiply this by -1 as the sum of the log porbabilities will be negative and we want to minimise this number as close to zero as possible. The transformation of prod(nll, -1) is a quick hack for this<sup>4</sup>
+
+Formally, for k matches and i teams, the likelihood function takes the form:
+
+$$\mathcal l_{n}(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{N}{\frac{\lambda_{k}^{x_{k}}e^-\lambda_{k}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^-\mu_{k}}{y_{k}!}}$$
+
+where for match k and teams i and j, home goals, x is defined by
+
+$$x_{k} \sim Poisson(\lambda_{k} = \alpha_{i(k)}\beta_{j(k)}\gamma)$$
+and away goals, y
+
+$$y_{k} \sim Poisson(\mu_{k} = \alpha_{j(k)}\beta_{i(k)})$$
+
+which seems daunting when you write it down, but we've already covered everything we need to do solve it. It's just saying we want to minimise the result of the multiplication (the sum of logs in our case above) of the probability of scoring x and y goals in a game. The probability of goals scored assumed to be Poisson distributed, controlled by parameters α, β, and γ for home and away teams.
 
 ```{r optim_subfunctions, warning=FALSE,message=FALSE}
 # optim requires parameters to be supplied as a vector
@@ -818,62 +834,19 @@ equal_parameters <- list(
   gamma = 0
 )
 
-# run
-optimised_parameters4 <- optim(
-  par = unlist(equal_parameters), 
-  fn = optimise_params,
-  results = results,
-  method = "BFGS",
-  control = list(maxit = 10000))
-
-```
-
-Finally, we want to add in an extra term to our calculations. 
-
-```{r, warning=FALSE,message=FALSE}
-# add in intercept term
-relist_params <- function(parameters) {
-  parameter_list <- list(
-    alpha = parameters %>%
-      .[grepl("alpha", names(.))] %>%
-      append(prod(sum(.), -1), .) %>%
-      `names<-`(teams),
-    beta = parameters %>%
-      .[grepl("beta", names(.))] %>%
-      append(prod(sum(.), -1), .) %>%
-      `names<-`(teams),
-    gamma = parameters["gamma"],
-    phi = parameters["phi"]
-  )
-  return(parameter_list)
-}
-
-# predict results with intercept added to exp argument
-predict_results <- function(home, away, param_list) {
-  e_goals_home <- exp(param_list$phi + param_list$alpha[home] - param_list$beta[away] + param_list$gamma)
-  e_goals_away <- exp(param_list$phi + param_list$alpha[away] - param_list$beta[home])
-  
-  df <- data.frame(home = home, away = away,
-                   e_hgoal = e_goals_home, e_agoal = e_goals_away)
-  
-  return(df)
-}
-
-# add intercept to the initial parameters
-equal_parameters$phi = 0
-
-# initialise i to collect data about theoptimisation process at each iteration
+# initialise i to collect data about the optimisation process at each iteration
 i <- 0
 # collect current parameter values and neg log likelihood at each iteration
 current_parameters <- list()
 current_nll <- list()
+
 ```
 
 We can then final the optim() function one final time to get our final optimised paramters
 
 ```{r calculated_optimised_parameters, warning=FALSE,message=FALSE}
 # run our final calculation
-optimised_parameters5 <- optim(
+optimised_parameters4 <- optim(
   par = unlist(equal_parameters), 
   fn = optimise_params,
   results = results,
@@ -890,8 +863,9 @@ As the optim() function plays with the parameters you can see the log likelihood
 p3 <- data.frame(likelihood = unlist(current_nll),
                 iteration = seq(length(current_nll))) %>%
   ggplot(aes(x = iteration, y = likelihood)) +
-  geom_line() +
-  scale_y_continuous(limits = c(0, 250)) +
+  geom_line(size = 2, colour = "red") +
+  # cut out some cases where optim() has been a bit ambitious
+  coord_cartesian(ylim = c(0, 250)) +
   labs(title = "Negative log likelihood of parameters over iterations",
        y = "negative log likelihood",
        x = "iteration") +
@@ -901,10 +875,10 @@ p3
 
 ```
 
-The final parameters 
+The final parameters can also be extracted from the output from optim() and plotted:
 
 ```{r plot_parameters, warning=FALSE,message=FALSE}
-p4 <- optimised_parameters5$par %>%
+p4 <- optimised_parameters4$par %>%
   # relist to add in first team
   relist_params() %>%
   unlist() %>%
@@ -928,15 +902,30 @@ p4 <- optimised_parameters5$par %>%
 
 p4
 ```
+Notice how the teams monotonically increase in both attack and defensive ability. This is by design on how the results were created (see the bottom of this post). With only 8 games per team however, there is quite a lot of noise in the signal. Hitting the crossbar instead of scoring in one game could make a fairly large difference in how the function rates a team.
 
+Also note how the regression line passes through the origin- this is a result of us constraining the paramters to sum to zero.
+
+## Predict Remaining Matches
+
+Now we have rated each teams attack/defense, and the advantage to a team to play at home, we can predict the remeaning matches between the teams.
+
+For this, we just have to use the predict_results() function we defined earlier, except this time the output will be the expected goals per team. Earlier we were measuring the deviance from expectation, but not we assume the most likely result is exactly equal to the expected results. If we wanted to we could work out how likely this result is, and what the most likely results are.
+
+This post is long enough however, so for now, we'll just detail the most likely results.
 
 ```{r predict_results2, warning=FALSE,message=FALSE}
 predicted_results <- predict_results(unplayed_games$home,
                       unplayed_games$away, 
-                      relist_params(optimised_parameters5$par)) %>%
-  mutate_if(is.numeric, round, 2)
+                      relist_params(optimised_parameters4$par)) %>%
+  mutate_if(is.numeric, round, 2) %>%
+  print()
 
 ```
+
+All of these look reasonable, with better teams beaten worse ones. The only match that the model thinks might well end in a draw is Dover at home to Enfield, which is not entirely unreasonable.
+
+We can add these predictions to our earlier matrix of results to get a sense if these fit in with the trend from the observed matches:
 
 ```{r plot_all_games, warning=FALSE,message=FALSE}
 p5 <- rbind(
@@ -962,6 +951,14 @@ p5 <- rbind(
 p5
 ```
 
+Which they do! The predicted results fit in with the gradient of heavier defeats for home teams towards the bottom left, progressing to easy home victories in the top right.
+
+That's all for this post. Hopefully using the Poisson distributon to model football matches is a little clearer now. Feel free to email me any questions and check out the packages I stole all the codes/idea from.
+
+Next time, I'll go over how to predict how likely a range of results are for any single match in (hopefully) a shorter post; until then!
+
+## Notes
+
 <sup>1</sup> much of the code I use here is stolen/reworked from the code shared on this repo
 
 <sup>2</sup> towards the end of writing this post I came across [David Sheehan's blog](https://dashee87.github.io/football/python/predicting-football-results-with-statistical-modelling-dixon-coles-and-time-weighting/) which actually does a pretty good job, but I felt still didn't quite go through how/why the model uses the maths it does
@@ -970,7 +967,7 @@ p5
 
 <sup>4</sup> *we could instead _maximise_ the sum of the log likelihoods and then the error will converge towards 0 from a negative number. Either is fine. 
 
-## Results generation
+## Results Generation
 
 First we need to create a df of fixtures for each team
 
