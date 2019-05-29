@@ -923,7 +923,7 @@ predicted_results <- predict_results(unplayed_games$home,
 
 ```
 
-All of these look reasonable, with better teams beaten worse ones. The only match that the model thinks might well end in a draw is Dover at home to Enfield, which is not entirely unreasonable.
+All of these look reasonable, with better teams beating worse ones. The only match that the model thinks might well end in a draw is Dover at home to Enfield, which is not entirely unreasonable.
 
 We can add these predictions to our earlier matrix of results to get a sense if these fit in with the trend from the observed matches:
 
@@ -955,7 +955,7 @@ Which they do! The predicted results fit in with the gradient of heavier defeats
 
 That's all for this post. Hopefully using the Poisson distribution to model football matches is a little clearer now. Feel free to email me any questions and check out the packages I stole all the codes/idea from.
 
-Next time, I'll go over how to predict how likely a range of results are for any single match in (hopefully) a shorter post; until then!
+Next time, I'll go over how to quantify the probability of a range of results for any single match in (hopefully) a shorter post; until then!
 
 ## Notes
 
