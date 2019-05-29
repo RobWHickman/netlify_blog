@@ -101,7 +101,7 @@ p1 &lt;- choice_data %&gt;%
   theme_minimal()
 
 p1</code></pre>
-<p><img src="/post/random_utility_stuff_files/figure-html/plot_data-1.png" width="672" /></p>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_data-1.png" width="672" /></p>
 <p>We then need to solve your utilities of buzz cola and slurm. To do this we need to maximize the sum of the log likelihood of each choice you make.</p>
 <p>Basically, for each trial when you are presented with x ml of buzz cola (the number of cans multiplied by 330ml per can) or y ml of slurm there are utility parameters (rho) for both of these which mean you have some total utility of offered buzz cola and total utility of offered slurm.</p>
 <p>As a rational econ PhD student, you are pretty much always going to choose whichever of these utilities is greater. E.g:</p>
@@ -248,7 +248,7 @@ p2 &lt;- vals %&gt;%
   ease_aes(&#39;cubic-in-out&#39;)
 
 p2</code></pre>
-<p><img src="/post/random_utility_stuff_files/figure-html/plot_parameter_optimisation-1.gif" /><!-- --></p>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_parameter_optimisation-1.gif" /><!-- --></p>
 <pre class="r"><code>#unlist the log likelihood sum per iteration
 p3 &lt;- unlist(sumloglik) %&gt;%
   #add the iteration number as a variable
@@ -263,7 +263,7 @@ p3 &lt;- unlist(sumloglik) %&gt;%
   theme_minimal()
 
 p3</code></pre>
-<p><img src="/post/random_utility_stuff_files/figure-html/plot_optimisation_errors-1.png" width="672" /></p>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_optimisation_errors-1.png" width="672" /></p>
 <p>The final maximized value of -400 is still some way off 0 but seems to be the highest it will go. Looking at p1, we can see that the curves are some way off a step function that would mean that no ‘sub-optimal’ choices would be made (there’s some threshold of slurm vs buzz cola that means only one or the other is chosen).</p>
 <p>We can then get the optimized parameters from the object returned from optimization function</p>
 <pre class="r"><code>#print the optimised parameters
@@ -304,7 +304,7 @@ p4 &lt;- seq(1/3, 3, by = 0.1) %&gt;%
   theme_minimal()
 
 p4</code></pre>
-<p><img src="/post/random_utility_stuff_files/figure-html/plot_utility_curve-1.png" width="672" /></p>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_utility_curve-1.png" width="672" /></p>
 <div id="how-parameters-vary" class="section level2">
 <h2>How Parameters Vary</h2>
 <p>Imagine that two of your colleagues, Andreas and Béatrice also arrive at the picnic and take part in the utility measurement.</p>
@@ -325,7 +325,7 @@ p4</code></pre>
   facet_wrap(~person)
 
 p5</code></pre>
-<p><img src="/post/random_utility_stuff_files/figure-html/plot_colleagues_choices-1.png" width="672" /></p>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_colleagues_choices-1.png" width="672" /></p>
 <p>Andreas shows a step function in choosing between buzz cola and slurm, whereas Béatrice show much more linearity, with lines that pass 0.5 where ml slurm == ml buzz cola.</p>
 <p>I won’t show the code for calculating the optimal parameters for these two as it’s much the same as before, but upon calculation we get</p>
 <pre class="r"><code>#the optimal parameters for Andreas and Béatrice
@@ -346,7 +346,7 @@ optim_params$par</code></pre>
 <p>Plotting the utility curves for these two also shows this</p>
 <pre class="r"><code>#plot the utility curves per colleague
 p6</code></pre>
-<p><img src="/post/random_utility_stuff_files/figure-html/plot_colleague_utility_curves-1.png" width="672" /> Where I’ve used geom_line to link between the points. Andreas’ curve is much steeper than yours which we plotted previously, but passes the indifference point (0.5 on the y axis) at roughly the same place.</p>
+<p><img src="/post/2019-04-24-introduction-to-discrete-choice-analysis_files/figure-html/plot_colleague_utility_curves-1.png" width="672" /> Where I’ve used geom_line to link between the points. Andreas’ curve is much steeper than yours which we plotted previously, but passes the indifference point (0.5 on the y axis) at roughly the same place.</p>
 <p>Béatrice’s is less steep but her indifference point is where the ml of the two sodas are equal (x == 1).</p>
 </div>
 <div id="data-creation" class="section level2">
