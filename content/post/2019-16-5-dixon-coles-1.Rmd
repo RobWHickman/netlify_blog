@@ -21,15 +21,15 @@ title: "Untitled"
 output: html_document
 ---
 
-For anyone watching football, being able to predict matches is a key aspect of the hobby. Whether explicitly (e.g. when betting on matches, or deciding on recruitment for an upcoming season), or more implictly when discussing favourites to win the league in the pub, almost all discussion of the sport on some level require predictions about some set of upcoming games.
+For anyone watching football, being able to predict matches is a key aspect of the hobby. Whether explicitly (e.g. when betting on matches, or deciding on recruitment for an upcoming season), or more implicitly when discussing favourites to win the league in the pub, almost all discussion of the sport on some level require predictions about some set of upcoming games.
 
 The first step of prediction is some form of quantification of ability. We'd expect a better team to have a better chance of winning than a worse team. For an example of a more sophisticated set of rankings, see [fivethirtyeight's Soccer Power Index](https://projects.fivethirtyeight.com/soccer-predictions/) which is explicitly used to predict the results of various football competitions.
 
-The accuracy of our predictions therefore relies on the accuracy of our judgements on team's ability. When discussing football with friends, we might use half-remembered match highlights to form some impression of how strong a team is. When programming however, we have free access to the results of teams thus far in a campaign and should be able to produce a model more grounded in truth.
+The accuracy of our predictions therefore relies on the accuracy of our judgement on team's ability. When discussing football with friends, we might use half-remembered match highlights to form some impression of how strong a team is. When programming however, we have free access to the results of teams thus far in a campaign and should be able to produce a model more grounded in truth.
 
-Two seminal papers for using recent football results to assess the abilities of football teams (and then use this assessment to predict matches) are [Maher's 1982 paper](https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1467-9574.1982.tb00782.x) on modelling football scores, which is complimented by [Mark Dixon and Stuart Coles' 1997 paper](https://www.jstor.org/stable/pdf/2986290.pdf?casa_token=9deLgF7xOaEAAAAA:fGGfUQKOsezrWBvbmphK56HddtiaohxaUNPdkDBoTApL_beghKXFlru5USztLt7dDVEMSdhAfkg8yzubZsAs7eeyZvp307iAGwqAtVSMMhwk6xhUleM). For R various packages to use the methods outlined in these papers exist incluiding [Ben Torvaney's regista](https://github.com/Torvaney/regista), [opisthokonta's goalmodel](https://github.com/opisthokonta/goalmodel)<sup>1</sup>, and [Eli Holmes' fbRanks](https://cran.r-project.org/web/packages/fbRanks/index.html).
+Two seminal papers for using recent football results to assess the abilities of football teams (and then use this assessment to predict matches) are [Maher's 1982 paper](https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1467-9574.1982.tb00782.x) on modelling football scores, which is complimented by [Mark Dixon and Stuart Coles' 1997 paper](https://www.jstor.org/stable/pdf/2986290.pdf?casa_token=9deLgF7xOaEAAAAA:fGGfUQKOsezrWBvbmphK56HddtiaohxaUNPdkDBoTApL_beghKXFlru5USztLt7dDVEMSdhAfkg8yzubZsAs7eeyZvp307iAGwqAtVSMMhwk6xhUleM). For R various packages to use the methods outlined in these papers exist including [Ben Torvaney's regista](https://github.com/Torvaney/regista), [opisthokonta's goalmodel](https://github.com/opisthokonta/goalmodel)<sup>1</sup>, and [Eli Holmes' fbRanks](https://cran.r-project.org/web/packages/fbRanks/index.html).
 
-However, the overlap between people obsessed enough with football to read mathmatical papers on the sport, and those with the formal training in reading math notation to understand these models is fairly low, and I wasn't able to find<sup>2</sup> a good intuitive explanation for these models. Hopefully, building up these models from the most basic entry steps to a fully sophisticated model for predicting football matches might help some who want to start modelling football but don't have the privilege of formal stats/modelling/coding training. As I want to start from pretty much zero, in this first post I make at least one or two claims that are not strictly true (indeed, this post does not actually implement some of the main points of the 1997 Dixon & Coles paper), but will try to point tese out as I go, and correct them in later posts.
+However, the overlap between people obsessed enough with football to read mathematical papers on the sport, and those with the formal training in reading math notation to understand these models is fairly low, and I wasn't able to find<sup>2</sup> a good intuitive explanation for these models. Hopefully, building up these models from the most basic entry steps to a fully sophisticated model for predicting football matches might help some who want to start modelling football but don't have the privilege of formal stats/modelling/coding training. As I want to start from pretty much zero, in this first post I make at least one or two claims that are not strictly true (indeed, this post does not actually implement some of the main points of the 1997 Dixon & Coles paper), but will try to point these out as I go, and correct them in later posts.
 
 First, let's load libraries and also set a seed for the reproducibility of this document
 
@@ -43,7 +43,7 @@ set.seed(3459)
 
 ##Set up
 
-In reaility, we'd probably want to model a whole league or cup. However, these can generally contain 20+ teams, many of which will have similar abilities. For simplcitly here, lets instead imagine a summer league between 6 English football clubs where each team plays each other twice (once at home and once away)
+In reality, we'd probably want to model a whole league or cup. However, these can generally contain 20+ teams, many of which will have similar abilities. For simplicity here, lets instead imagine a summer league between 6 English football clubs where each team plays each other twice (once at home and once away)
 
 ```{r teams, warning=FALSE,message=FALSE}
 teams <- c("Arsenal", # 5th in the 1st tier
@@ -127,7 +127,7 @@ Let's say that we've had 8 weeks of games played so far, and the results have be
 head(results,8)
 ```
 
-A better way to show this is to generte a matrix of home (y axis) vs. away (x axis) and show the goals scored in each match between them:
+A better way to show this is to generate a matrix of home (y axis) vs. away (x axis) and show the goals scored in each match between them:
 
 ```{r plot_results, warning=FALSE,message=FALSE}
 p1 <- results %>%
@@ -236,7 +236,7 @@ real_data <- engsoccerdata::england %>%
 head(real_data)
 ```
 
-Here every row shows a team that played a match (as it's sorted by league then alphabetically, the first 6 records are all for Arsenal). It also shows if the team played home or away. The data also shows the goals scored by (e.g.) Arsenal in g_for, and the goals they conceeded in g_ag.
+Here every row shows a team that played a match (as it's sorted by league then alphabetically, the first 6 records are all for Arsenal). It also shows if the team played home or away. The data also shows the goals scored by (e.g.) Arsenal in g_for, and the goals they conceded in g_ag.
 
 If we plot the goals scored for each game, we get a nice humped distribution with slightly offset peaks for home and away. That is to say, in most games teams will score 0, 1, or 2 goals, and that scoring more than 6 goals in a match is incredibly rare. The difference between the home and away distributions mean that teams are slightly more likely to score more if playing at home, compared to play away from home. 
 
@@ -249,7 +249,7 @@ p2 <- real_data %>%
   scale_fill_manual(values = c("red", "blue")) +
   scale_x_continuous(breaks = 0:6) +
   labs(title = "Goals scored at home and away in English football",
-       subtitle = "data from 48.8k matches 2000-2016",
+       subtitle = "data from 48.8k matches 1992-2016",
        x = "goals scored",
        y = "density") +
   theme_minimal()
@@ -270,7 +270,7 @@ real_data_means <- real_data %>%
 
 ```
 
-Goals in games are both relatively sparse, and relatively stochastic, football is a low scoring game where goals are evenly distributed throughout the game. In theory any attack made by a team i has a probability of being scored dependent upon the strength of team i's attack (α~i~) which is independent of all the other attacks that team has made.
+Goals in games are both relatively sparse, and relatively stochastic; football is a low scoring game where goals are evenly distributed throughout the game. In theory any attack made by a team i has a probability of being scored dependent upon the strength of team i's attack (α~i~) which is independent of all the other attacks that team has made.
 
 (there is some reason to doubt this may be the case<sup>3</sup>, but for now this is a fine generalisation)
 
@@ -294,7 +294,7 @@ p2 + geom_density(data = simulated_poisson, aes(x = dist),
 
 ```
 
-It's not perfect. But it's not a bad fit either. We can quantify how well the Poisson distribution fits the data using a [Chi Squared test](https://stats.stackexchange.com/questions/92627/how-to-use-the-chi-squared-test-to-determine-if-data-follow-the-poisson-distribu). 
+It's not perfect, but it's not a bad fit either. We can quantify how well the Poisson distribution fits the data using a [Chi Squared test](https://stats.stackexchange.com/questions/92627/how-to-use-the-chi-squared-test-to-determine-if-data-follow-the-poisson-distribu). 
 
 ```{r chi_squared, warning=FALSE,message=FALSE}
 # calc chi squared for home and away goals following Poisson distribution
@@ -599,7 +599,7 @@ The three separate functions are coded out separately so we can tinker with them
 
 Formally, for k matches and i teams, the likelihood function takes the form:
 
-$$\mathcal l_{n}(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{N}{\frac{\lambda_{k}^{x_{k}}e^-\lambda_{k}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^-\mu_{k}}{y_{k}!}}$$
+$$\mathcal l_{n}(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{N}{\frac{\lambda_{k}^{x_{k}}e^{-\lambda_{k}}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^{-\mu_{k}}}{y_{k}!}}$$
 
 where for match k and teams i and j, home goals, x is defined by
 
@@ -709,7 +709,7 @@ For starters, I always think it's simpler to have both scales of α and β to in
 $$X_{ij} \sim Poisson(α_{i}β_{j}γ)$$
 $$Y_{ij} \sim Poisson(α_{j}β_{i})$$
 
-if instead of multiplying by β, we divide instead, a stronger defence will reduce the value of β (reducing the number of expected goals for the opposing team).
+if instead of multiplying by β, we divide instead, a stronger defence will reduce the value of X~ij~/Y~ij~ (reducing the number of expected goals for the opposing team).
 
 $$X_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})$$
 $$Y_{ij} \sim Poisson(\frac{α_{j}}{β_{i}})$$
@@ -749,7 +749,7 @@ $$ A = \frac{B \cdot C}{D}$$
 is exactly the same as 
 
 $$ A = e ^{log(B) + log(C) - log(D)}$$
-we can convert the parameters we are looking for into log(parameters) and take the exponential of their sum as the predicted goals. This might seem like a minor change, but prevents an important exception. Using home goals as an example, remember that
+we can convert the parameters we are looking for into log(parameters) and take the exponent of their sum as the predicted goals. This might seem like a minor change, but prevents an important exception. Using home goals as an example, remember that
 
 $$X_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})$$
 if any of the three parameters become negative then we're left with a Poisson distribution with a negative mean, which is is absurd: events cannot unhappen. For instance, imagine a football game where one team scores negative goals.
@@ -806,7 +806,7 @@ and also
 $$\beta_{n} = -\sum_{i = 1}^{n-1} \beta_{i} $$ 
 In terms of code this just requires adding one line to the relist_params() function to append the value back. We also then need to remove this parameter that we will add back in from the initial parameters which is done below.
 
-Our output will now be missing the paramters for Arsenal (as they will only exist within the function), but we can easily calculate it from the parameters we do get out.
+Our output will now be missing the parameters for Arsenal (as they will only exist within the function), but we can easily calculate it from the parameters we do get out.
 
 ```{r constrained_parameters, warning=FALSE,message=FALSE}
 # introduce sum to zero constraint by calculating
@@ -842,7 +842,7 @@ current_nll <- list()
 
 ```
 
-We can then final the optim() function one final time to get our final optimised paramters
+We can then final the optim() function one final time to get our final optimised parameters
 
 ```{r calculated_optimised_parameters, warning=FALSE,message=FALSE}
 # run our final calculation
@@ -863,7 +863,7 @@ As the optim() function plays with the parameters you can see the log likelihood
 p3 <- data.frame(likelihood = unlist(current_nll),
                 iteration = seq(length(current_nll))) %>%
   ggplot(aes(x = iteration, y = likelihood)) +
-  geom_line(size = 2, colour = "red") +
+  geom_line(colour = "red") +
   # cut out some cases where optim() has been a bit ambitious
   coord_cartesian(ylim = c(0, 250)) +
   labs(title = "Negative log likelihood of parameters over iterations",
@@ -904,11 +904,11 @@ p4
 ```
 Notice how the teams monotonically increase in both attack and defensive ability. This is by design on how the results were created (see the bottom of this post). With only 8 games per team however, there is quite a lot of noise in the signal. Hitting the crossbar instead of scoring in one game could make a fairly large difference in how the function rates a team.
 
-Also note how the regression line passes through the origin- this is a result of us constraining the paramters to sum to zero.
+Also note how the regression line passes through the origin- this is a result of us constraining the parameters to sum to zero.
 
 ## Predict Remaining Matches
 
-Now we have rated each teams attack/defense, and the advantage to a team to play at home, we can predict the remeaning matches between the teams.
+Now we have rated each teams attack/defense, and the advantage to a team to play at home, we can predict the remaining matches between the teams.
 
 For this, we just have to use the predict_results() function we defined earlier, except this time the output will be the expected goals per team. Earlier we were measuring the deviance from expectation, but not we assume the most likely result is exactly equal to the expected results. If we wanted to we could work out how likely this result is, and what the most likely results are.
 
@@ -953,7 +953,7 @@ p5
 
 Which they do! The predicted results fit in with the gradient of heavier defeats for home teams towards the bottom left, progressing to easy home victories in the top right.
 
-That's all for this post. Hopefully using the Poisson distributon to model football matches is a little clearer now. Feel free to email me any questions and check out the packages I stole all the codes/idea from.
+That's all for this post. Hopefully using the Poisson distribution to model football matches is a little clearer now. Feel free to email me any questions and check out the packages I stole all the codes/idea from.
 
 Next time, I'll go over how to predict how likely a range of results are for any single match in (hopefully) a shorter post; until then!
 
