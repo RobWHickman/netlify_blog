@@ -1,7 +1,7 @@
 ---
 title: "An Introduction to Modelling Soccer Matches in R (part 1)"
 author: "Robert Hickman"
-date: '2019-05-16'
+date: '2019-06-30'
 output:
   pdf_document: default
   html_document:
@@ -88,7 +88,6 @@ fixtures <- create_fixtures(teams) %>%
 ```
 ```{r create_results, warning=FALSE,message=FALSE,include=FALSE}
 library(goalmodel)
-library(regista)
 model <- list()
 model$parameters <- list(attack = seq(1, -1 + 2/length(teams), by = -2/(length(teams)-1)) %>%
                            append(-sum(.)) %>%
@@ -219,7 +218,7 @@ unplayed_games <- fixtures %>%
 
 If we want to predict these results, we need to have data on the strength of the teams above, but also, a good prior on what sort of scores we should expect.
 
-Using real data from the engsoccerdata package we can get the results of all 48840 English football league games between August 1992 and May 2016. If we melt this to get the goals scored by each team by their location we get a df of 97680 records of a teams performance in a game:
+Using real data from the engsoccerdata package we can get the results of all 48840 English football league games between August 1992 and May 2016. If we melt this to get the goals scored by each team by their location we get a data.frame of 97680 records of a teams performance in a game:
 
 ```{r real_world_data, warning=FALSE,message=FALSE}
 # load real data from the english league
@@ -322,7 +321,7 @@ lapply(c("home", "away"), calc_chi_squared)
 
 It's actually perhaps not as significant as might be expected given the sheer amount of observations we have (see above reservations about modelling goals as a Poisson process) but it's clearly not the worst approximation either. The p-values < 0.05 for both home and away match data show we have a good reason to reject the null hypothesis that the data is not a Poisson distribution.
 
-If we think that goals scored represents some Poisson process, it can be modelled using the equation which underlies the Pisson distribution. For a given interval (one match), the probability of x events (goals scored) in that interval will be:
+If we think that goals scored represents some Poisson process, it can be modeled using the equation which underlies the Poisson distribution. For a given interval (one match), the probability of x events (goals scored) in that interval will be:
 
 $$P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}$$
 
@@ -349,7 +348,7 @@ basic_model <- results %>%
   print()
 ```
 
-(we'll come on to the beta parameter in a bit- where alpha is the average scoring rate, beta is the average condeeding rate).
+(we'll come on to the beta parameter in a bit- where alpha is the average scoring rate, beta is the average conceding rate).
 
 If we take Coventry's remaining two games as examples we can see that they are yet to play Arsenal and Frimley Green at home
 
@@ -378,7 +377,7 @@ e_results <- paste(team_alphas[coventry_games$home],
 
 These aren't ridiculous estimates by any stretch but it's clear something is up. It's pretty intuitive that Coventry City would be expected to score more goals at home to Frimley Green than at home to Arsenal.
 
-We can account for this by introducing an opposing team defence paramter β~j~. In our very simple model this will be estimating by taking the average rate a team conceedes goals. As with the attack rating, this is the calculated as the sum of all goals conceeded divided by number of matches. We'll then multiply α~i~ and β~j~ together to get the score estimate:
+We can account for this by introducing an opposing team defence parameter β~j~. In our very simple model this will be estimating by taking the average rate a team concedes goals. As with the attack rating, this is the calculated as the sum of all goals conceded divided by number of matches. We'll then multiply α~i~ and β~j~ together to get the score estimate:
 
 ```{r defence_estimates, warning=FALSE,message=FALSE}
 # get and name the defence rating for each team
@@ -396,7 +395,7 @@ e_results <- paste(round(team_alphas[coventry_games$home]*
 
 ```
 
-The opposition scores remain the same because Coventry have on average conceeded 1 goal per game. 
+The opposition scores remain the same because Coventry have on average conceded 1 goal per game. 
 
 Coventry's predicted goals though has diverged with them now predicted to score less than a goal against Arsenal and to score 8(!) against Frimley Green, both of which sound reasonable (when you consider that Frimley Green are a team of amateurs).
 
@@ -480,7 +479,7 @@ Remember that for the Poisson distribution, the probability of x goals in one ma
 
 $$P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}$$
 
-The expected value of the Poisson distribution is equal to λ, so we can plug λ as our predicted goals, and x as the actual goals, and calculate the probability of that results occuring _given_ the attack/defence/home advantage parameters that we think are correct.
+The expected value of the Poisson distribution is equal to λ, so we can plug λ as our predicted goals, and x as the actual goals, and calculate the probability of that results occurring _given_ the attack/defence/home advantage parameters that we think are correct.
 
 We then do this for all the matches played and get the likelihood for the home and away teams scores given the model:
 
@@ -517,7 +516,7 @@ log_likehood <- sum(log(likelihoods$lik_hgoal), log(likelihoods$lik_agoal)) * -1
 log_likehood
 
 ```
-(n.b. there'll be some rounding errors- especially on the pre-log probabilities, but this will suffice for now)
+(n.b. there will be some rounding errors- especially on the pre-log probabilities, but this will suffice for now)
 
 To get an idea of whether or not this is good, let's quickly run the model with all the parameters set to zero. Given that we're pretty sure that at least Arsenal will be a lot better than Frimley Green, this model should do worse than our basic model above. 
 
@@ -551,9 +550,9 @@ The worse log likelihood (112.6) is worse (only a bit though) than the 106.0 we 
 
 ## Parameter Optimisation
 
-There will exist some parameters (α and β for each team, and γ for the home field advantage) that will minimise this negative log likehood. That is to say, they will predict the results of the already played games most accurately.
+There will exist some parameters (α and β for each team, and γ for the home field advantage) that will minimise this negative log likelihood. That is to say, they will predict the results of the already played games most accurately.
 
-If we want to find those we can use the optim() function in the stats package. This will take a vector of paramaters and iterate while slightly changing their values until it gets the lowest value it can find as the output for a supplied function. It also takes a df of results between teams. The results of these games are predicted and then checked against this actually observed data.
+If we want to find those we can use the optim() function in the stats package. This will take a vector of parameters and iterate while slightly changing their values until it gets the lowest value it can find as the output for a supplied function. It also takes a data.frame of results between teams. The results of these games are predicted and then checked against this actually observed data.
 
 At the end, I've also set the function to pass some information from each iteration into the global environment, namely, the iteration number (i), the parameter values the optim() function has chosen for this iteration, and the negative log likelihood of those parameters- the likelihood of the observed scores if those parameters are correct.
 
@@ -593,13 +592,13 @@ The three separate functions are coded out separately so we can tinker with them
 
 *it isn't vital to have the parameters arranged like this, but I think it leads to neater indexing when predicting the results
 
-2) we then need to use these parameters to predict the results of past games. For each home and away team in a df of results we can predict the expected home and expected away goals. These are then bound into a df of home and away teams and these predicted gaols for each
+2) we then need to use these parameters to predict the results of past games. For each home and away team in a data.frame of results we can predict the expected home and expected away goals. These are then bound into a data.frame of home and away teams and these predicted goals for each
 
-3) finally, we need to calculate the negative log likelihood by calculating the log probability of the observed goals given the predicted goals and summing these. We then multiply this by -1 as the sum of the log porbabilities will be negative and we want to minimise this number as close to zero as possible. The transformation of prod(nll, -1) is a quick hack for this<sup>4</sup>
+3) finally, we need to calculate the negative log likelihood by calculating the log probability of the observed goals given the predicted goals and summing these. We then multiply this by -1 as the sum of the log probabilities will be negative and we want to minimise this number as close to zero as possible. The transformation of prod(neg_log_likelihood, -1) is a quick hack for this<sup>4</sup>
 
-Formally, for k matches and i teams, the likelihood function takes the form:
+Hopefully this is at least bearable to follow. Formalised, this can be written for teams i and matches k as:
 
-$$\mathcal l_{n}(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{N}{\frac{\lambda_{k}^{x_{k}}e^{-\lambda_{k}}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^{-\mu_{k}}}{y_{k}!}}$$
+$$\mathcal L_{n}(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{K}{\frac{\lambda_{k}^{x_{k}}e^{-\lambda_{k}}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^{-\mu_{k}}}{y_{k}!}}$$
 
 where for match k and teams i and j, home goals, x is defined by
 
@@ -741,6 +740,8 @@ optimised_parameters2$par
 
 ```
 
+(n.b. I won't print out the results of all these steps as this post is long enough, but you can run and see the gradual improvements for yourself)
+
 Next we want to subtly change how the expected goals are calculated.
 
 Given that
@@ -757,7 +758,7 @@ if any of the three parameters become negative then we're left with a Poisson di
 If we take the log parameters instead we have
 
 $$X_{ij} \sim Poisson(e ^ {α_{i} - β_{j} + γ})$$
-where no matter what values α, β, or γ take, the exponential or their sum will never be negative. When playing a very strong away teams, the mean goals will tend towards 0 (though will never actually reach it).
+where no matter what values α, β, or γ take, the exponent of their sum will never be negative. When playing a very strong away teams, the mean goals will tend towards 0 (though will never actually reach it).
 
 ```{r log_parameters, warning=FALSE,message=FALSE}
 # change prediction to use log parameters
@@ -792,11 +793,9 @@ optimised_parameters3 <- optim(
 
 ```
 
-## WRITE ABOUT BFGS METHOD ##
+We've also switched optimisation algorithm from Nelder-Mead to BFGS. BFGS is [quicker](https://docs.mantidproject.org/v3.7.1/concepts/FittingMinimizersComparisonDetailed.html#minimizers-unweighted-comparison-in-terms-of-accuracy) than Nelder-Mead but requires the minimisation function (i.e. the negative log likelihood we calculate) to be finite. Before, we could get infinite negative log likelihoods, as it was possible to calculate a negative mean (expected goals for a team). Running dpois() for a negative lambda will return NaN so it becomes impossible to calculate the final negative log likelihood.
 
-I won't print out the outcome for each of these small tinkering steps, but you can check them if you run the code yourself. Converting the parameters to log parameters won't really affect the optimisation, other than just performing a log calculation on their final value.
-
-Next we want to constrain the final optimised parameters by fixing the sum of all attack parameters, and the sum of all defence parameters, to equal 0. In practice, this basically means that above average attaking/defending teams will have parameters above 0, and below average teams will have parameters below 0. This is handy, but also the main advantage is this prevents [overfitting](https://en.wikipedia.org/wiki/Overfitting) of the parameters by the optimisation algorithm.
+Finally, we want to constrain the final optimised parameters by fixing the sum of all attack parameters, and the sum of all defence parameters, to equal 0. In practice, this basically means that above average attacking/defending teams will have parameters above 0, and below average teams will have parameters below 0. This is handy, but also the main advantage is this prevents [overfitting](https://en.wikipedia.org/wiki/Overfitting) of the parameters by the optimisation algorithm.
 
 To do this, we can simply drop the first (or last, or any, it doesn't matter) parameter from attack or defence (the parameters for Arsenal) and then calculate Arsenal's parameters as the sum of the remaining parameters multiplied by minus 1.
 
@@ -906,6 +905,38 @@ Notice how the teams monotonically increase in both attack and defensive ability
 
 Also note how the regression line passes through the origin- this is a result of us constraining the parameters to sum to zero.
 
+If we want to see how optim() selects these, we can plot how they change over iterations. You can see how it jumps around then settles on incremental improvements to the model.
+
+```{r}
+p5 <- current_parameters %>%
+  # get the parameters for arsenal for each iteration
+  lapply(., function(x){ unlist(relist_params(x))}) %>%
+  map_df(bind_rows, .id = "iteration") %>%
+  # melt data and split parameters into team and parameter
+  gather("parameter", "value", -iteration) %>%
+  # get rid of the gamma parameter
+  filter(parameter != "gamma.gamma") %>%
+  separate(parameter, into = c("parameter", "team"), sep = "\\.") %>%
+  # spread data back by parameter
+  spread(parameter, value) %>%
+  mutate(iteration = as.numeric(iteration)) %>%
+  # plot alpha against beta for each iteration
+  ggplot(aes(x = alpha, y = beta)) +
+  geom_text(aes(label = team)) +
+  labs(title = 'Parameters for Iteration {floor(frame_time)}',
+       subtitle = "given first 8 weeks of results",
+       x = "alpha (more likely to score ->)",
+       y = "beta (less likely to concede ->)") +
+  # using gganimate package
+  gganimate::transition_time(iteration) +
+  gganimate::ease_aes('linear') +
+  gganimate::view_follow()
+
+# animate the plot
+gganimate::animate(p5, nframes = i)
+```
+
+
 ## Predict Remaining Matches
 
 Now we have rated each teams attack/defense, and the advantage to a team to play at home, we can predict the remaining matches between the teams.
@@ -928,7 +959,7 @@ All of these look reasonable, with better teams beating worse ones. The only mat
 We can add these predictions to our earlier matrix of results to get a sense if these fit in with the trend from the observed matches:
 
 ```{r plot_all_games, warning=FALSE,message=FALSE}
-p5 <- rbind(
+p6 <- rbind(
   predicted_results %>%
     rename_if(is.numeric, gsub, pattern = "e_", replacement = "") %>%
     mutate(type = "predicted"),
@@ -948,7 +979,7 @@ p5 <- rbind(
   scale_y_discrete(limits = rev(levels(results$away))) +
   theme_minimal()
 
-p5
+p6
 ```
 
 Which they do! The predicted results fit in with the gradient of heavier defeats for home teams towards the bottom left, progressing to easy home victories in the top right.
@@ -969,7 +1000,7 @@ Next time, I'll go over how to quantify the probability of a range of results fo
 
 ## Results Generation
 
-First we need to create a df of fixtures for each team
+First we need to create a data.frame of fixtures for each team
 
 ```{r create_fixtures_display, warning=FALSE,message=FALSE}
 # https://stackoverflow.com/questions/54099990/is-there-an-efficient-algorithm-to-create-this-type-of-schedule
