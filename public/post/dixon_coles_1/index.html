@@ -573,7 +573,7 @@ lapply(c(&quot;home&quot;, &quot;away&quot;), calc_chi_squared)</code></pre>
 <p><span class="math display">\[P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}\]</span></p>
 <p>The simplest model we can produce is to estimate λ as each team’s attack rating (henceforth α<sub>i</sub>) which is equal to observed mean rate of goals for that team.</p>
 <p>That is the say the probability of team i scoring x goals against team j is:</p>
-<p><span class="math display">\[P(X_{i,j} = x) = \frac{\alpha_{i}^{x}e^{-\alpha_{i}}}{x!}\]</span></p>
+<p><span class="math display">\[P(x_{i,j} = x) = \frac{\alpha_{i}^{x}e^{-\alpha_{i}}}{x!}\]</span></p>
 <p>where α<sub>i</sub> is the sum of all goals scored divided by the total number of matches:</p>
 <p><span class="math display">\[\alpha_{i} = \frac{1}{N}\sum_{n=1}^{N} x\]</span></p>
 <p>grouping by teams makes this easy to calculate:</p>

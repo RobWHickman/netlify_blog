@@ -329,7 +329,7 @@ The simplest model we can produce is to estimate λ as each team's attack rating
 
 That is the say the probability of team i scoring x goals against team j is:
 
-$$P(X_{i,j} = x) = \frac{\alpha_{i}^{x}e^{-\alpha_{i}}}{x!}$$
+$$P(x_{i,j} = x) = \frac{\alpha_{i}^{x}e^{-\alpha_{i}}}{x!}$$
 
 where α~i~ is the sum of all goals scored divided by the total number of matches:
 
