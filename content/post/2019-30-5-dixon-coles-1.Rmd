@@ -408,9 +408,9 @@ real_data_means
 
 It's pretty common knowledge that football teams do better at home, so we'll want to factor that in. A simple estimate is to divide the mean home goals/game by the mean away goals/game.
 
-We'll call this parameter γ and can be formalised as the sum of home goals (which we'll refer to as X from now on) divided by the sum of away goals (Y)
+We'll call this parameter γ and can be formalised as the sum of home goals (which we'll refer to as x from now on) divided by the sum of away goals (y)
 
-$$\gamma = \frac{\sum{X}}{\sum{Y}}$$
+$$\gamma = \frac{\sum{x}}{\sum{y}}$$
 
 ```{r add_home_advantage, warning=FALSE,message=FALSE}
 # the home advantage is how much easier it is to score at home
@@ -478,6 +478,7 @@ In order to do this we can use the results we have from the first 8 weeks of mat
 Remember that for the Poisson distribution, the probability of x goals in one match is 
 
 $$P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}$$
+
 
 The expected value of the Poisson distribution is equal to λ, so we can plug λ as our predicted goals, and x as the actual goals, and calculate the probability of that results occurring _given_ the attack/defence/home advantage parameters that we think are correct.
 
@@ -598,7 +599,7 @@ The three separate functions are coded out separately so we can tinker with them
 
 Hopefully this is at least bearable to follow. Formalised, this can be written for teams i and matches k as:
 
-$$\mathcal L_{n}(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{K}{\frac{\lambda_{k}^{x_{k}}e^{-\lambda_{k}}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^{-\mu_{k}}}{y_{k}!}}$$
+$$\mathcal L(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{K}{\frac{\lambda_{k}^{x_{k}}e^{-\lambda_{k}}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^{-\mu_{k}}}{y_{k}!}}$$
 
 where for match k and teams i and j, home goals, x is defined by
 
@@ -705,13 +706,13 @@ This is all very well but there's still some small improvements we can make.
 
 For starters, I always think it's simpler to have both scales of α and β to increase as a teams becomes more skillful in attack or defence. In our original equation the expected home and away goals follow the formula
 
-$$X_{ij} \sim Poisson(α_{i}β_{j}γ)$$
-$$Y_{ij} \sim Poisson(α_{j}β_{i})$$
+$$x_{ij} \sim Poisson(α_{i}β_{j}γ)$$
+$$y_{ij} \sim Poisson(α_{j}β_{i})$$
 
-if instead of multiplying by β, we divide instead, a stronger defence will reduce the value of X~ij~/Y~ij~ (reducing the number of expected goals for the opposing team).
+if instead of multiplying by β, we divide instead, a stronger defence will reduce the value of x~ij~/y~ij~ (reducing the number of expected goals for the opposing team).
 
-$$X_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})$$
-$$Y_{ij} \sim Poisson(\frac{α_{j}}{β_{i}})$$
+$$x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})$$
+$$y_{ij} \sim Poisson(\frac{α_{j}}{β_{i}})$$
 
 To achieve this we just have to flip two lines of the predict_results function. Instead of multiplying α and β, we divide them instead.
 
@@ -752,12 +753,12 @@ is exactly the same as
 $$ A = e ^{log(B) + log(C) - log(D)}$$
 we can convert the parameters we are looking for into log(parameters) and take the exponent of their sum as the predicted goals. This might seem like a minor change, but prevents an important exception. Using home goals as an example, remember that
 
-$$X_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})$$
+$$x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})$$
 if any of the three parameters become negative then we're left with a Poisson distribution with a negative mean, which is is absurd: events cannot unhappen. For instance, imagine a football game where one team scores negative goals.
 
 If we take the log parameters instead we have
 
-$$X_{ij} \sim Poisson(e ^ {α_{i} - β_{j} + γ})$$
+$$x_{ij} \sim Poisson(e ^ {α_{i} - β_{j} + γ})$$
 where no matter what values α, β, or γ take, the exponent of their sum will never be negative. When playing a very strong away teams, the mean goals will tend towards 0 (though will never actually reach it).
 
 ```{r log_parameters, warning=FALSE,message=FALSE}

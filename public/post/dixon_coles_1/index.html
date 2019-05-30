@@ -643,8 +643,8 @@ real_data_means</code></pre>
 ## 1 away            1.11
 ## 2 home            1.48</code></pre>
 <p>It’s pretty common knowledge that football teams do better at home, so we’ll want to factor that in. A simple estimate is to divide the mean home goals/game by the mean away goals/game.</p>
-<p>We’ll call this parameter γ and can be formalised as the sum of home goals (which we’ll refer to as X from now on) divided by the sum of away goals (Y)</p>
-<p><span class="math display">\[\gamma = \frac{\sum{X}}{\sum{Y}}\]</span></p>
+<p>We’ll call this parameter γ and can be formalised as the sum of home goals (which we’ll refer to as x from now on) divided by the sum of away goals (y)</p>
+<p><span class="math display">\[\gamma = \frac{\sum{x}}{\sum{y}}\]</span></p>
 <pre class="r"><code># the home advantage is how much easier it is to score at home
 home_advantage_gamma &lt;- sum(results$hgoal) / sum(results$agoal)
 
@@ -875,7 +875,7 @@ worse_log_likelihood</code></pre>
 <li><p>finally, we need to calculate the negative log likelihood by calculating the log probability of the observed goals given the predicted goals and summing these. We then multiply this by -1 as the sum of the log probabilities will be negative and we want to minimise this number as close to zero as possible. The transformation of prod(neg_log_likelihood, -1) is a quick hack for this<sup>4</sup></p></li>
 </ol>
 <p>Hopefully this is at least bearable to follow. Formalised, this can be written for teams i and matches k as:</p>
-<p><span class="math display">\[\mathcal L_{n}(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{K}{\frac{\lambda_{k}^{x_{k}}e^{-\lambda_{k}}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^{-\mu_{k}}}{y_{k}!}}\]</span></p>
+<p><span class="math display">\[\mathcal L(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{K}{\frac{\lambda_{k}^{x_{k}}e^{-\lambda_{k}}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^{-\mu_{k}}}{y_{k}!}}\]</span></p>
 <p>where for match k and teams i and j, home goals, x is defined by</p>
 <p><span class="math display">\[x_{k} \sim Poisson(\lambda_{k} = \alpha_{i(k)}\beta_{j(k)}\gamma)\]</span>
 and away goals, y</p>
@@ -969,11 +969,11 @@ optimised_parameters$par</code></pre>
 <h2>Tinkering</h2>
 <p>This is all very well but there’s still some small improvements we can make.</p>
 <p>For starters, I always think it’s simpler to have both scales of α and β to increase as a teams becomes more skillful in attack or defence. In our original equation the expected home and away goals follow the formula</p>
-<p><span class="math display">\[X_{ij} \sim Poisson(α_{i}β_{j}γ)\]</span>
-<span class="math display">\[Y_{ij} \sim Poisson(α_{j}β_{i})\]</span></p>
-<p>if instead of multiplying by β, we divide instead, a stronger defence will reduce the value of X<sub>ij</sub>/Y<sub>ij</sub> (reducing the number of expected goals for the opposing team).</p>
-<p><span class="math display">\[X_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]</span>
-<span class="math display">\[Y_{ij} \sim Poisson(\frac{α_{j}}{β_{i}})\]</span></p>
+<p><span class="math display">\[x_{ij} \sim Poisson(α_{i}β_{j}γ)\]</span>
+<span class="math display">\[y_{ij} \sim Poisson(α_{j}β_{i})\]</span></p>
+<p>if instead of multiplying by β, we divide instead, a stronger defence will reduce the value of x<sub>ij</sub>/y<sub>ij</sub> (reducing the number of expected goals for the opposing team).</p>
+<p><span class="math display">\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]</span>
+<span class="math display">\[y_{ij} \sim Poisson(\frac{α_{j}}{β_{i}})\]</span></p>
 <p>To achieve this we just have to flip two lines of the predict_results function. Instead of multiplying α and β, we divide them instead.</p>
 <pre class="r"><code># change prediction to inverse defence parameters
 predict_results &lt;- function(home, away, param_list) {
@@ -1003,10 +1003,10 @@ optimised_parameters2$par</code></pre>
 is exactly the same as</p>
 <p><span class="math display">\[ A = e ^{log(B) + log(C) - log(D)}\]</span>
 we can convert the parameters we are looking for into log(parameters) and take the exponent of their sum as the predicted goals. This might seem like a minor change, but prevents an important exception. Using home goals as an example, remember that</p>
-<p><span class="math display">\[X_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]</span>
+<p><span class="math display">\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]</span>
 if any of the three parameters become negative then we’re left with a Poisson distribution with a negative mean, which is is absurd: events cannot unhappen. For instance, imagine a football game where one team scores negative goals.</p>
 <p>If we take the log parameters instead we have</p>
-<p><span class="math display">\[X_{ij} \sim Poisson(e ^ {α_{i} - β_{j} + γ})\]</span>
+<p><span class="math display">\[x_{ij} \sim Poisson(e ^ {α_{i} - β_{j} + γ})\]</span>
 where no matter what values α, β, or γ take, the exponent of their sum will never be negative. When playing a very strong away teams, the mean goals will tend towards 0 (though will never actually reach it).</p>
 <pre class="r"><code># change prediction to use log parameters
 # exp(log(x) + log(y)) = x * y
