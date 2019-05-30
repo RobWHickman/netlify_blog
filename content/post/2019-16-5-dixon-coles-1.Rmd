@@ -907,7 +907,7 @@ Also note how the regression line passes through the origin- this is a result of
 
 If we want to see how optim() selects these, we can plot how they change over iterations. You can see how it jumps around then settles on incremental improvements to the model.
 
-```{r}
+```{r plot_optimisation_animation, warning=FALSE,message=FALSE}
 p5 <- current_parameters %>%
   # get the parameters for arsenal for each iteration
   lapply(., function(x){ unlist(relist_params(x))}) %>%
