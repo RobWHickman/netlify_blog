@@ -8,9 +8,7 @@
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
     <lastBuildDate>Sun, 01 Jan 2017 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
-    
+    <atom:link href="/tags/" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Content tagged as &#39;Academic&#39;</title>
@@ -18,7 +16,8 @@
       <pubDate>Sun, 01 Jan 2017 00:00:00 +0000</pubDate>
       
       <guid>/tags/academic/</guid>
-      <description>Here is a list of all the content that has been tagged as academic.</description>
+      <description>&lt;p&gt;Here is a list of all the content that has been tagged as &lt;em&gt;academic&lt;/em&gt;.&lt;/p&gt;
+</description>
     </item>
     
     <item>
@@ -144,87 +143,6 @@
       <pubDate>Thu, 22 Nov 2018 00:00:00 +0000</pubDate>
       
       <guid>/tags/pubs/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>riddler</title>
-      <link>/tags/riddler/</link>
-      <pubDate>Sun, 03 Feb 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/riddler/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>rstas</title>
-      <link>/tags/rstas/</link>
-      <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/rstas/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>rstats</title>
-      <link>/tags/rstats/</link>
-      <pubDate>Thu, 30 May 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/rstats/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>sf</title>
-      <link>/tags/sf/</link>
-      <pubDate>Sun, 09 Sep 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/sf/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>the_knowledge</title>
-      <link>/tags/the_knowledge/</link>
-      <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/the_knowledge/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>tidytuesday</title>
-      <link>/tags/tidytuesday/</link>
-      <pubDate>Wed, 02 Jan 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/tidytuesday/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>twitter</title>
-      <link>/tags/twitter/</link>
-      <pubDate>Wed, 02 Jan 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/twitter/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>world cup</title>
-      <link>/tags/world-cup/</link>
-      <pubDate>Sun, 10 Jun 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/world-cup/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>xG</title>
-      <link>/tags/xg/</link>
-      <pubDate>Fri, 04 Jan 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/xg/</guid>
       <description></description>
     </item>
     

@@ -8,9 +8,7 @@
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
     <lastBuildDate>Sun, 03 Feb 2019 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="/tags/riddler/index.xml" rel="self" type="application/rss+xml" />
-    
+    <atom:link href="/tags/riddler/" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Riddler 1st February 2019</title>
@@ -18,8 +16,169 @@
       <pubDate>Sun, 03 Feb 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/riddler-1st-feb-2019/</guid>
-      <description>Riddler ClassicIn my spare time I enjoy solving 538’s The Riddler column. This week I had a spare few hours waiting for the Superbowl to start and decided to code up a solution to the latest problem to keep me busy.
-The question revolves around a card game in which whatever choice a player makes, they are likely to lose to a con artist. Formally this is phrased as:</description>
+      <description>
+
+
+&lt;div id=&#34;riddler-classic&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Riddler Classic&lt;/h1&gt;
+&lt;p&gt;In my spare time &lt;a href=&#34;http://www.robert-hickman.eu/post/riddler-27th-april-2018/&#34;&gt;I enjoy solving&lt;/a&gt; &lt;a href=&#34;https://fivethirtyeight.com/tag/the-riddler/&#34;&gt;538’s The Riddler column&lt;/a&gt;. This week I had a spare few hours waiting for the Superbowl to start and decided to code up a solution to the latest problem to keep me busy.&lt;/p&gt;
+&lt;p&gt;The question revolves around a card game in which whatever choice a player makes, they are likely to lose to a con artist. Formally this is phrased as:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;You meet someone on a street corner who’s standing at a table on which there are three decks of playing cards. He tells you his name is “Three Deck Monte.” Knowing this will surely end well, you inspect the decks. Each deck contains 12 cards …&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Red Deck: four aces, four 9s, four 7s Blue Deck: four kings, four jacks, four 6s Black Deck: four queens, four 10s, four 8s The man offers you a bet: You pick one of the decks, he then picks a different one. You both shuffle your decks, and you compete in a short game similar to War. You each turn over cards one at a time, the one with a higher card wins that turn (aces are high), and the first to win five turns wins the bet. (There can’t be ties, as no deck contains any of the same cards as any other deck.)&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Should you take the bet? After all, you can pick any of the decks, which seems like it should give you an advantage against the dealer. If you take the bet, and the dealer picks the best possible counter deck each time, how often will you win?&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Obviously if you’ve ever seen a trick like this you’ll know you shouldn’t. But what is the probability you lose?&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
+library(Rcpp)
+
+#set up the parameters
+deck_names &amp;lt;- c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;black&amp;quot;)
+decks &amp;lt;- list(
+  c(rep(14, 4), rep(9, 4), rep(7, 4)),
+  c(rep(13, 4), rep(11, 4), rep(6, 4)),
+  c(rep(12, 4), rep(10, 4), rep(8, 4))
+  )&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;in tidy R we can easily simulate a game using a quickly written function&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;play_game &amp;lt;- function(deck_player, deck_grifter) {
+  #shuffle the decks
+  deck_player &amp;lt;- sample(decks[[grep(deck_player, deck_names)]])
+  deck_grifter &amp;lt;- sample(decks[[grep(deck_grifter, deck_names)]])
+  
+  #set the point to zero
+  points_player &amp;lt;- 0
+  points_grifter &amp;lt;- 0
+  
+  #set the turn to 0
+  n &amp;lt;- 1
+  
+  #keep drawing cards until one player wins 5 times
+  while(points_grifter &amp;lt; 5 &amp;amp; points_player &amp;lt; 5) {
+    if(deck_player[n] &amp;gt; deck_grifter[n]) {
+      points_player &amp;lt;- points_player + 1
+    } else {
+      points_grifter &amp;lt;- points_grifter + 1
+    }
+    
+    #and update the turn 
+    n &amp;lt;- n + 1
+  }
+  
+  if(points_player &amp;gt; points_grifter) {
+    return(1)
+  } else {
+    return(0)
+  }
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;However, there’s not much learnt from just answering these question as easily/quickly as possible, so I frequently try and write out my solutions using the &lt;a href=&#34;https://cran.r-project.org/web/packages/Rcpp/index.html&#34;&gt;Rcpp package&lt;/a&gt; from Dirk Edelbuettel which allows for C++ integration into R.&lt;/p&gt;
+&lt;p&gt;For problems like this it isn’t reaaalllly necessary, but it’s good practice nonetheless.&lt;/p&gt;
+&lt;p&gt;The equivalent Rcpp function looks like:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#first declare the type_of_output function_name(type_of_input argument) up top
+cppFunction(&amp;#39;int play_gameC(NumericVector player_deck, NumericVector grifter_deck) {
+  //shuffle the decks
+  std::random_shuffle(player_deck.begin(), player_deck.end());
+  std::random_shuffle(grifter_deck.begin(), grifter_deck.end());
+  
+  //initialise
+  int turn = 0;
+  int points_player = 0;
+  int points_grifter = 0;
+
+  //play each round
+  while(points_player &amp;lt; 5 &amp;amp;&amp;amp; points_grifter &amp;lt; 5) {
+    int player_card = player_deck(turn);
+    int grifter_card = grifter_deck(turn);
+
+    if(player_card &amp;gt; grifter_card)
+    {
+      points_player = points_player + 1;
+    } 
+    else 
+    {
+      points_grifter = points_grifter + 1;
+    }
+
+    turn = turn + 1;
+  }
+  
+  //say default result =0 and update when player wins
+  int result = 0;
+
+  if(points_player &amp;gt; points_grifter) {
+    result = result + 1;
+  }
+
+//return the game result
+  return result;
+}&amp;#39;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;all that’s left is to rerun this a load of times. Fortunately purrr makes this super easy&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#create a df of all deck combinations
+combinations &amp;lt;- data.frame(player_choice = deck_names,
+                           grifter_choice = deck_names) %&amp;gt;%
+    expand(player_choice, grifter_choice) %&amp;gt;%
+    filter(player_choice != grifter_choice)
+
+#choose how many games to play
+number_of_games &amp;lt;- 10000
+
+#find how often the player wins for each deck choice
+results &amp;lt;- rerun(number_of_games,
+                 map2(combinations$player_choice,
+                      combinations$grifter_choice,
+                      play_game)
+                 ) %&amp;gt;%
+  unlist(.) %&amp;gt;%
+  matrix(ncol = number_of_games) %&amp;gt;%
+  #as a proportion of games
+  rowSums() / number_of_games 
+
+#mutate this back onto the combinations
+combinations &amp;lt;- combinations %&amp;gt;%
+  mutate(win_chance = results) %&amp;gt;%
+  print()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 3
+##   player_choice grifter_choice win_chance
+##   &amp;lt;fct&amp;gt;         &amp;lt;fct&amp;gt;               &amp;lt;dbl&amp;gt;
+## 1 black         blue                0.299
+## 2 black         red                 0.701
+## 3 blue          black               0.704
+## 4 blue          red                 0.306
+## 5 red           black               0.295
+## 6 red           blue                0.709&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So whatever deck you pick you have a 70% chance of losing providing the grifter has memorized the winning counter-deck. What an unfortunate state of affairs.&lt;/p&gt;
+&lt;p&gt;Giving we’ve written the C++ code (which I didn’t use in the end to run my model), it’s worth seeing what the speed advantage would have been. If you’re eagle-eyed you might notice that play_game and play_gameC have a slightly different way to defining the decks (the R function selects based on name in the first line) so I also wrote a play_gameR function that functions the same as the C++ one for a fairer comparison.&lt;/p&gt;
+&lt;p&gt;We can benchmark these using the microbenchmark&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(microbenchmark)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## Warning: package &amp;#39;microbenchmark&amp;#39; was built under R version 3.5.2&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#we&amp;#39;ll just use deck1 vs deck2 for the example
+deck1 &amp;lt;- decks[[1]]
+deck2 &amp;lt;- decks[[2]]
+
+microbenchmark(
+  play_gameR(deck1, deck2),
+  play_gameC(deck1, deck2),
+  times = 10000
+)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## Unit: microseconds
+##                      expr   min    lq      mean median     uq      max
+##  play_gameR(deck1, deck2) 8.388 9.847 14.202272 10.576 13.858 7745.265
+##  play_gameC(deck1, deck2) 1.094 1.459  2.333585  1.824  2.553  815.771
+##  neval
+##  10000
+##  10000&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And we can see that despite being very similar, the C++ code is much faster. For problems like this it makes no difference (a mean of 13 vs. 2ms isn’t going to be noticeable to a human except on very large numbers of reruns), but it’s fun to know how to get some free speed out of code in any case.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.youtube.com/watch?v=8nTFjVm9sTQ&#34;&gt;Radiohead - House of Cards&lt;/a&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;riddler-express---can-you-escape-a-maze-without-walls&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Riddler Express - Can You Escape a Maze Without Walls&lt;/h1&gt;
+&lt;p&gt;I also completed the riddler express which involves a maze. Obviously look away if you don’t want it spoiled, but the key is to work backwards and see there’s 1 clear fastest path. You can complete the maze in 42 moves. I’ve tried to show my messy working&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/riddler_maze.png&#34; /&gt;&lt;!-- --&gt;&lt;/p&gt;
+&lt;/div&gt;
+</description>
     </item>
     
   </channel>

@@ -8,9 +8,7 @@
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
     <lastBuildDate>Sun, 09 Sep 2018 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="/tags/sf/index.xml" rel="self" type="application/rss+xml" />
-    
+    <atom:link href="/tags/sf/" rel="self" type="application/rss+xml" />
     
     <item>
       <title>sf.chlorodot mini-package</title>
@@ -18,9 +16,110 @@
       <pubDate>Sun, 09 Sep 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/sf.schlorodot/</guid>
-      <description>Recently, I’d seen two tweets with stunning examples of maps by Paul Campbell here and (taken inspiration from the first) by Imer Muhović here.
-The basic idea of the dot chloropleths is to visualise not only the location clustering of each variable but the number of observations (something traditional ‘filled’ chloropleths don’t do). More importantly than this, the maps also just look really really cool.
-I had a spare few minutes during work on Friday which I tidied up into a package to calculate the random position of dots for such maps which can be found on my github.</description>
+      <description>
+
+
+&lt;p&gt;Recently, I’d seen two tweets with stunning examples of maps by Paul Campbell &lt;a href=&#34;https://twitter.com/PaulCampbell91/status/992043182996193280&#34;&gt;here&lt;/a&gt; and (taken inspiration from the first) by Imer Muhović &lt;a href=&#34;https://twitter.com/ImerM1/status/1037358973807210498&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The basic idea of the dot chloropleths is to visualise not only the location clustering of each variable but the number of observations (something traditional ‘filled’ chloropleths don’t do). More importantly than this, the maps also just look really really cool.&lt;/p&gt;
+&lt;p&gt;I had a spare few minutes during work on Friday which I tidied up into a package to calculate the random position of dots for such maps which can be found &lt;a href=&#34;https://github.com/RobWHickman/sf.chlorodot&#34;&gt;on my github&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Below, I’ll outline the code for the South African example used in the package README. Data comes from Adrian Frith’s &lt;a href=&#34;https://census2011.adrianfrith.com/&#34;&gt;very good 2011 census site&lt;/a&gt; and &lt;a href=&#34;https://gadm.org/download_country_v3.html&#34;&gt;gadm&lt;/a&gt; for the shapefiles.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(sf)
+library(ggplot2)
+library(tidyverse)
+library(data.table)
+library(rvest)
+
+devtools::install_github(&amp;#39;RobWHickman/sf.chlorodot&amp;#39;)
+library(sf.chlordot)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Next, download and scrape the data for the map&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#download the South African shapefile fom gadm
+admin_url &amp;lt;- &amp;quot;https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_ZAF_3_sf.rds&amp;quot;
+download.file(admin_url, destfile = &amp;quot;shapefiles.rds&amp;quot;, mode = &amp;quot;wb&amp;quot;)
+south_africa &amp;lt;- readRDS(&amp;quot;shapefiles.rds&amp;quot;) %&amp;gt;%
+  #convert to sf
+  st_as_sf() %&amp;gt;%
+  select(region = NAME_3) %&amp;gt;%
+  #merge geometries that have two rows
+  group_by(region) %&amp;gt;%
+  summarise()
+
+#get the links to the data from Adrian Frith&amp;#39;s site
+sa_data_url &amp;lt;- &amp;quot;https://census2011.adrianfrith.com&amp;quot;
+south_africa_data &amp;lt;- sa_data_url %&amp;gt;%
+  read_html() %&amp;gt;% html_nodes(&amp;quot;.namecell a&amp;quot;) %&amp;gt;% html_attr(&amp;quot;href&amp;quot;) %&amp;gt;% paste0(sa_data_url, .) %&amp;gt;%
+  lapply(., function(x) read_html(x) %&amp;gt;% html_nodes(&amp;quot;.namecell a&amp;quot;) %&amp;gt;% html_attr(&amp;quot;href&amp;quot;) %&amp;gt;% paste0(sa_data_url, .)) %&amp;gt;% unlist() %&amp;gt;%
+   lapply(., function(x) read_html(x) %&amp;gt;% html_nodes(&amp;quot;.namecell a&amp;quot;) %&amp;gt;% html_attr(&amp;quot;href&amp;quot;) %&amp;gt;% paste0(sa_data_url, .)) %&amp;gt;% unlist()
+
+#scrape the data on primary language from the 2011 South African census
+language_data &amp;lt;- rbindlist(lapply(south_africa_data, function(x) {
+  read &amp;lt;- read_html(x)
+  language_nos &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.datacell&amp;quot;) %&amp;gt;% html_text()
+  start &amp;lt;- grep(&amp;quot;Percentage&amp;quot;, language_nos)[3] + 1
+  stop &amp;lt;- grep(&amp;quot;Population&amp;quot;, language_nos) - 1
+  #some areas have no data
+  if(!is.na(start) &amp;amp; !is.na(stop)) {
+    language_nos &amp;lt;- language_nos[start:stop]
+    language_nos &amp;lt;- language_nos[seq(1, length(language_nos), 2)]
+  } else {
+    language_nos &amp;lt;- NA
+  }
+  
+  languages &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;tr &amp;gt; :nth-child(1)&amp;quot;) %&amp;gt;% html_text()
+  start &amp;lt;- grep(&amp;quot;First language&amp;quot;, languages) + 1
+  stop &amp;lt;- grep(&amp;quot;Name&amp;quot;, languages) - 1
+  if(length(start) &amp;gt; 0 &amp;amp; !is.na(stop)) {
+    languages &amp;lt;- languages[start:stop]
+  } else {
+    languages &amp;lt;- NA
+  }
+  
+  region_names &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.topname&amp;quot;) %&amp;gt;% html_text()
+  
+  #combine into a df
+  df &amp;lt;- data.frame(language = languages, primary_speakers = language_nos, region = region_names)
+  return(df)
+}))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;the lanaguage data then needs to be transformed before the dot position is calculated. It must be in ‘short’ format with variables as column names. At the same time we can do some cleaning in order to match the shape areas with the region names from the census and remove data we don’t want to plot&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;language_data %&amp;lt;&amp;gt;%
+  #convert number of speakers to numeric
+  mutate(primary_speakers = as.numeric(as.character(primary_speakers))) %&amp;gt;%
+  #matching of area names with South African shapefile
+  mutate(region = gsub(&amp;quot; NU&amp;quot;, &amp;quot;&amp;quot;, region)) %&amp;gt;%
+  mutate(region = gsub(&amp;quot;Tshwane&amp;quot;, &amp;quot;City of Tshwane&amp;quot;, region)) %&amp;gt;%
+  #filter only the data we want to merge
+  filter(region %in% south_africa$region) %&amp;gt;%
+  filter(!is.na(language)) %&amp;gt;%
+  filter(language != &amp;quot;Not applicable&amp;quot;) %&amp;gt;%
+  #spread the data
+  dcast(., region ~ language, value.var = &amp;quot;primary_speakers&amp;quot;, fun.aggregate = sum) %&amp;gt;%
+  #join in the spatial geometry
+  left_join(., south_africa) %&amp;gt;%
+  #convert to sf
+  st_as_sf()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;then we can calculate the random dot position using calc_dots() from the sf.chlorodot package. This takes three arguments. The first is the df to take the data from (language_data). The second is which variables to calculate positions for. The easiest way to do this is to use names(df) and select from there, though a character vector can also be passed. Finally, n_per_dot is the number of observations (speakers of language x) for each dot on the map. This will affect the look of the map, but also the processing time (lower n_per_dot = greater time) so play around with it a bit.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#calculate the dot positions using calc_dots from the sf.chlorodot package
+sf_dots &amp;lt;- calc_dots(df = language_data, col_names = names(language_data)[2:14], n_per_dot = 1000)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Finally, we can plot the output of this&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#stolen the background colour scheme from Paul Campbell&amp;#39;s blog
+#original inspiration for this package
+p &amp;lt;- ggplot() +
+  geom_sf(data = south_africa, fill = &amp;quot;transparent&amp;quot;,colour = &amp;quot;white&amp;quot;) +
+  geom_point(data = sf_dots, aes(lon, lat, colour = variable), size = 0.1) +
+  scale_colour_discrete(name = &amp;quot;Primary Language&amp;quot;) +
+  ggtitle(&amp;quot;Language Diversity in South Africa&amp;quot;) +
+  theme_void() +
+  guides(colour = guide_legend(override.aes = list(size = 10))) +
+  theme(plot.background = element_rect(fill = &amp;quot;#212121&amp;quot;, color = NA), 
+        panel.background = element_rect(fill = &amp;quot;#212121&amp;quot;, color = NA),
+        legend.background = element_rect(fill = &amp;quot;#212121&amp;quot;, color = NA),
+        text =  element_text(color = &amp;quot;white&amp;quot;),
+        title =  element_text(color = &amp;quot;white&amp;quot;),
+        legend.text=element_text(size=12),
+        plot.title = element_text(size = 20),
+        plot.margin = margin(1, 1, 1, 1, &amp;quot;cm&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;../../img/south_africa.png&#34; alt=&#34;chlorodot map of South African languages&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Enjoy!&lt;/p&gt;
+</description>
     </item>
     
   </channel>

@@ -8,9 +8,7 @@
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
     <lastBuildDate>Sun, 10 Jun 2018 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="/tags/world-cup/index.xml" rel="self" type="application/rss+xml" />
-    
+    <atom:link href="/tags/world-cup/" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Could an Independent Yorkshire Win the World Cup - Rest of the World/UK</title>
@@ -18,8 +16,188 @@
       <pubDate>Sun, 10 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_6/</guid>
-      <description>Recently, a Yorkshire national football team appeared in a league of national teams for stateless people. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
-I published the complete code for that article on this blog this week. However, one question which I kept being asked was how a ‘All of the UK’ team would do (i.</description>
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+&lt;p&gt;I &lt;a href=&#34;http://www.robert-hickman.eu/post/yorkshire_world_cup_1/&#34;&gt;published&lt;/a&gt; the complete code for that article on this blog this week. However, one question which I kept being asked was how a ‘All of the UK’ team would do (i.e. if the country wasn’t split up into England, Wales, Scotland, and Northern Ireland). Listening to the latest &lt;a href=&#34;https://twitter.com/doublepivotpod?lang=en&#34;&gt;Double Pivot Podcast&lt;/a&gt;, drafting plyers not going to the World Cup, I also wondered what a ‘Rest of the World’ 11 would look like/fare.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
+library(magrittr)
+library(data.table)
+library(ggplot2)&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;building-teams&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Building Teams&lt;/h1&gt;
+&lt;p&gt;To save time, I’m gonig to used saved versions of the datasets I built up over the 5 blog posts.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#world rankings
+world_rankings &amp;lt;- readRDS(&amp;quot;national_rankings.rds&amp;quot;)
+
+#player data
+all_players_data &amp;lt;- readRDS(&amp;quot;all_players_position_data.rds&amp;quot;)
+#all British players
+british_player_birthplaces &amp;lt;- readRDS(&amp;quot;british_player_birthplaces.rds&amp;quot;)
+
+#the countries going to the world cup
+world_cup_countries &amp;lt;- c(&amp;quot;Russia&amp;quot;, &amp;quot;Saudi Arabia&amp;quot;, &amp;quot;Egypt&amp;quot;, &amp;quot;Uruguay&amp;quot;,
+                         &amp;quot;Portugal&amp;quot;, &amp;quot;Spain&amp;quot;, &amp;quot;Morocco&amp;quot;, &amp;quot;Iran&amp;quot;,
+                         &amp;quot;France&amp;quot;, &amp;quot;Australia&amp;quot;, &amp;quot;Peru&amp;quot;, &amp;quot;Denmark&amp;quot;,
+                         &amp;quot;Argentina&amp;quot;, &amp;quot;Iceland&amp;quot;, &amp;quot;Croatia&amp;quot;, &amp;quot;Nigeria&amp;quot;,
+                         &amp;quot;Brazil&amp;quot;, &amp;quot;Switzerland&amp;quot;, &amp;quot;Costa Rica&amp;quot;, &amp;quot;Serbia&amp;quot;,
+                         &amp;quot;Germany&amp;quot;, &amp;quot;Mexico&amp;quot;, &amp;quot;Sweden&amp;quot;, &amp;quot;Korea Republic&amp;quot;,
+                         &amp;quot;Belgium&amp;quot;, &amp;quot;Panama&amp;quot;, &amp;quot;Tunisia&amp;quot;, &amp;quot;England&amp;quot;,
+                         &amp;quot;Poland&amp;quot;, &amp;quot;Senegal&amp;quot;, &amp;quot;Colombia&amp;quot;, &amp;quot;Japan&amp;quot;)
+
+#load data to save having to recalculate optimal teams
+optimal_national_teams &amp;lt;- readRDS(&amp;quot;optimal_national_teams.rds&amp;quot;)
+national_teams &amp;lt;- readRDS(&amp;quot;national_teams.rds&amp;quot;)
+
+#the formations for selecting teams
+formations_df &amp;lt;- readRDS(&amp;quot;formations_df.rds&amp;quot;)
+formation_coords &amp;lt;- readRDS(&amp;quot;player_position_coords.rds&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I won’t include the functions in this blog post either, but the article uses (at most very slight modified) functions from the previous 5 posts.&lt;/p&gt;
+&lt;p&gt;We first need to sort the players into either the UK vs. the rest of the World* and finding the optimal teams for each, as we did prviously.&lt;/p&gt;
+&lt;p&gt;*it’s possible Welsh (especially Gareth Bale), Northern Irish, or Scottish players might make the rest of the World team, but I’ll ignore that possibility for simplicity&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the names of each player to merge in
+player_lookup &amp;lt;- all_players_data %&amp;gt;%
+  select(id, name, nationality) %&amp;gt;%
+  mutate(original_nation = as.character(nationality))
+
+#sort the data for finding teams
+nationalised_players &amp;lt;- all_players_data %&amp;gt;%
+  setDT() %&amp;gt;%
+  #convert british players nationality to UK
+  .[id %in% british_player_birthplaces$id, nationality := &amp;quot;UK&amp;quot;] %&amp;gt;%
+  #filter out players from countries at the world cup
+  .[!nationality %in% world_cup_countries] %&amp;gt;%
+  #convert non-UK players nationality to &amp;quot;Rest of World&amp;quot;
+  .[!id %in% british_player_birthplaces$id, nationality := &amp;quot;RoW&amp;quot;]
+
+#find the optimal teams for both these nations
+extranational_teams &amp;lt;- rbindlist(lapply(unique(nationalised_players$nationality), find_optimal_team, 
+                                           select(nationalised_players, id, nationality, 49:60), replicates = 100))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;These can then be plotted to show the teams as before.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#select the best 4 county teams by total ability
+extranational_teams %&amp;lt;&amp;gt;%
+  setDT() %&amp;gt;%
+  .[, unique_position := make.unique(as.character(position)), by = &amp;quot;nation&amp;quot;] %&amp;gt;%
+  merge(., formation_coords, by = c(&amp;quot;formation&amp;quot;, &amp;quot;unique_position&amp;quot;)) %&amp;gt;%
+  merge(player_lookup, by = &amp;quot;id&amp;quot;) 
+
+#plot the data
+p &amp;lt;- ggplot(data = extranational_teams)
+p &amp;lt;- p %&amp;gt;%
+  #custom pitch aesthetic function
+  draw_pitch()
+p &amp;lt;- p + 
+  geom_text(aes(x = player_x, y = player_y, label = gsub(&amp;quot; &amp;quot;, &amp;quot;\n&amp;quot;, name), colour = original_nation), fontface = &amp;quot;bold&amp;quot;) +
+  scale_colour_manual(values = c(&amp;quot;darkred&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;yellow&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;darkblue&amp;quot;, &amp;quot;orange&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;red&amp;quot;),
+                      guide = FALSE) +
+  facet_wrap(~nation)
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/unnamed-chunk-1-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;calculating-ability&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Calculating Ability&lt;/h1&gt;
+&lt;p&gt;As previously, we can calculate the expected ELO of such teams via linear regression of the FIFA18 ability vs. ELO of actual national teams.&lt;/p&gt;
+&lt;p&gt;This time, let’s predict the ability of the extranational teams based on this regression before plotting, just to save on plots/time/code/etc.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge in the world rankings for each fieldable national team
+national_teams %&amp;lt;&amp;gt;% merge(., world_rankings, by = &amp;quot;nation&amp;quot;) %&amp;gt;%
+  #merge in the optimal team total_ability for each nation
+  merge(., unique(select(optimal_national_teams, nation, total_ability)), by = &amp;quot;nation&amp;quot;)
+
+#regress ELO against total_ability (as judged by selection of FIFA18 players)
+ability_regression &amp;lt;- lm(data = national_teams, ELO ~ total_ability)
+
+#munge the extranational teams df to predict the ELO
+extranational_teams &amp;lt;- data.frame(nation = c(&amp;quot;UK&amp;quot;, &amp;quot;RoW&amp;quot;)) %&amp;gt;%
+  merge(., select(extranational_teams, nation, total_ability), by = &amp;quot;nation&amp;quot;) %&amp;gt;%
+  #predict the ELO of each county using the previous regression
+  mutate(predicted_ELO = predict(ability_regression, .)) %&amp;gt;%
+  unique()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then we can plot this regression and see where the RoW and UK fall in terms of actual nations&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot ELO vs. total_ability
+p &amp;lt;- ggplot(data = national_teams, aes(x = total_ability, y = ELO)) +
+  geom_text(aes(label = nation), colour = &amp;quot;grey60&amp;quot;) +
+  #add in the linear regression line + confidence intervals
+  stat_smooth(method = &amp;quot;lm&amp;quot;, colour = &amp;quot;darkred&amp;quot;) +
+  geom_text(data = extranational_teams, aes(label = nation, x = total_ability, y = predicted_ELO), colour = &amp;quot;darkblue&amp;quot;) +
+  xlab(&amp;quot;FIFA18 Optimal Team Ability&amp;quot;) +
+  ylab(&amp;quot;National Team ELO&amp;quot;) +
+  ggtitle(&amp;quot;FIFA18 ability vs. ELO for National Teams&amp;quot;) +
+  theme_minimal()
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/plot_regression-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;What’s quite nice about the graph is it shows the limitation of this approach. By definition, a UK team should be &lt;em&gt;at least&lt;/em&gt; as good as the English national team, but because England overperform their ‘FIFA ability’, the UK is actually ranked a fair bit lower in terms of ELO&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#show the ELOs of the English national football team
+#and predicted ELO of a UK team
+national_teams$ELO[national_teams$nation == &amp;quot;England&amp;quot;]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 1941&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;extranational_teams$predicted_ELO[extranational_teams$nation == &amp;quot;UK&amp;quot;]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##       12 
+## 1910.421&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The RoW team is similarly probably undervalued in terms of ELO. FIFA18 ranks the players as a lot better than teams like Germany and Brazil, but with much lower ELO&lt;/p&gt;
+&lt;p&gt;We can then run the simulations, swapping the UK/RoW in for countries. The obvious substitute for the UK is England. For the RoW I decided to remove the team with the lowest ELO, which turns out to be Saudi Arabia&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge the ELOs with the world cup draw information
+wc_teams %&amp;lt;&amp;gt;% merge(., select(national_teams, nation, ELO) %&amp;gt;%
+                      rbind(., data.frame(nation = &amp;quot;Panama&amp;quot;, ELO = 1669)), by = &amp;quot;nation&amp;quot;)
+wc_teams$nation &amp;lt;- as.character(wc_teams$nation)
+
+simulate_counties &amp;lt;- function(extranation, simulations, replace_country) {
+  #replace Englands ELO with that of the county team replacing them
+  wc_teams$ELO[wc_teams$nation == replace_country] &amp;lt;- extranational_teams$predicted_ELO[extranational_teams$nation == extranation]
+  wc_teams$nation[wc_teams$nation == replace_country] &amp;lt;- extranation
+  
+  #run x number of simulations
+  for(simulation in 1:simulations) {
+    winner &amp;lt;- simulate_tournament(wc_teams, knockout_matches, group_matches)
+    if(simulation == 1) {
+      winners &amp;lt;- winner
+    } else {
+      winners &amp;lt;- append(winners, winner)
+    }
+  }
+  
+  #spit out a df with each winner and the number of times they win
+  simulation_df &amp;lt;- data.frame(table(winners))
+  names(simulation_df) &amp;lt;- c(&amp;quot;nation&amp;quot;, &amp;quot;championships&amp;quot;)
+  
+  #work out the percentage chane of each nation/county winning
+  simulation_df$percentage &amp;lt;- simulation_df$championships / (simulations/100)
+  return(simulation_df)
+}
+
+#run the simulations
+UK_simulation &amp;lt;- simulate_counties(&amp;quot;UK&amp;quot;, 1000, &amp;quot;England&amp;quot;) %&amp;gt;% 
+  mutate(simulation = &amp;quot;UK&amp;quot;)
+RoW_simulation &amp;lt;- simulate_counties(&amp;quot;RoW&amp;quot;, 1000, wc_teams$nation[which.min(wc_teams$ELO)]) %&amp;gt;%
+  mutate(simulation = &amp;quot;RoW&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;simulation_results &amp;lt;- rbind(UK_simulation, RoW_simulation) %&amp;gt;%
+  setDT() %&amp;gt;%
+    .[, perc_chance := mean(percentage), by = &amp;quot;nation&amp;quot;] %&amp;gt;%
+  .[, c(&amp;quot;nation&amp;quot;, &amp;quot;perc_chance&amp;quot;)] %&amp;gt;%
+  unique(.) %&amp;gt;%
+  .[nation %in% c(&amp;quot;RoW&amp;quot;, &amp;quot;UK&amp;quot;), nation_status := &amp;quot;simulation&amp;quot;] %&amp;gt;%
+  .[!nation %in% c(&amp;quot;RoW&amp;quot;, &amp;quot;UK&amp;quot;), nation_status := &amp;quot;nation&amp;quot;] %&amp;gt;%
+  #order by percentage chance of winning the WC
+  .[, nation := factor(nation, levels = nation[order(-.$perc_chance)])]
+
+#plot the results
+p &amp;lt;- ggplot(data = simulation_results, aes(x = nation, y = perc_chance)) +
+  geom_bar(stat = &amp;quot;identity&amp;quot;, aes(fill = nation_status)) +
+  scale_fill_manual(values = c(&amp;quot;darkblue&amp;quot;, &amp;quot;darkred&amp;quot;), name = &amp;quot;Nation Status&amp;quot;) +
+  xlab(&amp;quot;Team&amp;quot;) +
+  ylab(&amp;quot;World Cup Win Percentage Chance&amp;quot;) +
+  ggtitle(&amp;quot;Percetange Chance of Winning the World Cup from 1000 Simulations&amp;quot;,
+          subtitle = &amp;quot;UK/RoW Substituted for England/Saudi Arabia Respectively&amp;quot;) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.2))
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/munge_simulation_results-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;The team for the RoW tend to do fairly well. In fact only Brazil, Germany, or Spain (3 of the tournament favourites) tend to win more simulated World Cups than them. The team for the whole of the UK disappoints as much as the English national team, winning about the same as the original, and other similarly ranked nations, such as Colombia, or Peru.&lt;/p&gt;
+&lt;/div&gt;
+</description>
     </item>
     
     <item>
@@ -28,8 +206,356 @@ I published the complete code for that article on this blog this week. However, 
       <pubDate>Sat, 09 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_5/</guid>
-      <description>Recently, a Yorkshire national football team appeared in a league of national teams for stateless people. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
-This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 5 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.</description>
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+&lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 5 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Now that we’ve picked the teams for each nation and county, it’s finally time to make predictions about the World Cup.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
+library(magrittr)
+library(data.table)
+library(ggplot2)&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;get-county-rankings&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Get County Rankings&lt;/h1&gt;
+&lt;p&gt;Now that we have the teams for each county, we want to work out how well they would do at a world cup. For this, we need to know roughly what their ranking would be compared to actual nations.&lt;/p&gt;
+&lt;p&gt;Two sources of rankings of nations are the official FIFA world rankings, and also the world ELO ratings of each nation at www.eloratings.net.&lt;/p&gt;
+&lt;p&gt;I scraped both of these (accurate to mid-May) and cleaned the data to match the nation names to those in the player dataset we’re using.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#scraped world rankings from FIFA and world ELO
+#http://www.fifa.com/fifa-world-ranking/ranking-table/men/index.html
+#https://www.eloratings.net/
+#accurate for mid-May
+#have matched country names between world rankings and FIFA player data
+world_rankings &amp;lt;- readRDS(&amp;quot;national_rankings.rds&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#glimpse the data
+head(world_rankings)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##      nation  ELO FIFA
+## 1    Brazil 2131    2
+## 2   Germany 2092    1
+## 3     Spain 2049    8
+## 4 Argentina 1985    5
+## 5    France 1984    7
+## 6  Portugal 1975    4&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ELO is a chess rating mechanism which can be used to make predictions about which team would win in a matchup. If we compare it to the FIFA rankings, we can see there’s a clear negative correlation (the lower the ranking (e.g. top 10 teams in the world), the higher the ELO)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot FIFA rankings vs. ELO
+p &amp;lt;- ggplot(data = world_rankings, aes(x = FIFA, y = ELO)) +
+  geom_text(aes(label = nation)) +
+  xlab(&amp;quot;FIFA Ability&amp;quot;) +
+  ylab(&amp;quot;ELO Rankings&amp;quot;) +
+  ggtitle(&amp;quot;The FIFA World Rankings and ELO Rankings for Countries&amp;quot;)
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_5_files/figure-html/plot_world_rankings-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;To validate our method, the total ability of each team from their players in FIFA18 should correlate with this ELO rating.&lt;/p&gt;
+&lt;p&gt;If we merge in the optimal team data and plot it against ELO we see nice linear positive correlation.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge in the world rankings for each fieldable national team
+national_teams %&amp;lt;&amp;gt;% merge(., world_rankings, by = &amp;quot;nation&amp;quot;) %&amp;gt;%
+  #merge in the optimal team total_ability for each nation
+  merge(., unique(select(optimal_national_teams, nation, total_ability)), by = &amp;quot;nation&amp;quot;)
+
+head(national_teams)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##      nation players gks  ELO FIFA total_ability
+## 1   Albania      36   2 1596   56      73.44459
+## 2   Algeria      58   3 1524   64      77.86387
+## 3    Angola      16   1 1259  138      69.03657
+## 4 Argentina     875 100 1985    5      84.97171
+## 5 Australia     199  33 1714   40      74.21456
+## 6   Austria     226  39 1726   26      78.65603&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot ELO vs. total_ability
+p &amp;lt;- ggplot(data = national_teams, aes(x = total_ability, y = ELO)) +
+  geom_text(aes(label = nation), colour = &amp;quot;grey60&amp;quot;) +
+  xlab(&amp;quot;FIFA18 Optimal Team Ability&amp;quot;) +
+  ylab(&amp;quot;National Team ELO&amp;quot;) +
+  ggtitle(&amp;quot;FIFA18 ability vs. ELO for National Teams&amp;quot;) +
+  theme_minimal()
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_5_files/figure-html/unnamed-chunk-1-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;We can quanitfy this correlation by creating a linear model using lm() and see that the adjusted R-squared is rather high- 0.7354.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#regress ELO against total_ability (as judged by selection of FIFA18 players)
+ability_regression &amp;lt;- lm(data = national_teams, ELO ~ total_ability)
+
+#summary
+summary(ability_regression)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 
+## Call:
+## lm(formula = ELO ~ total_ability, data = national_teams)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -222.229  -58.773    2.228   48.415  274.785 
+## 
+## Coefficients:
+##               Estimate Std. Error t value Pr(&amp;gt;|t|)    
+## (Intercept)   -755.764    160.669  -4.704 1.02e-05 ***
+## total_ability   32.133      2.111  15.221  &amp;lt; 2e-16 ***
+## ---
+## Signif. codes:  0 &amp;#39;***&amp;#39; 0.001 &amp;#39;**&amp;#39; 0.01 &amp;#39;*&amp;#39; 0.05 &amp;#39;.&amp;#39; 0.1 &amp;#39; &amp;#39; 1
+## 
+## Residual standard error: 97.31 on 82 degrees of freedom
+## Multiple R-squared:  0.7386, Adjusted R-squared:  0.7354 
+## F-statistic: 231.7 on 1 and 82 DF,  p-value: &amp;lt; 2.2e-16&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can also plot this regression to further convince ourselves that predicting ELO from FIFA18 ability is a fairly valid move.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot ELO vs. total_ability
+p &amp;lt;- ggplot(data = national_teams, aes(x = total_ability, y = ELO)) +
+  geom_text(aes(label = nation), colour = &amp;quot;grey60&amp;quot;) +
+  #add in the linear regression line + confidence intervals
+  stat_smooth(method = &amp;quot;lm&amp;quot;, colour = &amp;quot;darkred&amp;quot;) +
+  xlab(&amp;quot;FIFA18 Optimal Team Ability&amp;quot;) +
+  ylab(&amp;quot;National Team ELO&amp;quot;) +
+  ggtitle(&amp;quot;FIFA18 ability vs. ELO for National Teams&amp;quot;) +
+  theme_minimal()
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_5_files/figure-html/plot_regression-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;As we have a predictor for ELO based on FIFA18 ability, we can now predict the ELO of each county team. We simply feed the model back into our df of optimal county teams.&lt;/p&gt;
+&lt;p&gt;If we plot this over the previous plot we can see the counties have ELOs which fall within a range of national team abilities. The best counties (Yorkshire and Lancashire) are about as good as teams which generally qualify for world cups (e.g. Sweden and Serbia) whereas some counties (e.g. ) are much less proficient and would probably struggle to qualify.&lt;/p&gt;
+&lt;p&gt;Given the teams we saw that were selected earlier, this makes sense- Yorkshire and Lancashire can field generally pretty solid teams of international/near-international level footballers and so would be expected to be competitive.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;county_teams %&amp;lt;&amp;gt;% merge(., select(optimal_county_teams, county = nation, total_ability), by = &amp;quot;county&amp;quot;) %&amp;gt;%
+  #predict the ELO of each county using the previous regression
+  mutate(predicted_ELO = predict(ability_regression, .))
+
+#add these to the plots of ELO ~ FIFA team ability
+plot(p + geom_text(data = county_teams, aes(x = total_ability, y = predicted_ELO, label = county), colour = &amp;quot;darkblue&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_5_files/figure-html/predict_county_ELO-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;simulate-world-cups&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Simulate World Cups&lt;/h1&gt;
+&lt;p&gt;Finally, we want to know if any of these counties have a shot at winning the World Cup.&lt;/p&gt;
+&lt;p&gt;To do this, the best method is simply to simulate lots of World Cups and see what the percentage chance for each team is. This is possible as ELO gives us a quantifiable measure of how likely a given team is to beat another.&lt;/p&gt;
+&lt;p&gt;Before we can simulate the World Cup however, we need some information about the draw.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;wc_teams &amp;lt;- data.frame(nation = c(&amp;quot;Russia&amp;quot;, &amp;quot;Saudi Arabia&amp;quot;, &amp;quot;Egypt&amp;quot;, &amp;quot;Uruguay&amp;quot;,
+                                  &amp;quot;Portugal&amp;quot;, &amp;quot;Spain&amp;quot;, &amp;quot;Morocco&amp;quot;, &amp;quot;Iran&amp;quot;,
+                                  &amp;quot;France&amp;quot;, &amp;quot;Australia&amp;quot;, &amp;quot;Peru&amp;quot;, &amp;quot;Denmark&amp;quot;,
+                                  &amp;quot;Argentina&amp;quot;, &amp;quot;Iceland&amp;quot;, &amp;quot;Croatia&amp;quot;, &amp;quot;Nigeria&amp;quot;,
+                                  &amp;quot;Brazil&amp;quot;, &amp;quot;Switzerland&amp;quot;, &amp;quot;Costa Rica&amp;quot;, &amp;quot;Serbia&amp;quot;,
+                                  &amp;quot;Germany&amp;quot;, &amp;quot;Mexico&amp;quot;, &amp;quot;Sweden&amp;quot;, &amp;quot;Korea Republic&amp;quot;,
+                                  &amp;quot;Belgium&amp;quot;, &amp;quot;Panama&amp;quot;, &amp;quot;Tunisia&amp;quot;, &amp;quot;England&amp;quot;,
+                                  &amp;quot;Poland&amp;quot;, &amp;quot;Senegal&amp;quot;, &amp;quot;Colombia&amp;quot;, &amp;quot;Japan&amp;quot;),
+                       group = c(rep(letters[1:8], each = 4)),
+                       draw = rep(1:4, 8))
+
+group_matches &amp;lt;- data.frame(match = 1:6,
+                            team1 = c(1,3,1,4,4,2),
+                            team2 = c(2,4,3,2,1,3))
+
+knockout_matches &amp;lt;- data.frame(round = c(rep(&amp;quot;R16&amp;quot;, 8), rep(&amp;quot;QF&amp;quot;, 4), rep(&amp;quot;SF&amp;quot;, 2), &amp;quot;F&amp;quot;),
+                               team1 = c(&amp;quot;a1&amp;quot;, &amp;quot;c1&amp;quot;, &amp;quot;e1&amp;quot;, &amp;quot;g1&amp;quot;, &amp;quot;b1&amp;quot;, &amp;quot;d1&amp;quot;, &amp;quot;f1&amp;quot;, &amp;quot;h1&amp;quot;,
+                                         &amp;quot;m49&amp;quot;, &amp;quot;m53&amp;quot;, &amp;quot;m51&amp;quot;, &amp;quot;m55&amp;quot;, &amp;quot;m57&amp;quot;, &amp;quot;m59&amp;quot;, &amp;quot;m61&amp;quot;),
+                               team2 = c(&amp;quot;b2&amp;quot;, &amp;quot;d2&amp;quot;, &amp;quot;f2&amp;quot;, &amp;quot;h2&amp;quot;, &amp;quot;a2&amp;quot;, &amp;quot;c2&amp;quot;, &amp;quot;e2&amp;quot;, &amp;quot;g2&amp;quot;,
+                                         &amp;quot;m50&amp;quot;, &amp;quot;m54&amp;quot;, &amp;quot;m52&amp;quot;, &amp;quot;m56&amp;quot;, &amp;quot;m58&amp;quot;, &amp;quot;m60&amp;quot;, &amp;quot;m62&amp;quot;),
+                               match_id = c(&amp;quot;m49&amp;quot;, &amp;quot;m50&amp;quot;, &amp;quot;m53&amp;quot;, &amp;quot;m54&amp;quot;, &amp;quot;m51&amp;quot;, &amp;quot;m52&amp;quot;, &amp;quot;m55&amp;quot;, &amp;quot;m56&amp;quot;,
+                                            &amp;quot;m57&amp;quot;, &amp;quot;m58&amp;quot;, &amp;quot;m59&amp;quot;, &amp;quot;m60&amp;quot;, &amp;quot;m61&amp;quot;, &amp;quot;m62&amp;quot;, &amp;quot;FINAL&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And then we need to write functions to do the simulation.&lt;/p&gt;
+&lt;p&gt;The first of these simply takes the ELO of the two teams and works out the win percentage for teamA (for teamB = 1 - p(teamA)).&lt;/p&gt;
+&lt;p&gt;This is used in two further functions which simulate the group stages, and then the knockout stages respectively.&lt;/p&gt;
+&lt;p&gt;For the groups, teams are drawn against each other as they will be in Russia and their ELOs compared. A random number generator is used to decided which teams wins (if p(teamA wins based on ELO) &amp;gt; random_number, teamA wins). I also included the chance to draw if the difference between the win_chance and the random_number is less than 0.1 in either direction.&lt;/p&gt;
+&lt;p&gt;The points each team is predicted to win in the groups is then summed and the top two teams from each group progresses to the knockout stage.&lt;/p&gt;
+&lt;p&gt;The knockout stage is easier to simulate as we don’t need to worry about points/draws. The same method as above is used to predict the winning team and that team progresses, whilst we remove the other from a df. Eventually only one team is left- the winner of the tournament.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#uses ELO to calculate the chance of team A winning
+calc_win_chance &amp;lt;- function(ratingA, ratingB) {
+  win_chance &amp;lt;- 1/ (1+10^((ratingB-ratingA)/400))
+}
+
+#simulate the group stages of the tournament
+simulate_groups &amp;lt;- function(group_letter, national_teams, group_matches) {
+  group &amp;lt;- national_teams %&amp;gt;%
+    filter(group == group_letter) %&amp;gt;%
+    mutate(points = 0) %&amp;gt;%
+    mutate(av_difference = 0) %&amp;gt;%
+    arrange(draw)
+  
+  #six matches per group
+  for(match in 1:6){
+    team1 &amp;lt;- group$nation[group_matches$team1[match]]
+    team2 &amp;lt;- group$nation[group_matches$team2[match]]
+    
+    #calculate winner using a random number generator and comparing to the ELO win percentages
+    random_number_draw &amp;lt;- runif(1)
+    win_chance &amp;lt;- calc_win_chance(group$ELO[group$nation == team1], group$ELO[group$nation == team2])
+    
+    #update ELOs and assign group stage points
+    if(win_chance - random_number_draw &amp;gt; 0.1) {
+      group$points[group$nation == team1] &amp;lt;- group$points[group$nation == team1] + 3
+      group$points[group$nation == team2] &amp;lt;- group$points[group$nation == team2] + 0
+      
+      group$ELO[group$nation == team1] &amp;lt;- group$ELO[group$nation == team1] + 50*(1-win_chance)
+      group$ELO[group$nation == team2] &amp;lt;- group$ELO[group$nation == team2] + 50*(0-(1-win_chance))
+      
+    } else if(win_chance - random_number_draw &amp;lt; -0.1) {
+      group$points[group$nation == team1] &amp;lt;- group$points[group$nation == team1] + 0
+      group$points[group$nation == team2] &amp;lt;- group$points[group$nation == team2] + 3
+      
+      group$ELO[group$nation == team1] &amp;lt;- group$ELO[group$nation == team1] + 50*(0-win_chance)
+      group$ELO[group$nation == team2] &amp;lt;- group$ELO[group$nation == team2] + 50*(1-(1-win_chance))
+
+    } else {
+      group$points[group$nation == team1] &amp;lt;- group$points[group$nation == team1] + 1
+      group$points[group$nation == team2] &amp;lt;- group$points[group$nation == team2] + 1
+      
+      group$ELO[group$nation == team1] &amp;lt;- group$ELO[group$nation == team1] + 50*(0.5-win_chance)
+      group$ELO[group$nation == team2] &amp;lt;- group$ELO[group$nation == team2] + 50*(0.5-(1-win_chance))
+    }
+    
+    group$av_difference[group$nation == team1] &amp;lt;- group$av_difference[group$nation == team1] + 
+      (group$ELO[group$nation == team1] - group$ELO[group$nation == team2])
+    group$av_difference[group$nation == team2] &amp;lt;- group$av_difference[group$nation == team2] - 
+      (group$ELO[group$nation == team1] - group$ELO[group$nation == team2])
+  }
+  
+  #arrange the groups by points per team, then by the ELO difference between a team and it&amp;#39;s rivals
+  #use ELO difference as secondary sorter as proxy for goal difference
+  group &amp;lt;- arrange(group, -points, -av_difference) %&amp;gt;%
+    mutate(position = 1:4)
+  return(group)
+}
+
+#simulate the knockout rounds
+simulate_knockout_rounds &amp;lt;- function(national_teams, knockout_matches) {
+  for(match in seq(nrow(knockout_matches))) {
+    #get the teams and the match id
+    team1 &amp;lt;- as.character(national_teams$nation[which(national_teams$id == knockout_matches$team1[match])])
+    team2 &amp;lt;- as.character(national_teams$nation[which(national_teams$id == knockout_matches$team2[match])])
+    match_id &amp;lt;- as.character(knockout_matches$match_id[match])
+    
+    national_teams$id[which(national_teams$nation %in% c(team1, team2))] &amp;lt;- match_id
+    
+    #use a random number generator to decide the winner
+    random_number_draw &amp;lt;- runif(1)
+    
+    #use ELO chances vs. the random number to work out which team wins
+    win_chance &amp;lt;- calc_win_chance(national_teams$ELO[national_teams$nation == team1], national_teams$ELO[national_teams$nation == team2])
+    
+    #update ELOs and remove losing team
+    if(win_chance &amp;gt; random_number_draw) {
+      national_teams$ELO[national_teams$nation == team1] &amp;lt;- national_teams$ELO[national_teams$nation == team1] + 50*(1-win_chance)
+      national_teams &amp;lt;- national_teams[-which(national_teams$nation == team2),]
+    } else {
+      national_teams$ELO[national_teams$nation == team2] &amp;lt;- national_teams$ELO[national_teams$nation == team2] + 50*(1-(1-win_chance))
+      national_teams &amp;lt;- national_teams[-which(national_teams$nation == team1),]
+    }
+  }
+  #returns the nation from the last remain row of the df == the winner of the tournament
+  return(national_teams$nation)
+}
+
+#simulate the whole tournament
+simulate_tournament &amp;lt;- function(national_teams, knockout_matches, group_matches) {
+  #simulate the group stages
+  knockout_rounds &amp;lt;- rbindlist(lapply(letters[1:8], simulate_groups,  
+                                      national_teams = national_teams, group_matches = group_matches)) %&amp;gt;%
+    #filter the top two teams from each group
+    filter(position &amp;lt; 3) %&amp;gt;%
+    mutate(id = paste0(group, position)) %&amp;gt;%
+    select(nation, ELO, id)
+  
+  #simulate the knockout rounds until only 1 team remains
+  winner &amp;lt;- simulate_knockout_rounds(national_teams = knockout_rounds, knockout_matches = knockout_matches) %&amp;gt;%
+    as.character()
+  return(winner)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To simulate the world cups, first we merge the ELO data with the world cup draw information. We also have to add Panama as they were missing from the teams based on our player data.&lt;/p&gt;
+&lt;p&gt;Then here I run 10 simulations of the tournament and print the winners. Generally the clear favourites of the simulation are Brazil, then Germany, Spain and Argentina. This makes sense- they have the highest ELOs of all the nations.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge the ELOs with the world cup draw information
+wc_teams %&amp;lt;&amp;gt;% merge(., select(national_teams, nation, ELO) %&amp;gt;%
+                      rbind(., data.frame(nation = &amp;quot;Panama&amp;quot;, ELO = 1669)), by = &amp;quot;nation&amp;quot;)
+
+#run 10 simulations of the world cup choosing winners via ELO
+for(simulation in 1:10) {
+    winner &amp;lt;- simulate_tournament(wc_teams, knockout_matches, group_matches)
+    if(simulation == 1) {
+      winners &amp;lt;- winner
+    } else {
+      winners &amp;lt;- append(winners, winner)
+    }
+}
+
+#list the winners of these 10 simulations
+winners&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##  [1] &amp;quot;Belgium&amp;quot;  &amp;quot;Brazil&amp;quot;   &amp;quot;Germany&amp;quot;  &amp;quot;Brazil&amp;quot;   &amp;quot;Mexico&amp;quot;   &amp;quot;Brazil&amp;quot;  
+##  [7] &amp;quot;Spain&amp;quot;    &amp;quot;France&amp;quot;   &amp;quot;Spain&amp;quot;    &amp;quot;Colombia&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Finally, we can substitute in each county for the English national team and run x simulations (I use 10000 as anything more would take an unrealistic amount of processing time) to see what the chance of them winning the world cup would be.&lt;/p&gt;
+&lt;p&gt;I iterate this through each county and then get a df of the chances for every nation (-England) and that county to win.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;simulate_counties &amp;lt;- function(county, simulations) {
+  #replace Englands ELO with that of the county team replacing them
+  wc_teams$ELO[wc_teams$nation == &amp;quot;England&amp;quot;] &amp;lt;- county_teams$predicted_ELO[county_teams$county == county]
+  
+  #run x number of simulations
+  for(simulation in 1:simulations) {
+    winner &amp;lt;- simulate_tournament(wc_teams, knockout_matches, group_matches)
+    #if &amp;#39;England&amp;#39; wins, replace England with the county
+    if(winner == &amp;quot;England&amp;quot;) {
+      winner &amp;lt;- county
+    }
+    if(simulation == 1) {
+      winners &amp;lt;- winner
+    } else {
+      winners &amp;lt;- append(winners, winner)
+    }
+  }
+  
+  #spit out a df with each winner and the number of times they win
+  simulation_df &amp;lt;- data.frame(table(winners))
+  names(simulation_df) &amp;lt;- c(&amp;quot;nation&amp;quot;, &amp;quot;championships&amp;quot;)
+  
+  #work out the percentage chane of each nation/county winning
+  simulation_df$percentage &amp;lt;- simulation_df$championships / (simulations/100)
+  simulation_df$county_test &amp;lt;- county
+  return(simulation_df)
+}
+
+#run for many simulations
+#TAKES A LOT OF TIME
+simulations_results &amp;lt;- rbindlist(lapply(county_team_rankings$nation, simulate_counties, 10000))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Once we have that data out, some munging is necessary to get the average chance of winning the World Cup for each nation and label the counties and nations separately.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#munge the simulation_results
+simulation_results %&amp;lt;&amp;gt;% setDT() %&amp;gt;%
+  #get the average wc winning chance per nation across all simulations
+  .[, perc_chance := mean(percentage), by = &amp;quot;nation&amp;quot;] %&amp;gt;%
+  .[, perc_var := var(percentage), by = &amp;quot;nation&amp;quot;] %&amp;gt;%
+  .[, c(&amp;quot;nation&amp;quot;, &amp;quot;perc_chance&amp;quot;, &amp;quot;perc_var&amp;quot;)] %&amp;gt;%
+  unique(.) %&amp;gt;%
+  #bind in the nations which never win the world cup in any simulation
+  rbind(., unique(data.frame(nation = county_teams$county[which(!county_teams$county %in% .$nation)],
+                      perc_chance = 0,
+                      perc_var = NA))) %&amp;gt;%
+  #is the team a nation or a county
+  .[nation %in% county_teams$county, nation_status := &amp;quot;county&amp;quot;] %&amp;gt;%
+  .[!nation %in% county_teams$county, nation_status := &amp;quot;nation&amp;quot;] %&amp;gt;%
+  #order by percentage chance of winning the WC
+  .[, nation := factor(nation, levels = nation[order(-.$perc_chance)])]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And can then plot the results…&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot the results
+p &amp;lt;- ggplot(data = simulation_results, aes(x = nation, y = perc_chance)) +
+  geom_bar(stat = &amp;quot;identity&amp;quot;, aes(fill = nation_status)) +
+  geom_errorbar(aes(ymax = perc_chance + perc_var, ymin = perc_chance - perc_var)) +
+  scale_fill_manual(values = c(&amp;quot;darkred&amp;quot;, &amp;quot;darkblue&amp;quot;), name = &amp;quot;Nation Status&amp;quot;) +
+  xlab(&amp;quot;Team&amp;quot;) +
+  ylab(&amp;quot;World Cup Win Percentage Chance&amp;quot;) +
+  ggtitle(&amp;quot;Percetange Chance of Winning the World Cup from 10000 Simulations&amp;quot;,
+          subtitle = &amp;quot;Historic UK Counties Substituted in for England&amp;quot;) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.2))
+
+p2 &amp;lt;- ggplot(data = filter(simulation_results, nation_status == &amp;quot;county&amp;quot;), aes(x = nation, y = perc_chance)) +
+  geom_bar(stat = &amp;quot;identity&amp;quot;, aes(fill = nation_status)) +
+  geom_errorbar(aes(ymax = perc_chance + perc_var, ymin = perc_chance - perc_var)) +
+  scale_fill_manual(values = c(&amp;quot;darkred&amp;quot;, &amp;quot;darkblue&amp;quot;), name = &amp;quot;Nation Status&amp;quot;) +
+  xlab(&amp;quot;Team&amp;quot;) +
+  ylab(&amp;quot;World Cup Win Percentage Chance&amp;quot;) +
+  ggtitle(&amp;quot;Percetange Chance of Winning the World Cup from 10000 Simulations&amp;quot;,
+          subtitle = &amp;quot;Historic UK Counties Substituted in for England&amp;quot;) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.2))
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_5_files/figure-html/plot_results-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;plot(p2)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_5_files/figure-html/plot_results-2.png&#34; width=&#34;672&#34; /&gt; The bad news is, the real-life favourites tend to dominate the simulations. Brazil or Germany were predicted to win the tournament in almost half of all the simulations. On the graph, it;s just possible to make out the red bars of Yorkshire and Lancashire, both of which won 41 out of 10000 simulations (a 0.41 per cent chance of winning any random World Cup).&lt;/p&gt;
+&lt;p&gt;This seems pretty low – but is comparable to pretty respectable teams like Denmark (0.775 per cent), Senegal (0.217 per cent), and even higher than the Iceland team which knocked england out of Euro2016 (0.339 per cent). It’s way higher than the chances the simulation gives the Russian hosts (0.07 per cent).&lt;/p&gt;
+&lt;p&gt;Scaling down to just these pretty hopeless nations/counties really shows how little hope the independent British counties would have at an international tournament. However, the best four counties (Lancashire, Yorkshire, Essex, and Surrey) all have about a 0.2 per cent or higher chance, or 500-1 odds, at winning the 2018 World Cup were they to replace England at the last minute. This is an order of magnitude greater than the 5000-1 odds given to Leicester City at the start of 2015-2016 Premier League season, so there’s always a chance.&lt;/p&gt;
+&lt;p&gt;And that’s it! All the code for my article over at &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+</description>
     </item>
     
     <item>
@@ -38,8 +564,218 @@ This is the complete script for an short article I wrote for CityMetric on the t
       <pubDate>Fri, 08 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_4/</guid>
-      <description>Recently, a Yorkshire national football team appeared in a league of national teams for stateless people. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
-This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.</description>
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+&lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. In the last post, we located the place and county of birth for British players, which we’ll use to pick teams for counties now.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
+library(magrittr)
+library(data.table)
+library(ggplot2)
+library(rvest)&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;putting-together-teams&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Putting Together Teams&lt;/h1&gt;
+&lt;p&gt;To work out how good each nation/county is, we need to select the best team that can be picked from the available pool of players. In theory we could just select the best 11 players, but this isn’t how football works in real life. Instead, we want to pick the optimal 11 players for a set of realistic formations.&lt;/p&gt;
+&lt;p&gt;First, we need a list of plausible formations, and the positions they contain. There’s a handy list of the default FIFA18 formations online which we’ll scrape.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#grab a link to all the default FIFA18 formations
+link &amp;lt;- &amp;quot;https://www.fifauteam.com/fifa-18-formations-guide/#4222&amp;quot;
+
+#get all the formations
+formations &amp;lt;- read_html(link) %&amp;gt;%
+  html_nodes(&amp;quot;h2&amp;quot;) %&amp;gt;%
+  html_text() %&amp;gt;%
+  .[2:length(.)]
+
+#get all the positions per formation
+positions &amp;lt;- read_html(link) %&amp;gt;%
+  html_nodes(&amp;quot;td:nth-child(1)&amp;quot;) %&amp;gt;%
+  html_text() %&amp;gt;%
+  gsub(&amp;quot; .&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;%
+  #make positions symmetric
+  gsub(&amp;quot;RF|LF&amp;quot;, &amp;quot;CF&amp;quot;, .) %&amp;gt;%
+  gsub(&amp;quot;CMR|CML&amp;quot;, &amp;quot;CM&amp;quot;, .) %&amp;gt;%
+  gsub(&amp;quot;^R|^L&amp;quot;, &amp;quot;W&amp;quot;, .)
+
+#df of each formation and the positions it contains
+formations_df &amp;lt;- data.frame(formation = rep(formations, each = 10),
+                            position = positions)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then, for each nation/county, we need to work out which of these formations (and the selection of players for it), gives the highest total ability (using the ability for each position that we worked out earlier).&lt;/p&gt;
+&lt;p&gt;To do this, I have two functions: - The first (find_optimal_team) selects the available players for that nation/county. It then wraps in a second function (pick_players) that takes a formation and tries to find the optimal team for that formation. Finally, we select the team that has the highest total_ability out of all the possibilities that pick_plyaers returns&lt;/p&gt;
+&lt;p&gt;-pick_players itself iterates through each formation that we scraped. It then shuffles the positions each trial and pseudo-randomly picks the best* players for each position until an entire team is picked.It does this a specified (replicates) times per formation I find that doing it 100x per formation almost always gives an answer == 10000x per formation so I limit it to 100 to save on time.&lt;/p&gt;
+&lt;p&gt;*it doesn’t always necessarily pick the very best player, as we can imagine that picking the best (e.g.) centre forward, might mean that player can’t be picked as a striker where they would be better. Instead it is biased towards picking the best player, though sometimes opting for the 2nd or 3rd best.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;find_optimal_team &amp;lt;- function(nation, players, replicates) {
+  #find only players available to play for that nation
+  players_pool &amp;lt;- players %&amp;gt;%
+    filter(nationality == nation)
+  
+  #find the best team that can be played using these players for each default formation
+  best_team &amp;lt;- rbindlist(lapply(rep(unique(formations_df$formation), replicates), pick_players, players = players_pool)) %&amp;gt;%
+    #select only the formation/team with the highest total ability
+    filter(total_ability == max(total_ability)) %&amp;gt;%
+    #in case there are multiple best teams, take the first
+    .[1:11,] %&amp;gt;%
+    #add the nation as an id
+    mutate(nation = nation)
+  
+  return(best_team)
+}  
+
+pick_players &amp;lt;- function(players, formation) {
+  #get all the positions for he formation being tested
+  formation_positions &amp;lt;- formations_df$position[formations_df$formation == formation]
+  #randomise the order of positions to pick
+  positions &amp;lt;- sample(as.character(formation_positions))
+  #add the goalkeeper as the first to be picked
+  positions &amp;lt;- append(&amp;quot;GK&amp;quot;, positions)
+  
+  #for each position that needs a player
+  for(position in positions) {
+    if(position != &amp;quot;GK&amp;quot;) {
+      #generate a random number to determine if picking the best, second best, or third best player for that position
+      #might not always be optimal to pick the best player if they are even better in another position
+      randomiser &amp;lt;- runif(1)
+      #pick the corresponding player
+      if(randomiser &amp;lt; 0.6 | nrow(players) &amp;lt; 3) {
+        id &amp;lt;- players$id[which.max(players[[position]])]
+      } else if(randomiser &amp;lt; 0.9) {
+        id &amp;lt;- players$id[order(-players[[position]])][2]
+      } else {
+        id &amp;lt;- players$id[order(-players[[position]])][3]
+      }
+    } else {
+      #always pick the best goalkeeper available
+      id &amp;lt;- players$id[which.max(players[[position]])]
+    }
+    
+    #get the ability of that player in the position sampled
+    ability &amp;lt;- players[[position]][which(players$id == id)]
+    
+    #create a df of all the players picked for this formation
+    if(position == &amp;quot;GK&amp;quot;) {
+      team &amp;lt;- data.frame(id = id, position = position, ability = ability)
+    } else {
+      team &amp;lt;- rbind(team, data.frame(id = id, position = position, ability = ability))
+    }
+    #for each player picked, remove it from further consideration for other positions
+    players &amp;lt;- players[-which(players$id == id),]
+  }
+  
+  #get the total ability of the team by averaging their position abilities
+  team$total_ability &amp;lt;- sum(team$ability) / 11
+  team$formation &amp;lt;- formation
+  return(team)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Not every nation has enough players in FIFA18 to pick a whole side so first we need to select only those who have at leat 10 outfield players and at least one goalkeeper. This leaves us with 84 nations in total (most of the top nations and few random stragglers).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the number of FIFA players for each nation
+national_teams &amp;lt;- data.frame(table(all_players_data$nationality)) %&amp;gt;%
+  merge(., data.frame(table(all_players_data$nationality[which(all_players_data$symmetric_position == &amp;quot;GK&amp;quot;)])), by = &amp;quot;Var1&amp;quot;)
+names(national_teams) &amp;lt;- c(&amp;quot;nation&amp;quot;, &amp;quot;players&amp;quot;, &amp;quot;gks&amp;quot;)
+
+#select only nations that can field a team
+#at least 1 goalkeeper and 10 outfield players
+national_teams &amp;lt;- national_teams %&amp;gt;%
+  mutate(players = players - gks) %&amp;gt;%
+  filter(players &amp;gt;= 10) %&amp;gt;%
+  filter(gks &amp;gt;= 1)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then running the picking functions for each of these nations, giving us a df of each nations best possible team in FIFA18.&lt;/p&gt;
+&lt;p&gt;This function takes a while to run (~1 hour total).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the optimal team for each nation
+optimal_national_teams &amp;lt;- rbindlist(lapply(national_teams$nation, find_optimal_team, 
+                                           select(all_players_data, id, nationality, 49:60), replicates = 100))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then plot the national teams to take a look at the selections and check they make sense. I’ve only included the best 4 teams (Brazil, Germany, Spain, and Belgium) below to save space.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the names of each player to merge in
+players &amp;lt;- all_players_data %&amp;gt;%
+  select(id, name)
+
+#select the best 4 county teams by total ability
+best_national_elevens &amp;lt;- optimal_national_teams %&amp;gt;%
+  setDT() %&amp;gt;%
+  .[, unique_position := make.unique(as.character(position)), by = &amp;quot;nation&amp;quot;] %&amp;gt;%
+  merge(., formation_coords, by = c(&amp;quot;formation&amp;quot;, &amp;quot;unique_position&amp;quot;)) %&amp;gt;%
+  merge(players, by = &amp;quot;id&amp;quot;) %&amp;gt;%
+ .[total_ability &amp;gt;= abs(sort(unique(-.$total_ability)))[4]]
+
+#plot the data
+p &amp;lt;- ggplot(data = best_national_elevens)
+p &amp;lt;- p %&amp;gt;%
+  #custom pitch aesthetic function
+  draw_pitch()
+p &amp;lt;- p + 
+  geom_text(aes(x = player_x, y = player_y, label = gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, name)), colour = &amp;quot;black&amp;quot;) +
+  facet_wrap(~nation)
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_4_files/figure-html/plot_best_national_teams-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;We then need to do the same thing, but for the counties.&lt;/p&gt;
+&lt;p&gt;First the player position ability for all the british players needs to be merged in.&lt;/p&gt;
+&lt;p&gt;Then we select only those counties that can field a whole team, as we did before for nations. This leaves us with 20 counties overall which are plotted below.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge the birthplace data with the playing ability data
+british_player_data &amp;lt;- merge(british_player_birthplaces, select(all_players_data, id, 49:60))
+
+#find the number of FIFA players for each county
+county_teams &amp;lt;- data.frame(table(british_player_data$county)) %&amp;gt;%
+  merge(., 
+        data.frame(table(british_player_data$county[which(british_player_data$symmetric_position == &amp;quot;GK&amp;quot;)])),
+        by = &amp;quot;Var1&amp;quot;)
+names(county_teams) &amp;lt;- c(&amp;quot;county&amp;quot;, &amp;quot;players&amp;quot;, &amp;quot;gks&amp;quot;)
+
+#select only counties that can field a team
+#at least 1 goalkeeper and 10 outfield players
+county_teams &amp;lt;- county_teams %&amp;gt;%
+  mutate(players = players - gks) %&amp;gt;%
+  filter(players &amp;gt;= 10) %&amp;gt;%
+  filter(gks &amp;gt;= 1)
+
+#plot the counties which can field a whole team
+p &amp;lt;- ggplot(data = uk_counties) +
+  geom_sf() +
+  geom_sf(data = uk_counties[which(uk_counties$county %in%
+                                     county_teams$county),], fill = &amp;quot;darkred&amp;quot;) +
+  theme_void()
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_4_files/figure-html/select_fieldable_counties-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;and, as before, use these to pick the optimal teams for these counties&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the optimal team for each county
+optimal_county_teams &amp;lt;- rbindlist(lapply(county_teams$county, find_optimal_team, 
+                                         select(british_player_data, id, nationality = county, 49:60),
+                                         replicates = 100))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This yields some interesting potential teams…&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge in player names and position coordinates
+county_elevens &amp;lt;- optimal_county_teams %&amp;gt;%
+  setDT() %&amp;gt;%
+  .[, unique_position := make.unique(as.character(position)), by = &amp;quot;nation&amp;quot;] %&amp;gt;%
+  merge(., formation_coords, by = c(&amp;quot;formation&amp;quot;, &amp;quot;unique_position&amp;quot;)) %&amp;gt;%
+  merge(players, by = &amp;quot;id&amp;quot;)
+
+#plot the data
+p &amp;lt;- ggplot(data = county_elevens)
+p &amp;lt;- p %&amp;gt;%
+  draw_pitch()
+p &amp;lt;- p + 
+  geom_text(aes(x = player_x, y = player_y, label = gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, name), colour = total_ability), size = 2.5) +
+  scale_colour_gradient(high = &amp;quot;darkred&amp;quot;, low = &amp;quot;darkblue&amp;quot;, guide = FALSE) +
+  facet_wrap(~nation)
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_4_files/figure-html/plot_county_teams-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Which is a bit too small to make out. If we just plot the 4 best teams (Yorkshire, Lancashire, Essex, and Surrey)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#select the best 4 county teams by total ability
+county_elevens %&amp;lt;&amp;gt;%  .[total_ability &amp;gt;= abs(sort(unique(-county_elevens$total_ability)))[4]]
+
+#plot the data
+p &amp;lt;- ggplot(data = county_elevens)
+p &amp;lt;- p %&amp;gt;%
+  draw_pitch()
+p &amp;lt;- p + 
+  geom_text(aes(x = player_x, y = player_y, label = gsub(&amp;quot; &amp;quot;, &amp;quot;\n&amp;quot;, name)), colour = &amp;quot;black&amp;quot;, size = 2.5) +
+  facet_wrap(~nation)
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_4_files/figure-html/plot_best_county_teams-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;/div&gt;
+</description>
     </item>
     
     <item>
@@ -48,8 +784,250 @@ This is the complete script for an short article I wrote for CityMetric on the t
       <pubDate>Thu, 07 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_3/</guid>
-      <description>Recently, a Yorkshire national football team appeared in a league of national teams for stateless people. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
-This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 5 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.</description>
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+&lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 5 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we found the position abilities of each player using LASSO regression. This time, we’ll geolocate the birthplace of the British players in our dataset to find which county team they’d be eligible for.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
+library(magrittr)
+library(data.table)
+library(ggplot2)
+#use pediarr to query wikipedia to find the birthplace of players
+library(pediarr)
+#use googleway to geocode birthplaces
+library(googleway)
+#use sf to bin players into counties
+library(sf)&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;find-british-players-birthplaces&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Find British Players Birthplaces&lt;/h1&gt;
+&lt;p&gt;To select our county teams, we need to know where each British player was born (and thus their ‘county’ nationality). Fortunately, wikipedia has an extremely detailed database of thousands of footballers, incluiding their birthplace (which we can assume is at least reasonably correct).&lt;/p&gt;
+&lt;p&gt;First, the data needs to be filtered to include only players with British nationalities (English, Welsh, Scottish, or Northern Irish) or Irish. It’s very plausible that some players representing other countries would be born in England, and so eligible for the hypothetical county teams, but unlikely, and more trouble than it’s worth.&lt;/p&gt;
+&lt;p&gt;When filtering, I also remove players who have no wikipedia page/birthplace listed. For some of these, I was able to manually locate their birthplace. Some players don’t get matched very well (mostly due to Australian/American footballers) and it was easiest just to manually supply the links to their wikipedia page.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#players with no wikipedia birthplace listed
+players_missing_data &amp;lt;- c(&amp;quot;Liam Lindsay&amp;quot;,&amp;quot;Greg Docherty&amp;quot;,&amp;quot;Mikey Devlin&amp;quot;,&amp;quot;Josh Dacres-Cogley&amp;quot;,
+                          &amp;quot;Tom Broadbent&amp;quot;,&amp;quot;Callum Gribbin&amp;quot;,&amp;quot;Sam Hughes&amp;quot;,&amp;quot;
+                          James Cook&amp;quot;,&amp;quot;Daniel Jarvis&amp;quot;,&amp;quot;Zachary Dearnley&amp;quot;,&amp;quot;Ro-Shaun Williams&amp;quot;,
+                          &amp;quot;Jack Fitzwater&amp;quot;,&amp;quot;Jack Hamilton&amp;quot;,&amp;quot;Lewis Banks&amp;quot;,&amp;quot;Greg Bolger&amp;quot;,&amp;quot;Chris Shields&amp;quot;,
+                          &amp;quot;Conor Wilkinson&amp;quot;,&amp;quot;Barry McNamee&amp;quot;,&amp;quot;Keith Ward&amp;quot;,&amp;quot;Simon Madden&amp;quot;,&amp;quot;Dylan Connolly&amp;quot;,
+                          &amp;quot;Brian Gartland&amp;quot;,&amp;quot;Dinny Corcoran&amp;quot;)
+
+#players whose birthplace was manually found
+missing_players_data &amp;lt;- readRDS(&amp;quot;missing_player_birthplaces.rds&amp;quot;)
+
+#players whose wikipedia page is manually linked
+manual_links &amp;lt;- readRDS(&amp;quot;manual_links.rds&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The function below then iterates through every player with a nationality from the British Isles and searches for a matching wikipedia page.&lt;/p&gt;
+&lt;p&gt;It then looks for the birthplace of that player on their wikipedia page and returns a df containing the player and their birthplace.&lt;/p&gt;
+&lt;p&gt;It also tries to match the birthdate listed from FIFA18 with that on their wikipedia page as a check and throws a warning if they don’t match. I haven’t looked into if there are mismatches there but ~50 players overall don’t match perfectly.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;uk_players_info &amp;lt;- all_players_data %&amp;gt;%
+  #only want data to help identify players by wiki page
+  select(id, name, nationality, birthdate) %&amp;gt;%
+  #only include UK nations (+Ireland)
+  filter(nationality %in% c(&amp;quot;England&amp;quot;, &amp;quot;Scotland&amp;quot;, &amp;quot;Wales&amp;quot;, &amp;quot;Northern Ireland&amp;quot;, &amp;quot;Republic of Ireland&amp;quot;)) %&amp;gt;%
+  #remove duplicated names
+  #might lose some players here but they&amp;#39;re all so far down the pecking order effect should be minimal
+  filter(!duplicated(name)) %&amp;gt;%
+  #remove players who have no wikipedia birthplace
+  filter(!name %in% players_missing_data)
+
+#function to find the wikipedia page of each player
+#returns a df with the player name and birthplace scraped from wikipedia
+get_info &amp;lt;- function(row) {
+  #get player info
+  name &amp;lt;- uk_players_info$name[row]
+  birthday &amp;lt;- uk_players_info$birthdate[row]
+  id &amp;lt;- uk_players_info$id[row]
+  
+  #search wikipedia using the player name
+  search &amp;lt;- pediasearch(name, extract = TRUE, limit = 10)
+  #if a troublesome search use manual link
+  if(name %in% manual_links$name) {
+    wiki_suffix &amp;lt;- manual_links$link[which(manual_links$name == as.character(name))]
+  } else {
+    #else find the wikipedia page suffix for the player
+    if(search[1] == &amp;quot;&amp;quot; &amp;amp; length(search) == 1) {
+      wiki_suffix &amp;lt;- name %&amp;gt;%
+        gsub(&amp;quot; &amp;quot;, &amp;quot;_&amp;quot;, .)
+    } else {
+      footballer &amp;lt;- grep(&amp;quot;football&amp;quot;, search)[1]
+      wiki_suffix &amp;lt;- names(search)[footballer] %&amp;gt;%
+        gsub(&amp;quot; &amp;quot;, &amp;quot;_&amp;quot;, .)
+    }
+  }
+  
+  #read the info card from the players wikipedia page
+  info_card &amp;lt;- read_html(paste0(&amp;quot;https://en.wikipedia.org/wiki/&amp;quot;, wiki_suffix)) %&amp;gt;%
+    html_nodes(&amp;quot;.vcard&amp;quot;) %&amp;gt;%
+    .[1] %&amp;gt;%
+    html_table(fill = TRUE) %&amp;gt;%
+    data.frame()
+  
+  names(info_card) &amp;lt;- paste0(&amp;quot;X&amp;quot;, 1:ncol(info_card))
+  info_card$X1 &amp;lt;- tolower(info_card$X1)
+  
+  #check if the wikipedia birthdate matches the FIFA one
+  birthdate &amp;lt;- info_card %&amp;gt;%
+    filter(X1 == &amp;quot;date of birth&amp;quot;)
+  
+  birthdate &amp;lt;- birthdate$X2 %&amp;gt;%
+    as.character() %&amp;gt;%
+    gsub(&amp;quot; .*&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;%
+    gsub(&amp;quot;\\(|\\)&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;%
+    as.Date()
+  
+  if(birthdate != birthday){
+    warning(paste(row, &amp;quot;birthdays do not match&amp;quot;))
+  }  
+  
+  #find the players birthplace
+  birthplace &amp;lt;- info_card %&amp;gt;%
+    filter(X1 == &amp;quot;place of birth&amp;quot;)
+  
+  birthplace &amp;lt;- birthplace$X2 %&amp;gt;%
+    gsub(&amp;quot;\\[.*&amp;quot;, &amp;quot;&amp;quot;, .)
+  
+  #return info as a df
+  df &amp;lt;- data.frame(id = id,
+                   name = name,
+                   birthdate = birthdate,
+                   birthplace = birthplace)
+  return(df)
+}
+
+#run the function over the first 1333 players
+#after this very few players are found
+british_player_birthplaces &amp;lt;- rbindlist(lapply(1:1329, get_info)) %&amp;gt;%
+  #bind in the manually found data
+  rbind(., missing_players_data)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now that we have the birthplaces for each player, we need to convert these into coordinates via geocoding. For this I use googleway, but the geocode() function from ggmap could also be used.&lt;/p&gt;
+&lt;p&gt;The function takes a place and a key (for the API which isn’t included in the knitted markdown) and finds the lat lon for that place. To save on API requests I only run it on unique birthplaces then merge this back into the dataset.&lt;/p&gt;
+&lt;p&gt;Once we have the lat/lon of each birthplace we can convert the df of players into an sf (spatial) object. If we do this, we see that a lot of players who are eligible for British nations aren’t actually born on the islands (e.g. Raheem Sterling was born in Jamaica). so I only select those which are born within the grouped spatial object of all 5 countries.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#geocodes locations using googlemaps
+#requires a google maps API key (hidden here)
+googleway_geocode &amp;lt;- function(place, key){
+  data &amp;lt;- google_geocode(place, key = key)
+  latlon &amp;lt;- data$results$geometry$location[1,] %&amp;gt;%
+    mutate(birthplace = place)
+  #returns coordinates in the form latitude/longitude
+  return(latlon)
+}
+
+birthplace_coords &amp;lt;- rbindlist(lapply(as.character(unique(british_player_birthplaces$birthplace)),
+                                      googleway_geocode, key = key))
+
+#also melt into one spatial row for subsetting later
+uk &amp;lt;- uk_counties %&amp;gt;%
+  group_by(&amp;quot;UK&amp;quot;) %&amp;gt;%
+  summarise()
+
+british_player_birthplaces &amp;lt;- british_player_birthplaces %&amp;gt;%
+  merge(., birthplace_coords, by = &amp;quot;birthplace&amp;quot;) %&amp;gt;%
+  #convert to an sf object
+  st_as_sf(coords = c(&amp;quot;lng&amp;quot;, &amp;quot;lat&amp;quot;), crs = st_crs(uk_counties)) %&amp;gt;%
+  #keep only those born within the UK proper
+  .[unlist(st_contains(uk, .)),]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If we plot the players, we see they tend to be grouped around the large cities in London, Lancashire, and Yorkshire, with realtively few in Northern Ireland, rural Wales and the Highlands&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p &amp;lt;- ggplot(data = uk_counties) +
+  geom_sf() +
+  geom_sf(data = british_player_birthplaces, colour = &amp;quot;darkred&amp;quot;, alpha = 0.3) +
+  ggtitle(&amp;quot;Players Born in Historic UK Counties&amp;quot;) +
+  theme_void()
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_3_files/figure-html/plot_british_players-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;To find which county each player comes from, we can take the lat/lon of their birthplace and find which county shapefile contains it. The name of that county shapefile is then returned as a new column on the df of all British players&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the historic county each player was born within
+british_player_birthplaces$county &amp;lt;- unlist(lapply(seq(nrow(british_player_birthplaces)), function(player) {
+  #which county is there birthplace coordinates in
+  container &amp;lt;- st_contains(uk_counties, british_player_birthplaces[player,])
+  if(length(unlist(container)) == 1) {
+    #which county name is this
+    county &amp;lt;- as.character(uk_counties$county[as.numeric(t(container))])
+    } else {
+      county &amp;lt;- NA
+    }
+  return(county)
+}))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;if we table the results of the county binning, we can see that many counties contain very few players, whereas some contain many more (e.g. Lancashire has 164 available players, whereas Cambridgeshire has only 5). Later, we will only look at counties that can field at least 10 outfield players + 1 goalkeeper.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#the number of players from each historic county
+table(british_player_birthplaces$county)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 
+##                   Aberdeen                   Anglesey 
+##                         12                          1 
+##                      Angus                   Ayrshire 
+##                          3                         12 
+##               Bedfordshire                  Berkshire 
+##                         10                         15 
+##               Berwickshire            Buckinghamshire 
+##                          1                         15 
+##                  Caithness             Cambridgeshire 
+##                          1                          5 
+##              Cardiganshire            Carmarthenshire 
+##                          1                          2 
+##             Carnarvonshire                   Cheshire 
+##                          2                         50 
+##                   Cornwall              County Antrim 
+##                          5                         13 
+##              County Armagh County Derry / Londonderry 
+##                          2                          7 
+##                County Down           County Fermanagh 
+##                          3                          2 
+##              County Tyrone                 Cumberland 
+##                          3                          8 
+##               Denbighshire                 Derbyshire 
+##                          4                         13 
+##                      Devon                     Dorset 
+##                         17                          3 
+##              Dumfriesshire             Dunbartonshire 
+##                          2                          5 
+##                     Dundee                     Durham 
+##                          6                         26 
+##                  Edinburgh                      Essex 
+##                         23                         71 
+##                       Fife                 Flintshire 
+##                          5                          4 
+##                  Glamorgan                    Glasgow 
+##                         12                         35 
+##            Gloucestershire                  Hampshire 
+##                         13                         28 
+##              Herefordshire              Hertfordshire 
+##                          5                         33 
+##            Huntingdonshire            Inverness-shire 
+##                          3                          3 
+##                       Kent                Lanarkshire 
+##                         50                         18 
+##                 Lancashire             Leicestershire 
+##                        164                         12 
+##               Lincolnshire                  Middlesex 
+##                          8                         77 
+##                 Midlothian              Monmouthshire 
+##                          5                          5 
+##                      Nairn                    Norfolk 
+##                          1                          6 
+##           Northamptonshire             Northumberland 
+##                         12                         14 
+##            Nottinghamshire                Oxfordshire 
+##                         20                          6 
+##                 Perthshire               Renfrewshire 
+##                          3                          3 
+##               Selkirkshire                 Shropshire 
+##                          1                         11 
+##                   Somerset              Staffordshire 
+##                         12                         46 
+##              Stirlingshire                    Suffolk 
+##                          4                         10 
+##                     Surrey                     Sussex 
+##                         63                         16 
+##               Warwickshire               West Lothian 
+##                         44                          1 
+##               Wigtownshire                  Wiltshire 
+##                          1                          6 
+##             Worcestershire                  Yorkshire 
+##                          6                        103&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Obviously not all of these counties can field complete teams of 11 players, but for those who can, in the next post, we’ll start picking teams and seeing how counties and nations stack up against each other.&lt;/p&gt;
+&lt;/div&gt;
+</description>
     </item>
     
     <item>
@@ -58,8 +1036,217 @@ This is the complete script for an short article I wrote for CityMetric on the t
       <pubDate>Wed, 06 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_2/</guid>
-      <description>Recently, a Yorkshire national football team appeared in a league of national teams for stateless people. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
-This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.</description>
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+&lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article. Last time, we got the shapefiles for the historic counties of the UK and scraped the player data we’ll use to build the teams&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
+library(magrittr)
+library(data.table)
+library(ggplot2)
+#we&amp;#39;ll use glmnet to do LASSO regression to determine players positional ability
+library(glmnet)&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;work-out-player-position-ability&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Work Out Player Position Ability&lt;/h1&gt;
+&lt;p&gt;The data we’ve scraped only gives a player’s overall ‘ability’ and their abilities on specific skills (e.g. strength, long shots, dribbling…). We want to use this to work out how good each player is at each position.&lt;/p&gt;
+&lt;p&gt;It’s logical to assume that a player’s overall ability is how good they are at their main position (the position listed first on their page on fifaindex.com). We can therefore use &lt;a href=&#34;https://en.wikipedia.org/wiki/Lasso_(statistics)&#34;&gt;LASSO regression&lt;/a&gt; to work out which stats are contributing to their overall ability score. For instance, we would expect that a goalkeepers overall ability score is just a function of gk_positioning, gk_diving, gk_handling and so on… and doesn’t care about (e.g.) dribbling.&lt;/p&gt;
+&lt;p&gt;This positional ability score is important as we can’t just select the 11 best players for each team as we might end up playing a goalkeeper and 10 defenders (or etc.). We need to make sure we select the best palyers for each position on a realistic formation.&lt;/p&gt;
+&lt;p&gt;Unfortunately, there’s going to be no real way to tell between a players ability to play on either side of the field. There’s some correlation with their footedness ($foot), but it’s not worth going too in the weeds about that. So first we want to make all position symmetrical (i.e. we do discriminate between left and right sided positions).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;all_players_data %&amp;lt;&amp;gt;% mutate(symmetric_position = gsub(&amp;quot;L|R&amp;quot;, &amp;quot;W&amp;quot;, main_position))
+
+unique(as.character(all_players_data$main_position))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##  [1] &amp;quot;CF&amp;quot;  &amp;quot;LW&amp;quot;  &amp;quot;ST&amp;quot;  &amp;quot;GK&amp;quot;  &amp;quot;CAM&amp;quot; &amp;quot;CM&amp;quot;  &amp;quot;CB&amp;quot;  &amp;quot;CDM&amp;quot; &amp;quot;RW&amp;quot;  &amp;quot;LB&amp;quot;  &amp;quot;RM&amp;quot; 
+## [12] &amp;quot;LM&amp;quot;  &amp;quot;RB&amp;quot;  &amp;quot;LWB&amp;quot; &amp;quot;RWB&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;unique(all_players_data$symmetric_position)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##  [1] &amp;quot;CF&amp;quot;  &amp;quot;WW&amp;quot;  &amp;quot;ST&amp;quot;  &amp;quot;GK&amp;quot;  &amp;quot;CAM&amp;quot; &amp;quot;CM&amp;quot;  &amp;quot;CB&amp;quot;  &amp;quot;CDM&amp;quot; &amp;quot;WB&amp;quot;  &amp;quot;WM&amp;quot;  &amp;quot;WWB&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;First we need to convert the stats that we’re going to use for this regression/prediction into matrix form&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;player_stats &amp;lt;- all_players_data %&amp;gt;%
+  #select only the players stats for each skill
+  select(c(12, 14:47)) %&amp;gt;%
+  #transition data into matrix
+  model.matrix(overall~., .)
+
+#show the first 6 instances of the first 5 stats
+head(player_stats[,c(1:5)])&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##   (Intercept) ball_control dribbling marking slide_tackle
+## 1           1           96        97      13           26
+## 2           1           93        91      22           23
+## 3           1           95        96      21           33
+## 4           1           91        86      30           38
+## 5           1           48        30      10           11
+## 6           1           42        18      13           13&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To show how this works I’m going to illustrate it using goalkeepers and predicting the ability of each outfield player to play in goal.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#filter out only the goalkeepers
+goalkeepers &amp;lt;- all_players_data %&amp;gt;%
+  filter(symmetric_position == &amp;quot;GK&amp;quot;)
+
+#select a percentage of these to use as training data
+sample_percent &amp;lt;- 10
+train_samples &amp;lt;- sample(1:nrow(goalkeepers), (nrow(goalkeepers)/100)*sample_percent)
+
+gk_stats &amp;lt;- goalkeepers %&amp;gt;%
+  slice(train_samples) %&amp;gt;%
+  select(c(12, 14:47))
+
+#get the stats per skill
+train_matrix &amp;lt;- model.matrix(overall~., gk_stats)
+#and the overall (gk) ability
+train_ability &amp;lt;- gk_stats$overall
+  
+#perform the regression
+cv_model &amp;lt;- cv.glmnet(train_matrix, train_ability)
+
+#look at the weightings given to important variables using lambda value that gives minimum mean cross-validated error
+coef(cv_model, s = &amp;quot;lambda.min&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 36 x 1 sparse Matrix of class &amp;quot;dgCMatrix&amp;quot;
+##                         1
+## (Intercept)    1.48054668
+## (Intercept)    .         
+## ball_control   .         
+## dribbling      .         
+## marking        .         
+## slide_tackle   .         
+## stand_tackle   .         
+## aggression     .         
+## reactions      0.11010673
+## positioning    .         
+## interceptions  .         
+## vision         .         
+## composure      .         
+## crossing       .         
+## short_pass     .         
+## long_pass      .         
+## acceleration   .         
+## stamina        .         
+## strength       .         
+## balance        .         
+## sprint_speed   .         
+## agility        .         
+## jumping        .         
+## heading        .         
+## shot_power     .         
+## finishing      .         
+## long_shots     .         
+## curve          .         
+## free_kicks     .         
+## penalties      .         
+## volleys        .         
+## gk_positioning 0.20822323
+## gk_diving      0.20474961
+## gk_handling    0.20874770
+## gk_kicking     0.05344379
+## gk_reflexes    0.20770553&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The regression selects only variables which have a strong relationship with the outcome (overall ability in the gk position in this case). As expected, it selects only the gk_… skillset and also a players reactions, which makes sense if goalkeepers have to make point blank saves.&lt;/p&gt;
+&lt;p&gt;We can validate this by predicting the overall ability of the goalkeepers that aren’t in the training set fairly simply&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find non training examples of goalkeepers
+test_matrix &amp;lt;- goalkeepers %&amp;gt;%
+  slice(-train_samples) %&amp;gt;%
+  select(c(12, 14:47)) %&amp;gt;%
+  model.matrix(overall~., .)
+
+#get the overall ability for these players
+gk_abilities &amp;lt;- goalkeepers %&amp;gt;%
+  slice(-train_samples) %&amp;gt;%
+  select(overall)
+
+#predict their overall ability based on their stats
+gk_abilities$predicted &amp;lt;- as.vector(predict(cv_model, newx = test_matrix, s = &amp;quot;lambda.min&amp;quot;, type=&amp;quot;response&amp;quot;))
+
+#plot these
+p &amp;lt;- ggplot(data = gk_abilities, aes(x = overall, y = predicted)) +
+  geom_point() +
+  xlab(&amp;quot;Overall FIFA Ability&amp;quot;) +
+  ylab(&amp;quot;Predicted FIFA Ability&amp;quot;) +
+  ggtitle(&amp;quot;Actual and Predicted Goalkeeping Ability of Goalkeepers in FIFA18&amp;quot;)
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_2_files/figure-html/example_LASSO_validation-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Which gives a very good fit. This is expected for the dataset we’re using as the overall ability hasbeen directly calclulated from the complete set of skills using some hidden algorithm. In the real world, the actual vs. predicted results would most likely have more noise.&lt;/p&gt;
+&lt;p&gt;We can use this model now to predict how well outfield players would fare in goal, given that they have (low) ratings for all of these skills&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find all outfield players and convert stats the matrix
+outfield_players &amp;lt;- all_players_data %&amp;gt;%
+  filter(symmetric_position != &amp;quot;GK&amp;quot;) %&amp;gt;%
+  select(c(12, 14:47)) %&amp;gt;%
+  model.matrix(overall~., .)
+
+#get the names of each outfield palyer
+outfield_goalkeepers &amp;lt;- all_players_data %&amp;gt;%
+  filter(symmetric_position != &amp;quot;GK&amp;quot;) %&amp;gt;%
+  select(name)
+
+#predict how well each outfield player would do in goal
+outfield_goalkeepers$predicted_ability &amp;lt;- as.vector(predict(cv_model, newx = outfield_players, s = &amp;quot;lambda.min&amp;quot;, type=&amp;quot;response&amp;quot;))
+
+head(outfield_goalkeepers)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##                 name predicted_ability
+## 1       Lionel Messi          20.84383
+## 2  Cristiano Ronaldo          21.78181
+## 3             Neymar          21.10118
+## 4        Luis Suárez          38.68063
+## 5    Kevin De Bruyne          22.22474
+## 6 Robert Lewandowski          20.20816&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;It is of course, extremely ironic that Luis Suarez scores relatively highly as an outfield player in goal &lt;a href=&#34;https://www.youtube.com/watch?v=wn_oYeugGiw&#34;&gt;given his history&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;We can use this technique to predict how each player would play in each position using the following function&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#function to predict how each player would play in each position
+get_position_weights &amp;lt;- function(position, sample_percent) {
+  #filter data
+  position_df &amp;lt;- all_players_data %&amp;gt;%
+    filter(symmetric_position == position)
+  
+  #get training data
+  train_samples &amp;lt;- sample(1:nrow(position_df), (nrow(position_df)/100)*sample_percent)
+  
+  train_stats &amp;lt;- position_df %&amp;gt;%
+    .[train_samples,] %&amp;gt;%
+    select(c(12, 14:47))
+  
+  train_matrix &amp;lt;- model.matrix(overall~., train_stats)
+  
+  train_ability &amp;lt;- train_stats$overall
+  
+  #use LASSO regression to find weighting of significant covariates
+  cv_model &amp;lt;- cv.glmnet(train_matrix, train_ability)
+  
+  #predict players ability in that position
+  position_ability &amp;lt;- predict(cv_model, newx = player_stats, s = &amp;quot;lambda.min&amp;quot;, type=&amp;quot;response&amp;quot;)
+}
+
+#run through every mirrored position
+#using a high percentage of palyers in training set (50%) as in theory should be perfect regression
+position_abilities &amp;lt;- lapply(unique(all_players_data$symmetric_position), 
+                             get_position_weights, sample_percent = 50) %&amp;gt;%
+  do.call(cbind, .) %&amp;gt;%
+  data.frame()
+
+#name each position
+names(position_abilities) &amp;lt;- unique(all_players_data$symmetric_position)
+
+#bind this to the data we have on all the players
+all_players_data &amp;lt;- cbind(all_players_data, position_abilities) %&amp;gt;%
+  #convert all non-natural goalkeepers goalkeeping ability to zero
+  #want to make sure no non-goalkeepers are chosen in goal
+  mutate(GK = ifelse(main_position == &amp;quot;GK&amp;quot;, overall, 0)) 
+
+#show the first 6 rows
+head(select(all_players_data, c(1, 49:60)))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##                name symmetric_position       CF       WW       ST GK
+## 1      Lionel Messi                 CF 93.60706 92.27461 89.70278  0
+## 2 Cristiano Ronaldo                 WW 92.88560 91.16822 92.62438  0
+## 3            Neymar                 WW 89.48736 89.30329 85.17042  0
+## 4       Luis Suárez                 ST 90.48249 87.40918 88.93461  0
+## 5      Manuel Neuer                 GK 43.64828 39.22244 36.55564 92
+## 6            De Gea                 GK 41.70048 36.48414 34.36504 91
+##        CAM       CM       CB      CDM       WB       WM      WWB
+## 1 93.36468 85.23987 46.02382 60.18700 58.22984 91.18465 62.26366
+## 2 90.39084 83.31839 53.60718 62.65345 62.21724 90.32306 66.13034
+## 3 89.01684 80.80476 47.23479 60.16824 60.11565 88.27848 64.19203
+## 4 87.59322 81.40708 59.77832 66.74543 65.13876 86.44133 67.67849
+## 5 47.58404 49.47508 34.07456 42.88950 35.23432 44.42806 35.91158
+## 6 44.18874 46.37230 34.44230 42.30995 36.35090 41.15741 36.12737&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we have the ability of each player to perform in any position we can use it to build teams. First however, we need to sort British players into the county of their birth, which we’ll do in the next post.&lt;/p&gt;
+&lt;/div&gt;
+</description>
     </item>
     
     <item>
@@ -68,8 +1255,102 @@ This is the complete script for an short article I wrote for CityMetric on the t
       <pubDate>Tue, 05 Jun 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/yorkshire_world_cup_1/</guid>
-      <description>Recently, a Yorkshire national football team appeared in a league of national teams for stateless people. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?
-This is the complete script for an short article I wrote for CityMetric on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.</description>
+      <description>
+
+
+&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
+&lt;p&gt;This is the complete script for an short article I wrote for &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34;&gt;CityMetric&lt;/a&gt; on the topic. It’s split over 6 separate parts and is pretty hefty but contains pretty much everything you need to clone the article.&lt;/p&gt;
+&lt;p&gt;To start, there are 95 historic counts of Great Britain + the 6 counties of Northern Ireland which I included for completeness. These are of a wide variety of sizes and &lt;a href=&#34;https://www.citymetric.com/horizons/which-historic-english-county-has-highest-population-3386&#34;&gt;approximate population&lt;/a&gt; and demographic, so it’s not clear how each would do simply from inspection.&lt;/p&gt;
+&lt;p&gt;The data for this comes from &lt;a href=&#34;https://www.ordnancesurvey.co.uk/business-and-government/products/boundary-line.html&#34;&gt;Boundary Line&lt;/a&gt; and the &lt;a href=&#34;https://www.opendatani.gov.uk/dataset?q=boundary&#34;&gt;Northern Irish Boundary Database&lt;/a&gt;, I’ve put them together already, but its simple enough to do it in sf.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
+library(rvest)
+library(data.table)
+library(ggplot2)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p &amp;lt;- ggplot(data = uk_counties) +
+  geom_sf() +
+  theme_void()
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_1_files/figure-html/historic_counties-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;In order to calculate how good each county team would be, I needed a measure of the ability of all of the players they could field. For this I turned to the FIFA18 video game which rates players along a variety of scales.&lt;/p&gt;
+&lt;div id=&#34;scrape-player-data&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Scrape Player Data&lt;/h1&gt;
+&lt;p&gt;To get data on every player in the game I wrote a quick scraping function. This finds the links to every player on all 602 pages of &lt;a href=&#34;https://www.fifaindex.com/players/&#34; class=&#34;uri&#34;&gt;https://www.fifaindex.com/players/&lt;/a&gt; and then downloads all the data required on each player.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#both steps here take a fair amount of time
+#about 10mins and an hour respectively
+
+#get the links to each players page
+all_player_links &amp;lt;- unlist(lapply(paste0(&amp;quot;https://www.fifaindex.com/players/&amp;quot;, 1:602), function(x) {
+  player_link &amp;lt;- read_html(x) %&amp;gt;%
+    html_nodes(&amp;quot;td:nth-child(4) a&amp;quot;) %&amp;gt;%
+    html_attr(&amp;quot;href&amp;quot;)
+  })) %&amp;gt;%
+  paste0(&amp;quot;https://www.fifaindex.com/&amp;quot;, .)
+
+#big function to scrape every piece of data we could want of each players page
+get_player_data &amp;lt;- function(link) {
+  #read the players web page
+  read &amp;lt;- read_html(link)
+  
+  #basic data
+  name &amp;lt;- read %&amp;gt;%html_nodes(&amp;quot;.big&amp;quot;) %&amp;gt;% html_text()
+  club &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.panel-title a+ a&amp;quot;) %&amp;gt;% html_text() %&amp;gt;% .[length(.)]
+  if(length(club) == 0) {
+    club &amp;lt;- NA
+  }
+  nationality &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.subtitle a&amp;quot;) %&amp;gt;% html_text()
+  
+  #general info on the player
+  height &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(1) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
+    gsub(&amp;quot; cm&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;% as.numeric()
+  weight &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(2) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
+    gsub(&amp;quot; kg&amp;quot;, &amp;quot;&amp;quot;, .) %&amp;gt;% as.numeric()
+  foot &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(3) .pull-right&amp;quot;) %&amp;gt;% html_text()
+  birthdate &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(4) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
+    as.Date(&amp;quot;%m/%d/%Y&amp;quot;)
+  age &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(5) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;%
+    as.numeric()
+  main_position &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;body &amp;gt; div.container.main &amp;gt; div:nth-child(3) &amp;gt; div.col-md-8 &amp;gt; div:nth-child(3) &amp;gt; div.col-lg-5.col-sm-6 &amp;gt; div &amp;gt; div.panel-body &amp;gt; p:nth-child(6) &amp;gt; span &amp;gt; a&amp;quot;) %&amp;gt;% 
+    .[1] %&amp;gt;% html_attr(&amp;quot;title&amp;quot;)
+  work_rate &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.col-lg-5 p:nth-child(7) .pull-right&amp;quot;) %&amp;gt;% html_text() %&amp;gt;% 
+    str_split(., &amp;quot; / &amp;quot;) %&amp;gt;% unlist()
+  
+  #the players rating for each skill
+  ratings &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.rating&amp;quot;) %&amp;gt;% html_text() %&amp;gt;% as.numeric() %&amp;gt;%
+    as.matrix() %&amp;gt;% t() %&amp;gt;% as.data.frame()
+  names(ratings) &amp;lt;- c(&amp;quot;overall&amp;quot;,&amp;quot;specific&amp;quot;,&amp;quot;ball_control&amp;quot;,&amp;quot;dribbling&amp;quot;,&amp;quot;marking&amp;quot;,&amp;quot;slide_tackle&amp;quot;,&amp;quot;stand_tackle&amp;quot;,
+                      &amp;quot;aggression&amp;quot;,&amp;quot;reactions&amp;quot;,&amp;quot;positioning&amp;quot;,&amp;quot;interceptions&amp;quot;,&amp;quot;vision&amp;quot;,&amp;quot;composure&amp;quot;,&amp;quot;crossing&amp;quot;,
+                      &amp;quot;short_pass&amp;quot;,&amp;quot;long_pass&amp;quot;,&amp;quot;acceleration&amp;quot;,&amp;quot;stamina&amp;quot;,&amp;quot;strength&amp;quot;,&amp;quot;balance&amp;quot;,&amp;quot;sprint_speed&amp;quot;,
+                      &amp;quot;agility&amp;quot;,&amp;quot;jumping&amp;quot;,&amp;quot;heading&amp;quot;,&amp;quot;shot_power&amp;quot;,&amp;quot;finishing&amp;quot;,&amp;quot;long_shots&amp;quot;,&amp;quot;curve&amp;quot;,&amp;quot;free_kicks&amp;quot;,
+                      &amp;quot;penalties&amp;quot;,&amp;quot;volleys&amp;quot;,&amp;quot;gk_positioning&amp;quot;,&amp;quot;gk_diving&amp;quot;,&amp;quot;gk_handling&amp;quot;,&amp;quot;gk_kicking&amp;quot;,&amp;quot;gk_reflexes&amp;quot;)
+  
+  #stick everything into a dataframe to be output
+  df &amp;lt;- data.frame(name = name, club = club, nationality = nationality,
+                   height = height, weight = weight, foot = foot, birthdate = birthdate, age = age,
+                   main_position = main_position, work_rate1 = work_rate[1], work_rate2 = work_rate[2]) %&amp;gt;%
+    cbind(ratings)
+  return(df)
+}
+
+#scrape the info on all players
+all_players_data &amp;lt;- rbindlist(lapply(all_player_links, get_player_data)) %&amp;gt;%
+  setDT() %&amp;gt;%
+  #add an id column for each player
+  .[, id := 1:.N]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Once that’s scraped and bound we can take a peek at the data. There’s 18k players in total and 48 variables for each so we’ll just look at a few for now.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#show a selection of the some key info for each player
+#the id we gave them, their name, nationality, and their overall ability
+head(select(all_players_data, id, name, nationality, overall))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##    id              name nationality overall
+## 1:  1      Lionel Messi   Argentina      94
+## 2:  2 Cristiano Ronaldo    Portugal      94
+## 3:  3            Neymar      Brazil      92
+## 4:  4       Luis Suárez     Uruguay      92
+## 5:  5      Manuel Neuer     Germany      92
+## 6:  6            De Gea       Spain      91&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Over the course of the next posts, we’ll use this data to calculate a player’s ability in any position on the field. This will then be used to select optimal teams for each nation (or each historic British county). Finally we’ll take the average ability of these optimal teams and use them to simulate the World Cup to get the chance each team has to win the tournament.&lt;/p&gt;
+&lt;/div&gt;
+</description>
     </item>
     
   </channel>

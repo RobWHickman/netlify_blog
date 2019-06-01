@@ -8,9 +8,7 @@
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
     <lastBuildDate>Wed, 02 Jan 2019 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="/tags/clustering/index.xml" rel="self" type="application/rss+xml" />
-    
+    <atom:link href="/tags/clustering/" rel="self" type="application/rss+xml" />
     
     <item>
       <title>TidyTuesday Week One</title>
@@ -18,9 +16,245 @@
       <pubDate>Wed, 02 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/tidytuesday-2019-1/</guid>
-      <description>Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).
-A quick way to get something to work with that can be published unpolished is #TidyTuesday on twitter which (as far as I know/can tell) is organised by Thomas Mock from RStudio.
-This week, the data comes in the form of a massive corpus of every tweet using the #rstats hashtag, curated by rtweet package creator Mike Kearney.</description>
+      <description>
+
+
+&lt;p&gt;Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).&lt;/p&gt;
+&lt;p&gt;A quick way to get something to work with that can be published unpolished is &lt;a href=&#34;https://github.com/rfordatascience/tidytuesday&#34;&gt;#TidyTuesday&lt;/a&gt; on twitter which (as far as I know/can tell) is organised by &lt;a href=&#34;https://twitter.com/thomas_mock&#34;&gt;Thomas Mock&lt;/a&gt; from RStudio.&lt;/p&gt;
+&lt;p&gt;This week, the data comes in the form of a massive corpus of every tweet using the #rstats hashtag, curated by rtweet package creator Mike Kearney.&lt;/p&gt;
+&lt;p&gt;I’m only going to leave sparse notes as this is just a post from some lunchtime work cleaned up and published after. I probably won’t fully spellcheck it either.&lt;/p&gt;
+&lt;p&gt;First, libraries:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#for data #tidytuesday data manipulation
+library(tidyverse)
+#used for clustering later
+library(lsa)
+library(e1071)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;When loading the data, the first thing I decided to look at was the evolution of the hashtags use over time. As far as I can tell, first used in spring 2009 by &lt;a href=&#34;https://twitter.com/gappy3000&#34;&gt;Giuseppe Paleologo&lt;/a&gt;. Since then, it’s grown pretty exponentially.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#data at https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-01-01
+#rstats_data &amp;lt;- readRDS(&amp;quot;../../Downloads/rstats_tweets.rds&amp;quot;)
+
+#quickly plot tweets over time
+p &amp;lt;- rstats_data %&amp;gt;%
+  select(created_at) %&amp;gt;%
+  arrange(created_at) %&amp;gt;%
+  mutate(total_tweets = row_number()) %&amp;gt;%
+  ggplot(., aes(x = created_at, y = total_tweets)) +
+  geom_line() +
+  xlab(&amp;quot;Date&amp;quot;) +
+  ylab(&amp;quot;Total #rstats Tweets&amp;quot;) +
+  ggtitle(&amp;quot;#rstats Tweets Over Time&amp;quot;) +
+  theme_minimal()
+
+p&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-02-tidytuesday1_files/figure-html/peek_data-1.png&#34; width=&#34;672&#34; /&gt; I decided only to work with the most prolific #rstats tweeters, mostly to save space in plots as the corpus contains over 26k unique persons and 430k tweets&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#filter out people who tweet about rstats &amp;gt;=500 times
+rstats_data %&amp;lt;&amp;gt;% 
+  group_by(user_id) %&amp;gt;%
+  mutate(tweet_count = n()) %&amp;gt;%
+  filter(tweet_count &amp;gt; 499) %&amp;gt;%
+  ungroup() %&amp;gt;%
+  arrange(-tweet_count) %&amp;gt;%
+  #also filter out feeds
+  filter(!screen_name %in% c(&amp;quot;CRANberriesFeed&amp;quot;, &amp;quot;Rbloggers&amp;quot;, &amp;quot;rweekly_live&amp;quot;, &amp;quot;tidyversetweets&amp;quot;))
+
+#plot the number of tweets per person
+p2 &amp;lt;- rstats_data %&amp;gt;%
+  ggplot(., aes(x = reorder(user_id, tweet_count))) +
+  geom_bar(stat = &amp;quot;count&amp;quot;) +
+  ggtitle(&amp;quot;Rstats Tweets By Person&amp;quot;) +
+  xlab(&amp;quot;User&amp;quot;) +
+  ylab(&amp;quot;Tweets&amp;quot;) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank())
+
+p2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-1-1.png&#34; width=&#34;672&#34; /&gt; Lets see the most prolific tweeters&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#show the most prolific retweeters
+rstats_users &amp;lt;- rstats_data %&amp;gt;%
+  select(screen_name, tweet_count) %&amp;gt;%
+  unique()
+
+head(rstats_users)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 2
+##   screen_name tweet_count
+##   &amp;lt;chr&amp;gt;             &amp;lt;int&amp;gt;
+## 1 AndySugs           8216
+## 2 dataandme          4113
+## 3 gp_pulipaka        3237
+## 4 DerFredo           3091
+## 5 revodavid          2640
+## 6 MangoTheCat        2523&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I had been interested in recreating some analyses from &lt;a href=&#34;https://www.jtimm.net/2018/11/03/twitter-political-ideology-and-the-115-us-senate/&#34; class=&#34;uri&#34;&gt;https://www.jtimm.net/2018/11/03/twitter-political-ideology-and-the-115-us-senate/&lt;/a&gt; recently, and thought this gave a good oppurtunity.&lt;/p&gt;
+&lt;p&gt;First I needed the top levels domains of links in #rstats tweets&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#try to find only top level domains for grouping
+domain_patterns &amp;lt;- &amp;quot;\\.com.*|\\.org.*|\\.me.*|\\.gl.*|\\.li.*|\\..appspot|\\.blogspot|\\.io.*&amp;quot;
+links &amp;lt;- data.frame(url = unlist(rstats_data$urls_url)) %&amp;gt;%
+  mutate(domain = gsub(domain_patterns, &amp;quot;&amp;quot;, url)) %&amp;gt;%
+  filter(!is.na(domain)) %&amp;gt;%
+  group_by(domain) %&amp;gt;%
+  mutate(share_count = n()) %&amp;gt;%
+  ungroup()
+
+#which are the most tweeted links by the top tweeters
+head(links %&amp;gt;% select(-url) %&amp;gt;% unique() %&amp;gt;% arrange(-share_count))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 2
+##   domain         share_count
+##   &amp;lt;chr&amp;gt;                &amp;lt;int&amp;gt;
+## 1 goo                   4724
+## 2 wp                    4110
+## 3 github                3430
+## 4 twitter               3201
+## 5 cran.r-project        2878
+## 6 r-bloggers            2708&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;some of these (e.g. the google/wp/fb/bit.ly) ones seem a bit more to be quick links to pictures and so were removed. I also cut out links to amazon, google, facebook, and youtube, which I was less certain about doing and would probably analyse in a deeper cut.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#remove non-data sciencey links
+links %&amp;gt;%
+  filter(!grepl(&amp;quot;goo|wp|tweetedtimes|fb|htl|facebook|youtube|amazon|google&amp;quot;, domain)) %&amp;gt;%
+  filter(!grepl(&amp;quot;activevoice.us|ift.tt|rviv.ly|bit.ly&amp;quot;, domain)) %&amp;gt;%
+  select(-url) %&amp;gt;%
+  unique() %&amp;gt;%
+  arrange(-share_count) %&amp;gt;%
+  head()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 2
+##   domain                   share_count
+##   &amp;lt;chr&amp;gt;                          &amp;lt;int&amp;gt;
+## 1 github                          3430
+## 2 twitter                         3201
+## 3 cran.r-project                  2878
+## 4 r-bloggers                      2708
+## 5 link.rweekly                    2415
+## 6 blog.revolutionanalytics        1225&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then we need to create a matrix of each domain vs. each user with a value of how many tweets from that user link to that domain.&lt;/p&gt;
+&lt;p&gt;I selected 3 users to illustrate the finished matrix (from here on out I’m freely stealing code from the blogpost &lt;a href=&#34;https://www.jtimm.net/2018/11/03/twitter-political-ideology-and-the-115-us-senate/&#34;&gt;linked above&lt;/a&gt;)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find which domains each tweeted link belong to
+rstats_domains_shared &amp;lt;- rstats_data %&amp;gt;%
+  select(user_id, screen_name, url = urls_url, date = created_at) %&amp;gt;%
+  #remove tweets without links
+  filter(!is.na(url)) %&amp;gt;%
+  #unlist the links
+  #can be multiple per tweet
+  splitstackshape::listCol_l(., listcol = &amp;quot;url&amp;quot;) %&amp;gt;%
+  #merge with domain information
+  merge(., unique(select(links, domain, url_ul = url, domain_shares = share_count)), by = &amp;quot;url_ul&amp;quot;) %&amp;gt;%
+  #select only domains shared 100 or more times
+  filter(domain_shares &amp;gt; 99) %&amp;gt;%
+  #remove uninteresting domains
+  filter(!grepl(&amp;quot;goo|wp|tweetedtimes|fb|htl|facebook|youtube|amazon|google&amp;quot;, domain)) %&amp;gt;%
+  filter(!grepl(&amp;quot;activevoice.us|ift.tt|rviv.ly|bit.ly&amp;quot;, domain)) %&amp;gt;%
+  #limit to only frequent tweeters
+  filter(screen_name %in% rstats_users$screen_name)
+
+#get a matrix of domains shared vs. users
+rstats_shares_by_user &amp;lt;- rstats_domains_shared %&amp;gt;%
+  #find the number of times each user tweets a link to a domain
+  group_by(screen_name, domain) %&amp;gt;%
+  summarize(share_count = n()) %&amp;gt;%
+  #filter out those that are untweets
+  filter(share_count &amp;gt; 0) %&amp;gt;%
+  spread(screen_name, share_count) %&amp;gt;%
+  replace(is.na(.), 0)  %&amp;gt;%
+  ungroup()
+
+#quickly glance at this
+#has many columns so selecting only a few users
+users &amp;lt;- c(&amp;quot;hadleywickham&amp;quot;, &amp;quot;drob&amp;quot;, &amp;quot;JennyBryan&amp;quot;)
+rstats_shares_by_user %&amp;gt;%
+  .[c(1, which(names(rstats_shares_by_user) %in% users))] %&amp;gt;%
+  .[1:10,]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 10 x 4
+##    domain                    drob hadleywickham JennyBryan
+##    &amp;lt;chr&amp;gt;                    &amp;lt;dbl&amp;gt;         &amp;lt;dbl&amp;gt;      &amp;lt;dbl&amp;gt;
+##  1 analyticsvidhya              0             0          0
+##  2 andrewgelman                 0             0          0
+##  3 arilamstein                  0             0          0
+##  4 asbcllc                      0             0          0
+##  5 bl.ocks                      0             0          0
+##  6 blog.revolutionanalytics     0             5          0
+##  7 blog.rstudio                 1           115          6
+##  8 cran.r-project               6            12         21
+##  9 cran.rstudio                 0             1          1
+## 10 datasciencecentral           0             0          0&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Next we use cosine from the lsa package to get a matrix of user-user similarity. This is then crushed down to two dimensions X1 and X2&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the cosine similarity between all users
+cosine_rstats &amp;lt;- rstats_shares_by_user %&amp;gt;%
+  select(2:ncol(.)) %&amp;gt;%
+  data.matrix() %&amp;gt;%
+  lsa::cosine(.)
+
+#sort this into two dimensions
+#X1 and X2
+rstats_clustering &amp;lt;- cmdscale(1-cosine_rstats, eig = TRUE, k = 2)$points %&amp;gt;% 
+  data.frame() %&amp;gt;%
+  mutate(screen_name = rownames(cosine_rstats)) %&amp;gt;%
+  merge(rstats_users, by = &amp;quot;screen_name&amp;quot;)
+
+head(rstats_clustering)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##       screen_name         X1         X2 tweet_count
+## 1       _ColinFay -0.1192867 -0.2821199         989
+## 2        abresler -0.1712703 -0.3224543        1443
+## 3     AnalyticsFr -0.3210288  0.4201589        1386
+## 4 AnalyticsFrance -0.3210288  0.4201589        1989
+## 5 AnalyticsVidhya -0.2969805  0.4152374        1814
+## 6        AndySugs  0.1371950  0.2465780        8216&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If we plot this we get a nice graph of the top #rstats users qhich fall neatly into two dimensions. The first X1 seems to be ‘social’ vs. ‘professional’. People further to the left are users I recognise off the top of my head for sharing amateur data analyses/package building (e.g. JennyBryan) whereas those on the right seem to be more industrial users (e.g. MangoTheCat).&lt;/p&gt;
+&lt;p&gt;The second dimension is a bit harder to gauge but strikes me as sort of software vs. data science divide with more package creators/rstudio employees towards the bottom and people doing analysis of data towards the top (but this is only a gut feeling).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot the users by their cosine similarity and number of tweets
+rstats_clustering %&amp;gt;%
+  ggplot(aes(X1,X2)) +
+  geom_text(aes(label= screen_name, size = tweet_count), alpha = 0.3) +
+  scale_size_continuous(range = c(2,5), guide = FALSE) +
+  xlab(&amp;quot;Dimension X1&amp;quot;) +
+  ylab(&amp;quot;Dimension X2&amp;quot;) +
+  ggtitle(&amp;quot;#rstats Tweeters Arranged by Links Shared&amp;quot;,
+          subtitle = &amp;quot;position based on cosine similarity between users&amp;quot;) +
+  theme_minimal()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-7-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;To investigate a bit further I decided to see what each person was sharing. First I used c-means clustering as it’s something else I was working on in a separate project recently to cluster each use based on their cosine similarity (mostly just to have something to order the final plot by).&lt;/p&gt;
+&lt;p&gt;I then used geom_tile to show how often each user was sending links from which domains. Roughly, I would say that the ‘industrial’ (green) cluster makes shows a concentration of links to sites such as &lt;a href=&#34;https://www.r-bloggers.com/&#34;&gt;r-bloggers&lt;/a&gt; and &lt;a href=&#34;https://blog.revolutionanalytics.com/&#34;&gt;revolutionanalytics’ blog&lt;/a&gt;, whereas the ‘social data science’ cluster (blue) links much more to twitter itself, github, and CRAN. The red (‘software’) cluster links to these too, but especially much more to the r-project blog in particular.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;set.seed(22081992)
+#use fuzzy c means to find clusters based on cosine similarity
+#chose 3 as seems to be 3 clear nodes
+c_grouping &amp;lt;- cmeans(select(rstats_clustering, X1, X2) %&amp;gt;% as.matrix(), 3, iter.max = 1000)
+
+#merge this data in
+rstats_clustering %&amp;lt;&amp;gt;%
+  mutate(cluster = c_grouping$cluster) %&amp;gt;%
+  cbind(as.data.frame(c_grouping$membership)) %&amp;gt;%
+  mutate(cluster_membership = apply(.[, (ncol(.)-(max(.$cluster)-1)):ncol(.)], 1, max))
+
+#plot a heatmap of links shared vs. cluster grouping
+#remember cluster grouping is related to cosine similarity
+rstats_shares_by_user %&amp;gt;%
+  reshape2::melt(id.vars = &amp;quot;domain&amp;quot;, variable.name = &amp;quot;screen_name&amp;quot;, value.name = &amp;quot;shares&amp;quot;) %&amp;gt;%
+  merge(rstats_clustering, by = &amp;quot;screen_name&amp;quot;) %&amp;gt;%
+  filter(shares &amp;gt; 0) %&amp;gt;%
+  ggplot(., aes(x = domain, y = reorder(screen_name, cluster + cluster_membership))) +
+  geom_tile(aes(fill = log(shares), colour = factor(cluster)), size = 0.5) +
+  scale_fill_viridis_c(option = &amp;quot;plasma&amp;quot;, guide = FALSE) +
+  scale_colour_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;green&amp;quot;, &amp;quot;purple&amp;quot;), guide = FALSE) +
+  xlab(&amp;quot;Domain Shared&amp;quot;) +
+  ylab(&amp;quot;Screen Name&amp;quot;) +
+  ggtitle(&amp;quot;Domains Shared by #rstats Tweeters Coloured by User Cluster&amp;quot;) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-8-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Finally, I wanted to recreate the previous cosine similarity graph but with the clusters highlighted just because I think it makes a pretty graph.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#replot our initial plot of cosine similarity with the cluster information
+#alpha of screen_name indicates group membership strength
+rstats_clustering %&amp;gt;%
+  ggplot(aes(X1, X2)) +
+  geom_label(aes(label= screen_name, fill = factor(cluster), colour = cluster_membership, size = tweet_count), alpha = 0.3) +
+  scale_colour_gradient(high = &amp;quot;black&amp;quot;, low = &amp;quot;white&amp;quot;, guide = FALSE) +
+  scale_fill_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;green&amp;quot;, &amp;quot;purple&amp;quot;), guide = FALSE) +
+  scale_size_continuous(range = c(2,5), guide = FALSE) +
+  xlab(&amp;quot;Dimension X1&amp;quot;) +
+  ylab(&amp;quot;Dimension X2&amp;quot;) +
+  ggtitle(&amp;quot;#rstats Tweeters Grouped by Links Shared&amp;quot;,
+          subtitle = &amp;quot;grouping based on cosine similarity between users&amp;quot;) +
+  theme_minimal()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-9-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;That’s all for this post. I think I’ll keep on throwing up quick #TidyTuesday posts throughout the year which will be as sparse as this, but hopefully be interesting to one or two people.&lt;/p&gt;
+</description>
     </item>
     
   </channel>
