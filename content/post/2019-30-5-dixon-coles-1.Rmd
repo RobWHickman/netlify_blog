@@ -13,6 +13,7 @@ slug: dixon_coles_1
 tags:
 - football
 - models
+- rstats
 categories: []
 ---
 

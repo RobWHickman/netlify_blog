@@ -23,3 +23,5 @@ weight = 5
 # Biography
 
 I'm currently a second year PhD Student in the lab of Wolfram Schultz at the University of Cambridge. I study decision making in simple economic tasks in non-human primates, and in my spare time enjoy practising my coding- mostly in R. This website serves as a hub for small pieces of work relating to this.
+
+Posts here can also be accessed via my [feed](http://www.robert-hickman.eu/index.xml), [RWeekly](https://rweekly.org/), and also [R-Bloggers](https://www.r-bloggers.com/).
