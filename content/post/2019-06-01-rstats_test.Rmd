@@ -1,0 +1,18 @@
+---
+title: Test rstats
+author: Robert Hickman
+date: '2019-06-01'
+slug: rstats_test
+output: pdf_document
+categories: []
+tags:
+  - rstats
+  - maps
+  - test
+header:
+  caption: ''
+  image: ''
+---
+
+this is a test incluiding the rstats tag
+

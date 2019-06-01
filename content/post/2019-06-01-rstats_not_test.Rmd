@@ -1,0 +1,18 @@
+---
+title: Test no rstats
+author: Robert Hickman
+date: '2019-06-01'
+slug: rstats_not_test
+output: pdf_document
+categories: []
+tags:
+  - null
+  - maps
+  - test
+header:
+  caption: ''
+  image: ''
+---
+
+this is a test that does not have the rstats tag
+

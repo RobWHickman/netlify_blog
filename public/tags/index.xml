@@ -7,89 +7,26 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
-    <lastBuildDate>Thu, 30 May 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 01 Jan 2017 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>football</title>
-      <link>/tags/football/</link>
-      <pubDate>Thu, 30 May 2019 00:00:00 +0000</pubDate>
+      <title>Content tagged as &#39;Academic&#39;</title>
+      <link>/tags/academic/</link>
+      <pubDate>Sun, 01 Jan 2017 00:00:00 +0000</pubDate>
       
-      <guid>/tags/football/</guid>
-      <description></description>
+      <guid>/tags/academic/</guid>
+      <description>Here is a list of all the content that has been tagged as academic.</description>
     </item>
     
     <item>
-      <title>models</title>
-      <link>/tags/models/</link>
-      <pubDate>Thu, 30 May 2019 00:00:00 +0000</pubDate>
+      <title></title>
+      <link>/tags/</link>
+      <pubDate>Sat, 01 Jun 2019 00:00:00 +0000</pubDate>
       
-      <guid>/tags/models/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>behaviour</title>
-      <link>/tags/behaviour/</link>
-      <pubDate>Wed, 24 Apr 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/behaviour/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>economics</title>
-      <link>/tags/economics/</link>
-      <pubDate>Wed, 24 Apr 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/economics/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>rstas</title>
-      <link>/tags/rstas/</link>
-      <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/rstas/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>the_knowledge</title>
-      <link>/tags/the_knowledge/</link>
-      <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/the_knowledge/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>riddler</title>
-      <link>/tags/riddler/</link>
-      <pubDate>Sun, 03 Feb 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/riddler/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>rstats</title>
-      <link>/tags/rstats/</link>
-      <pubDate>Sun, 03 Feb 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/rstats/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>maps</title>
-      <link>/tags/maps/</link>
-      <pubDate>Mon, 21 Jan 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/maps/</guid>
+      <guid>/tags/</guid>
       <description></description>
     </item>
     
@@ -103,11 +40,38 @@
     </item>
     
     <item>
-      <title>xG</title>
-      <link>/tags/xg/</link>
-      <pubDate>Fri, 04 Jan 2019 00:00:00 +0000</pubDate>
+      <title>behaviour</title>
+      <link>/tags/behaviour/</link>
+      <pubDate>Wed, 24 Apr 2019 00:00:00 +0000</pubDate>
       
-      <guid>/tags/xg/</guid>
+      <guid>/tags/behaviour/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>buses</title>
+      <link>/tags/buses/</link>
+      <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/buses/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>cambridge</title>
+      <link>/tags/cambridge/</link>
+      <pubDate>Thu, 22 Nov 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/cambridge/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>chess</title>
+      <link>/tags/chess/</link>
+      <pubDate>Tue, 01 May 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/chess/</guid>
       <description></description>
     </item>
     
@@ -117,6 +81,132 @@
       <pubDate>Wed, 02 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/clustering/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>demo</title>
+      <link>/tags/demo/</link>
+      <pubDate>Fri, 05 Jan 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/demo/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>economics</title>
+      <link>/tags/economics/</link>
+      <pubDate>Wed, 24 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/economics/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>football</title>
+      <link>/tags/football/</link>
+      <pubDate>Thu, 30 May 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/football/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>getis-ord</title>
+      <link>/tags/getis-ord/</link>
+      <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/getis-ord/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>maps</title>
+      <link>/tags/maps/</link>
+      <pubDate>Sat, 01 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/maps/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>models</title>
+      <link>/tags/models/</link>
+      <pubDate>Thu, 30 May 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/models/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>package</title>
+      <link>/tags/package/</link>
+      <pubDate>Sun, 09 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/package/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>pubs</title>
+      <link>/tags/pubs/</link>
+      <pubDate>Thu, 22 Nov 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/pubs/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>riddler</title>
+      <link>/tags/riddler/</link>
+      <pubDate>Sun, 03 Feb 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/riddler/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>rstas</title>
+      <link>/tags/rstas/</link>
+      <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/rstas/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>rstats</title>
+      <link>/tags/rstats/</link>
+      <pubDate>Sat, 01 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/rstats/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>sf</title>
+      <link>/tags/sf/</link>
+      <pubDate>Sun, 09 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/sf/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>test</title>
+      <link>/tags/test/</link>
+      <pubDate>Sat, 01 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/test/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>the_knowledge</title>
+      <link>/tags/the_knowledge/</link>
+      <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/the_knowledge/</guid>
       <description></description>
     </item>
     
@@ -139,60 +229,6 @@
     </item>
     
     <item>
-      <title>cambridge</title>
-      <link>/tags/cambridge/</link>
-      <pubDate>Thu, 22 Nov 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/cambridge/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>pubs</title>
-      <link>/tags/pubs/</link>
-      <pubDate>Thu, 22 Nov 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/pubs/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>buses</title>
-      <link>/tags/buses/</link>
-      <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/buses/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>getis-ord</title>
-      <link>/tags/getis-ord/</link>
-      <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/getis-ord/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>package</title>
-      <link>/tags/package/</link>
-      <pubDate>Sun, 09 Sep 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/package/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>sf</title>
-      <link>/tags/sf/</link>
-      <pubDate>Sun, 09 Sep 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/sf/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>world cup</title>
       <link>/tags/world-cup/</link>
       <pubDate>Sun, 10 Jun 2018 00:00:00 +0000</pubDate>
@@ -202,30 +238,12 @@
     </item>
     
     <item>
-      <title>chess</title>
-      <link>/tags/chess/</link>
-      <pubDate>Tue, 01 May 2018 00:00:00 +0000</pubDate>
+      <title>xG</title>
+      <link>/tags/xg/</link>
+      <pubDate>Fri, 04 Jan 2019 00:00:00 +0000</pubDate>
       
-      <guid>/tags/chess/</guid>
+      <guid>/tags/xg/</guid>
       <description></description>
-    </item>
-    
-    <item>
-      <title>demo</title>
-      <link>/tags/demo/</link>
-      <pubDate>Fri, 05 Jan 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/demo/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Content tagged as &#39;Academic&#39;</title>
-      <link>/tags/academic/</link>
-      <pubDate>Sun, 01 Jan 2017 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/academic/</guid>
-      <description>Here is a list of all the content that has been tagged as academic.</description>
     </item>
     
   </channel>
