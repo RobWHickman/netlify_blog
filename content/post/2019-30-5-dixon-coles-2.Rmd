@@ -1,0 +1,24 @@
+---
+title: "An Introduction to Modelling Soccer Matches in R (part 2)"
+author: "Robert Hickman"
+date: '2019-06-05'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+header:
+  caption: ''
+  image: ''
+slug: dixon_coles_2
+tags:
+- football
+- models
+- rstats
+categories: []
+---
+
+---
+title: "Untitled"
+output: html_document
+---
+
