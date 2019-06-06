@@ -22,3 +22,19 @@ title: "Untitled"
 output: html_document
 ---
 
+```{r}
+library(tidyverse)
+
+```
+
+
+```{r}
+fixtures <- readRDS("../../static/files/dc_fixtures.rds")
+results <- readRDS("../../static/files/dc_results.rds")
+
+```
+
+```{r}
+
+```
+
