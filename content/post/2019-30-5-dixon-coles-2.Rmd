@@ -22,7 +22,7 @@ title: "Untitled"
 output: html_document
 ---
 
-```{r}
+```{r libraries, warning=FALSE,message=FALSE}
 library(tidyverse)
 
 ```
@@ -35,6 +35,81 @@ results <- readRDS("../../static/files/dc_results.rds")
 ```
 
 ```{r}
+model <- readRDS("../../static/files/dc_model.rds")
+
+model
+
+```
+```{r}
+predict_results <- function(home, away, param_list) {
+  e_goals_home <- exp(param_list$alpha[home] - param_list$beta[away] + param_list$gamma)
+  e_goals_away <- exp(param_list$alpha[away] - param_list$beta[home])
+  
+  df <- data.frame(home = home, away = away,
+                   e_hgoal = e_goals_home, e_agoal = e_goals_away)
+  
+  return(df)
+}
+
+```
+
+```{r}
+home <- "Blackburn_Rovers"
+away <- "Arsenal"
+
+prediction <- predict_results(home, away, model)
+```
+
+```{r}
+max_goals <- 5
+
+x <- lapply(0:max_goals, dpois, lambda = prediction$e_hgoal)
+y <- lapply(0:max_goals, dpois, lambda = prediction$e_agoal)
+
+df <- data.frame(goals = rep(0:max_goals, 2),
+                 team = rep(c(home, away), each = max_goals+1),
+                 p = c(unlist(x), unlist(y)))
+
+p <- ggplot(df, aes(x = goals, y = p, fill = team)) +
+  geom_density(stat = "identity", alpha = 0.5)
+
+p
+```
+```{r}
+matrix <- outer(unlist(x), unlist(y)) %>%
+  as.data.frame() %>%
+  gather() %>%
+  mutate(hgoals = rep(0:max_goals, max_goals+1),
+         agoals = rep(0:max_goals, each = max_goals+1))
+
+p <- ggplot(matrix, aes(x = hgoals, y = agoals, fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = paste(hgoals, agoals, sep = "-"))) +
+  scale_fill_gradient2(low = "white", high = "red", guide = FALSE) +
+  theme_minimal()
+
+p
+```
+
+```{r}
+all_fixtures <- rbind(select(results, -hgoal, -agoal), fixtures)
+
+predictions <- map2_df(all_fixtures$home, all_fixtures$away, 
+                       predict_results,
+                       model)
+
+max_goals <- 5
+
+hgoal_prob <- lapply(0:max_goals, dpois, predictions$e_hgoal) %>%
+  
+hgoal_prob <- lapply(predictions$e_hgoal, dpois, x = 0:max_goals) %>%
+  lapply(., `names<-`, 0:max_goals) 
+
+  as.data.frame(do.call(rbind, .)) %>%
+  set_names(all_fixtures$home)
+
+agoal_prob <- lapply(0:max_goals, dpois, predictions$e_agoal)
+
 
 ```
 
