@@ -61,7 +61,7 @@ prediction <- predict_results(home, away, model)
 ```
 
 ```{r}
-max_goals <- 5
+max_goals <- 7
 
 x <- lapply(0:max_goals, dpois, lambda = prediction$e_hgoal)
 y <- lapply(0:max_goals, dpois, lambda = prediction$e_agoal)
@@ -98,18 +98,29 @@ predictions <- map2_df(all_fixtures$home, all_fixtures$away,
                        predict_results,
                        model)
 
-max_goals <- 5
-
-hgoal_prob <- lapply(0:max_goals, dpois, predictions$e_hgoal) %>%
-  
 hgoal_prob <- lapply(predictions$e_hgoal, dpois, x = 0:max_goals) %>%
   lapply(., `names<-`, 0:max_goals) 
+agoal_prob <- lapply(predictions$e_agoal, dpois, x = 0:max_goals) %>%
+  lapply(., `names<-`, 0:max_goals) 
 
-  as.data.frame(do.call(rbind, .)) %>%
-  set_names(all_fixtures$home)
+all_predictions <- map2_df(hgoal_prob, agoal_prob, function(home, away) {
+    df <- outer(home, away) %>%
+      as.data.frame() %>% 
+      gather() %>% 
+      rownames_to_column("row") %>%
+      mutate(hgoal = as.numeric(row) %% (max_goals+1)-1) %>% 
+      mutate(hgoal = case_when(hgoal < 0 ~ max_goals, TRUE ~ hgoal),
+             agoal = as.numeric(key)) %>%
+      select(hgoal, agoal, prob = value)
+}) %>%
+  cbind(all_fixtures[rep(seq_len(nrow(all_fixtures)), each=(max_goals+1)^2),], .)
 
-agoal_prob <- lapply(0:max_goals, dpois, predictions$e_agoal)
-
+p <- ggplot(all_predictions, aes(x = hgoal, y = agoal, fill = prob)) +
+  geom_tile() +
+  geom_text(aes(label = paste(hgoal, agoal, sep = "-"))) +
+  scale_fill_gradient2(low = "white", high = "red", guide = FALSE) +
+  theme_minimal() +
+  facet_grid(away~home)
 
 ```
 
