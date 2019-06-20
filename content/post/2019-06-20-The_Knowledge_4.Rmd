@@ -1,17 +1,19 @@
 ---
-title: The Guardian Knowledge June 2019
-author: Robert Hickman
+title: "The Guardian Knowledge June 2019"
+author: "Robert Hickman"
 date: '2019-06-20'
-slug: guardian_knowledge_june
-output: pdf_document
-categories: []
-tags:
-  - maps
-  - pubs
-  - cambridge
+output:
+  html_document:
+    df_print: paged
 header:
   caption: ''
   image: ''
+slug: guardian_knowledge_june
+tags:
+- maps
+- pubs
+- cambridge
+categories: []
 ---
 
 
@@ -101,6 +103,11 @@ squads <- tables %>%
 
 ```
 
+```{r load_squads, warning=FALSE,message=FALSE}
+squads <- readRDS("C:/Users/rob-getty/Desktop/squads.rds")
+```
+
+
 ```{r international_df, warning=FALSE,message=FALSE}
 # load a df of international results
 # from https://www.kaggle.com/martj42/international-football-results-from-1872-to-2017/downloads/international-football-results-from-1872-to-2017.zip/42
@@ -143,20 +150,20 @@ head(international_results)
 # function to calculate updated ELO ratings
 calc_ELO <- function(date, home, away, K, G, result) {
   #get the difference in ratings
-  hr <- team_ratings$rating[which(team_ratings$team == home)]
-  vr <- team_ratings$rating[which(team_ratings$team == away)]
+  hr <- team_ratings$rating[which(team_ratings$nation == home)]
+  vr <- team_ratings$rating[which(team_ratings$nation == away)]
   dr <- vr - (hr + 100)
   
   # calculate expected results
   e_result <- 1/ ((10^(dr/400))+1)
-
+  
   # calculate new ratings
   new_hr <- hr + ((K*G) * (result - e_result))
   new_vr <- vr + ((K*G) * ((1-result) - (1-e_result)))
   
   # pipe these back into a df of team ratings to sample from
-  team_ratings$rating[which(team_ratings$team == home)] <<- new_hr
-  team_ratings$rating[which(team_ratings$team == away)] <<- new_vr
+  team_ratings$rating[which(team_ratings$nation == home)] <<- new_hr
+  team_ratings$rating[which(team_ratings$nation == away)] <<- new_vr
   
   # return new ratings
   return(list(h_rating = new_hr, v_rating = new_vr))
@@ -167,11 +174,11 @@ team_ratings <- international_results %>%
   # select date and teams
   select(date, home, away) %>%
   # melt
-  gather(., "location", "team", home, away) %>%
+  gather(., "location", "nation", home, away) %>%
   select(-location) %>%
   arrange(date) %>%
   # set out unique teams with a rating of 1200
-  filter(!duplicated(team)) %>%
+  filter(!duplicated(nation)) %>%
   mutate(rating = 1200) %>%
   select(-date)
 
@@ -179,48 +186,174 @@ head(team_ratings)
 
 ```
 
-```{r}
+```{r calculate_national_elo, warning=FALSE,message=FALSE}
 elo_data <- international_results %>%
   # select relevant variable
   # keep date so we know a teams ELO at specific date
   select(date, home, away, K, G, result) %>%
-  # pmap doesn't play with dates so convert to character
-  mutate(date = as.character(date)) %>%
   # apply the calc_ELO function over rows of df
-  pmap_df(~c(..., calc_ELO(...))) %>%
-  # reconvert to dates
-  mutate(date = as.Date(date)) %>%
+  bind_cols(pmap_df(., calc_ELO)) %>%
   # get rid of ELO parameters
   select(date, home, away, h_rating, v_rating) %>%
   # gather twice to get a long df of teams ratings after matches
-  gather("location", "team", -date, -h_rating, -v_rating) %>%
-  gather("rating", "value", -date, -location, -team) %>%
+  gather("location", "nation", -date, -h_rating, -v_rating) %>%
+  gather("rating", "value", -date, -location, -nation) %>%
   # filter for home rating for teams at home and vice versa
   filter((location == "home" & rating == "h_rating") |
            (location == "away" & rating == "v_rating")) %>%
-  select(date, team, rating = value) %>%
+  select(date, nation, rating = value) %>%
   # we only care about ratings from August 1992
   filter(date > "1992-07-31")
 
 ```
 
-```{r}
+```{r plot_teams_elo, warning=FALSE,message=FALSE}
 teams <- elo_data %>%
   filter(rating > 1600) %>%
-  .$team %>%
+  .$nation %>%
   unique() %>%
   .[sample(length(.), 5)]
 
-teams
-
-p <- elo_data %>%
-  filter(team %in% teams) %>%
-  ggplot(aes(x = date, y = rating, colour = team, group = team)) +
+p1 <- elo_data %>%
+  filter(nation %in% teams) %>%
+  ggplot(aes(x = date, y = rating, colour = nation, group = nation)) +
   geom_point() +
   geom_line() +
-  scale_colour_manual(values = c("skyblue", "darkblue", "darkorange", "darkgreen", "red")) +
+  scale_colour_manual(values = c("skyblue", 
+                                 "darkblue",
+                                 "darkorange",
+                                 "darkgreen",
+                                 "red")) +
   theme_minimal()
 
-plot(p)
+plot(p1)
+```
+
+
+```{r check_nation_names, warning=FALSE,message=FALSE}
+squad_teams <- unique(squads$nation)
+rating_teams <- unique(elo_data$nation)
+
+squad_teams[!squad_teams %in% rating_teams]
+
+```
+
+```{r combine_elo_data, warning=FALSE,message=FALSE}
+players_national_elo <- squads %>%
+  mutate(nation = case_when(
+    grepl("Yugoslavia", nation) ~ "Serbia",
+    grepl("Ireland Republic", nation) ~ "Republic of Ireland",
+    grepl("Macedonia FYR", nation) ~ "FYR Macedonia",
+    grepl("St. Kitts and Nevis", nation) ~ "Saint Kitts and Nevis",
+    grepl("Congo DR", nation) ~ "DR Congo",
+    grepl("China", nation) ~ "China PR",
+    grepl("Korea Republic", nation) ~ "South Korea",
+    grepl("Curacao", nation) ~ "CuraÃ§ao",
+    grepl("Cape Verde Islands", nation) ~ "Cape Verde",
+    TRUE ~ nation
+  )) %>%
+  mutate(year = as.numeric(year)) %>%
+  mutate(s_start = as.Date(paste0(year-1, "-08-01")),
+         s_end = as.Date(paste0(year, "-06-01"))) %>%
+  left_join(., elo_data, by = "nation") %>%
+  filter(date > s_start & date < s_end)
+
+p2 <- players_national_elo %>%
+  arrange(rating) %>%
+  filter(!duplicated(paste(player, team, year), fromLast = TRUE)) %>%
+  mutate(decade = case_when(
+    year < 2000 ~ "1990",
+    year < 2010 ~ "2000",
+    year < 2020 ~ "2010"
+  )) %>%
+  ggplot(aes(rating)) +
+  geom_histogram() +
+  labs(title = "",
+       subtitle = "",
+       x = "lowest national team ELO rating",
+       y = "player count") +
+  theme_minimal() +
+  facet_wrap(~decade)
+
+plot(p2)
+
+```
+
+```{r worst_elo_players, warning=FALSE,message=FALSE}
+worst_national_team_players <- players_national_elo %>%
+  arrange(rating) %>%
+  filter(appearances > 0) %>%
+  filter(!duplicated(player)) %>%
+  select(year, team, player, nation, rating)
+
+head(worst_national_team_players, n = 25)
+
+```
+
+```{r worst_epl_winning_rankings, warning=FALSE,message=FALSE}
+epl_winners <- data.frame(
+  champion = c(
+    "manchester-united",
+    "manchester-united",
+    "blackburn-rovers",
+    "manchester-united",
+    "manchester-united",
+    "arsenal",
+    "manchester-united",
+    "manchester-united",
+    "manchester-united",
+    "arsenal",
+    "manchester-united",
+    "arsenal",
+    "chelsea",
+    "chelsea",
+    "manchester-united",
+    "manchester-united",
+    "manchester-united",
+    "chelsea",
+    "manchester-united",
+    "manchester-city",
+    "manchester-united",
+    "manchester-city",
+    "chelsea",
+    "leicester-city",
+    "chelsea",
+    "manchester-city",
+    "manchester-city"),
+  year = 1993:2019
+) 
+
+get_nation_ranking <- function(season_end_date, player_nationality) {
+  df <- elo_data %>%
+    filter(date < season_end_date) %>%
+    filter(!duplicated(nation, fromLast = TRUE)) %>%
+    arrange(-rating) %>%
+    mutate(ranking = seq(nrow(.))) %>%
+    filter(nation == player_nationality) %>%
+    select(ranking)
+}
+
+epl_winning_squads <- players_national_elo %>%
+  left_join(., epl_winners, by = "year") %>%
+  filter(team == champion) %>%
+  arrange(rating) %>%
+  filter(appearances > 0 | sub_appearances > 0) %>%
+  filter(!duplicated(paste(player, year), fromLast = TRUE)) %>%
+  bind_cols(map2_df(.$s_end, .$nation, get_nation_ranking)) %>%
+  select(year, team, player, apps = appearances, sub_apps = sub_appearances, nation, rating, ranking) %>%
+  arrange(-ranking, rating)
+
+head(epl_winning_squads, n = 25)
+
+  
+  
+  
+```
+
+```{r}
+test <- "http://www.eloratings.net/Northern_Ireland" %>%
+  read_html() %>%
+  html_nodes(xpath = "#maintable_Brazil") %>%
+  html_table()
 ```
 
