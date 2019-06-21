@@ -10,12 +10,28 @@ header:
   image: ''
 slug: guardian_knowledge_june
 tags:
-- maps
-- pubs
-- cambridge
+- rstats
+- football
+- the_knowledge
 categories: []
 ---
 
+Most wednesday's I enjoy reading [The Knowledge](https://www.theguardian.com/football/series/theknowledge) blog on the Guardian's website and reading the football trivia therein. When time (and questions) allow, I like to answer some of the questions posed, example of which are [here](http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/), [here](http://www.robert-hickman.eu/post/counties_league_points/), and [here](http://www.robert-hickman.eu/post/the-knowledge-7th-february-2019/).
+
+# League of Nations
+
+The first question comes from
+
+<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Which player had the nationality with the lowest FIFA World Ranking at the time of him winning the Premier League?</p>&mdash; The Tin Boonie (@TheTinBoonie) <a href="https://twitter.com/TheTinBoonie/status/1140936272862691328?ref_src=twsrc%5Etfw">June 18, 2019</a></blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+a similar question is also answered in thi weeks column:
+
+'*“Fulham defender Zesh Rehman made his debut for Pakistan, who are ranked 168 by Fifa. Is that the lowest-ranked country a Premier League player has played for?”* wondered Zulfiqar Shah in January 2006.'
+
+I thought I'd answer both of these using R.
+
+First some libraries we'll need, and also set a seed for reproducibility.
 
 ```{r libraries, warning=FALSE,message=FALSE}
 library(tidyverse)
@@ -25,7 +41,11 @@ library(rvest)
 set.seed(3459)
 ```
 
-```{r epl_season, warning=FALSE,message=FALSE}
+The first thing we need to answer these is the nationality of EPL players. For this two good sources are [transfermarkt.co.uk](https://www.transfermarkt.co.uk/) and [11v11.com](https://www.11v11.com/). I'm going to opt for the later, just because the tables are a little easier to scrape.
+
+To start, we need to get the links to every team to have competed in the premier league
+
+```{r epl_teams, warning=FALSE,message=FALSE}
 # get years of EPL seasons
 years <- 1993:2019
 # base url we'll scrape from
@@ -34,11 +54,7 @@ base_url <- "https://www.11v11.com"
 # cat together
 tables <- paste0(base_url, "/league-tables/premier-league/01-june-", years)
 
-```
-
-```{r get_squads, warning=FALSE,message=FALSE,eval=FALSE}
-
-squads <- tables %>%
+competing_teams <- tables %>%
   # get a list of the links to every teams squad page
   map(., function(x) {
     x %>%
@@ -48,7 +64,16 @@ squads <- tables %>%
       # paste into working link for year and competition (EPL)
       paste0(base_url, ., "tab/players/season/", gsub(".*01-june-", "", x), "/comp/1/")
   }) %>%
-  unlist() %>%
+  unlist()
+
+head(competing_teams, n = 5)
+
+```
+
+We can then scrape the squads for these teams in that specific season. We want the players, their nationality and also the number of appearances they made in the league that season
+
+```{r get_squads, warning=FALSE,message=FALSE,eval=FALSE}
+squads <- competing_teams %>%
   # get the players/appearances/nationalities
   map_df(., function(y) {
     # read once to save server calls
@@ -100,6 +125,7 @@ squads <- tables %>%
     TRUE ~ nation
   ))
 
+head(squads, n = 10)
 
 ```
 
@@ -107,6 +133,13 @@ squads <- tables %>%
 squads <- readRDS("C:/Users/rob-getty/Desktop/squads.rds")
 ```
 
+To answer the question as asked, we'd want historical [FIFA ranking](https://www.fifa.com/fifa-world-ranking/ranking-table/men/) data. While it does exist going back to 2007, I'd prefer to have the full dataset back to 1993, and in any case, there are also [some problems](https://en.wikipedia.org/wiki/World_Football_Elo_Ratings) with the historical calculation FIFA used for it's ratings.
+
+Instead, I'm going to copy [eloratings.net](http://www.eloratings.net/) which calculated the ranking based on an ELO system as explained [here](http://www.eloratings.net/about).
+
+It's fairly easy to calculate this over time given a df of historical international, which can be found at [kaggle](https://www.kaggle.com/martj42/international-football-results-from-1872-to-2017/downloads/international-football-results-from-1872-to-2017.zip/42). 
+
+This can be downloaded and extracted with a free account, giving a 40451 row data frame, each with the details of one international football match.
 
 ```{r international_df, warning=FALSE,message=FALSE}
 # load a df of international results
@@ -115,6 +148,8 @@ international_results <- readRDS("../../static/files/international_results.rds")
 
 head(international_results)
 ```
+
+Before calculating the elo ratings adjustment for each match, we need to initialise the parameters for each match (see [here](http://www.eloratings.net/about)). Unfortunately, the data does not include the context of each match, so we can't adjust for match importance (a World Cup final should be taken more seriously than a friendly exhibition match), so I set the K parameter to 40 for each match. This will lead to discrepancies between my calculations and the 'official' eloratings.net rankings, but the gist at least should be the same
 
 ```{r munge_results, warning=FALSE,message=FALSE}
 # prepare results df for ELO modelling
@@ -146,6 +181,8 @@ head(international_results)
 
 ```
 
+We can then generate a function to calculate the ELO adjustment of each team which will take ratings from, and pass updated ratings to, a df of teams with their ELO rating. This data frame is also initialised below it
+
 ```{r set_up_ELO, warning=FALSE,message=FALSE}
 # function to calculate updated ELO ratings
 calc_ELO <- function(date, home, away, K, G, result) {
@@ -169,7 +206,7 @@ calc_ELO <- function(date, home, away, K, G, result) {
   return(list(h_rating = new_hr, v_rating = new_vr))
 }
 
-
+# df of team ratings to keep updated ELOs
 team_ratings <- international_results %>%
   # select date and teams
   select(date, home, away) %>%
@@ -177,7 +214,7 @@ team_ratings <- international_results %>%
   gather(., "location", "nation", home, away) %>%
   select(-location) %>%
   arrange(date) %>%
-  # set out unique teams with a rating of 1200
+  # set out unique teams with a rating of 1200 initially
   filter(!duplicated(nation)) %>%
   mutate(rating = 1200) %>%
   select(-date)
@@ -185,6 +222,10 @@ team_ratings <- international_results %>%
 head(team_ratings)
 
 ```
+
+The calc_ELO function is then ran rowwise using pmap_df, and the results bound columnwise onto the original data frame. For each of these small blog posts I like to try and learn one thing, and this was an improvement over the splitting of a data.frame and lapply-ing rows I used before. 
+
+The ELO data is then melted and arranged, then filtered giving only the data from 1992 onwards (the formation of the premier league)
 
 ```{r calculate_national_elo, warning=FALSE,message=FALSE}
 elo_data <- international_results %>%
@@ -207,13 +248,19 @@ elo_data <- international_results %>%
 
 ```
 
+To show how the ELO progresses over time we can randomly (though fixed via seeding at the start) select a few teams and plot this
+
 ```{r plot_teams_elo, warning=FALSE,message=FALSE}
+# randomly select countries who have max ratings > 1600
+# otherwise too biases towards small, hard to judge, countries
 teams <- elo_data %>%
   filter(rating > 1600) %>%
   .$nation %>%
   unique() %>%
+  # select 5 teams
   .[sample(length(.), 5)]
 
+# plot the elo over time for these countries
 p1 <- elo_data %>%
   filter(nation %in% teams) %>%
   ggplot(aes(x = date, y = rating, colour = nation, group = nation)) +
@@ -226,9 +273,30 @@ p1 <- elo_data %>%
                                  "red")) +
   theme_minimal()
 
+# plot
 plot(p1)
 ```
 
+This passes the sanity check, with nations that have historically been better showing higher ELO ratings.
+
+```{r}
+url <- "C:/Users/rob-getty/Downloads/test2.htm"
+links <- read_html(url) %>%
+  html_nodes("div.ui-widget-content:nth-child(10) > div:nth-child(2) > a:nth-child(1)") %>%
+  html_attr("href")
+
+get_ratings <- function(link) {
+  download.file(link, "./test.htm")
+  dl_page <- file.path(getwd(), "test.htm")
+  
+  teams <- read_html(url) %>%
+    html_nodes("div.ui-widget-content:nth-child(6) > div:nth-child(6)") %>%
+    html_text()
+}
+```
+
+
+Before we can join these two data series 
 
 ```{r check_nation_names, warning=FALSE,message=FALSE}
 squad_teams <- unique(squads$nation)
