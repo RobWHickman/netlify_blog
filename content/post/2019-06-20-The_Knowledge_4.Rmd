@@ -41,6 +41,115 @@ library(rvest)
 set.seed(3459)
 ```
 
+
+```{r testing_phantomjs, warning=FALSE,message=FALSE}
+phantom_dir <- "C:/Users/rob-getty/Desktop/netlify_blog/static/files/phantomjs_scraping/"
+index_page <- "elo_index.html" %>%
+  file.path(phantom_dir, .) 
+
+country_links <- index_page %>%
+  read_html() %>%
+  html_nodes("#maintable_World a") %>%
+  html_attr("href")
+
+split_teams <- function(t, o, c) {
+  country <- gsub("_", " ", c)
+  if(grepl(paste0("^", country), t)) {
+    home = gsub(o, "", t)
+    away = gsub(country, "", t)
+  } else {
+    home = gsub(country, "", t)
+    away = gsub(o, "", t)
+  }
+  df <- data.frame(home, away)
+}
+
+split_ratings <- function(r) {
+  split_r <- unlist(strsplit(r, ""))
+  if(length(split_r) == 8) {
+    r1 <- as.numeric(paste0(split_r[1:4], collapse = ""))
+    r2 <- as.numeric(paste0(split_r[5:8], collapse = ""))
+  } else if(length(split_r) == 7) {
+    if(as.numeric(split_r[1]) > 2) {
+      r1 <- as.numeric(paste0(split_r[1:3], collapse = ""))
+      r2 <- as.numeric(paste0(split_r[4:7], collapse = ""))
+    } else {
+      r1 <- as.numeric(paste0(split_r[1:4], collapse = ""))
+      r2 <- as.numeric(paste0(split_r[5:7], collapse = ""))
+    }
+  } else {
+    r1 <- as.numeric(paste0(split_r[1:3], collapse = ""))
+    r2 <- as.numeric(paste0(split_r[4:6], collapse = ""))
+  }
+  
+  df <- data.frame(r1, r2)
+}
+
+split_rankings <- function(rnk) {
+  ranking1 <- as.numeric(str_extract(gsub("^.*layout", "", gsub("<br>.*", "", rnk)), "[0-9]+"))
+  ranking2 <- as.numeric(gsub(".*<br>", "", gsub("<\\/div.*", "", rnk)))
+  
+  df <- data.frame(ranking1, ranking2)
+}
+
+convert_date <- function(d) {
+  year <- gsub("(^.*)([0-9]{4}$)", "\\2", d)
+  monthday <- gsub(year, "", d)
+  
+  date <- as.Date(paste(monthday, year), "%b %d %Y") %>%
+    as.character()
+}
+
+scrape_nation <- function(country) {
+  # download the page
+  url <- paste0("https://eloratings.net/", country)
+  system2("C:/Users/rob-getty/Downloads/phantomjs-2.1.1-windows/phantomjs-2.1.1-windows/bin/phantomjs.exe", 
+          args = c(file.path(phantom_dir, "scrape_ELO.js"), url))
+  
+  country_name <- gsub("_", "", country)
+  
+  i <<- country_name
+  
+  # read in downloaded page
+  page <- read_html("elopage.html")
+  
+  opposing <- page %>%
+      html_nodes(".r1 a") %>%
+      html_text()
+  
+  teams <- page %>%
+      html_nodes(".r1") %>%
+      html_text()
+  
+  fixtures <- map2_df(teams, opposing, split_teams, c = country_name)
+
+  ratings <- page %>%
+    html_nodes(".r4") %>%
+    html_text() %>%
+    map_df(., split_ratings)
+  
+  rankings <- page %>%
+    html_nodes(".r6") %>%
+    map_df(., split_rankings)
+
+  dates <- page %>%
+    html_nodes(".r0") %>%
+    html_text() %>%
+    map(., convert_date) %>%
+    unlist()
+
+  df <- fixtures %>%
+    cbind(., ratings) %>%
+    cbind(., rankings) %>%
+    mutate(date = as.Date(dates))
+}
+
+
+x <- map_df(country_links, scrape_nation)
+```
+
+
+
 The first thing we need to answer these is the nationality of EPL players. For this two good sources are [transfermarkt.co.uk](https://www.transfermarkt.co.uk/) and [11v11.com](https://www.11v11.com/). I'm going to opt for the later, just because the tables are a little easier to scrape.
 
 To start, we need to get the links to every team to have competed in the premier league
