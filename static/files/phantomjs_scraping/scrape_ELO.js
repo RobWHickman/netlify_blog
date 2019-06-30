@@ -1,21 +1,17 @@
 // scrapes a given url (for eloratings.net)
 
-// Create a webpage object
+// create a webpage object
 var page = require('webpage').create(),
-  system = require('system'),
-  country;
+  system = require('system')
 
-if (system.args.length === 1) {
-  console.log('Usage: loadspeed.js [some URL]');
-  phantom.exit();
-}
-
+// the url for each country provided as an argument
 country= system.args[1];
 
-// Include the File System module for writing to files
+// include the File System module for writing to files
 var fs = require('fs');
 
-// Specify source and path to output file
+// specify source and path to output file
+// we'll just overwirte iteratively to a page in the same directory
 var path = 'elopage.html'
 
 page.open(country, function (status) {

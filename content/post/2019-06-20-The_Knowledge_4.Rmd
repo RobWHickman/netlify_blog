@@ -89,6 +89,16 @@ squads <- competing_teams %>%
       # get rid of rows without player info
       filter(!is.na(Player))
     
+    player_details <- read %>%
+      html_nodes(".sortable a")
+    
+    df <- data.frame(Player = player_details %>%
+                       html_text(),
+                     url = player_details %>%
+                       html_attr("href"))
+    
+    squad <- left_join(squad, df, by = "Player")
+    
     # get the listed nationalities
     flags <- read %>%
       html_nodes(".squad > tbody:nth-child(2) > tr > td:nth-child(3)")
@@ -112,7 +122,7 @@ squads <- competing_teams %>%
              year = gsub(".*season\\/", "", gsub("\\/comp.*", "", y)),
              team = gsub("\\/tab\\/players.*", "", gsub(".*teams\\/", "", y))) %>%
       # select useful appearance information
-      select(player = Player, position = Position,
+      select(player = Player, url, position = Position,
              appearances = A, sub_appearances = S, 
              nation, year, team)
   }) %>%
@@ -130,38 +140,420 @@ head(squads, n = 10)
 
 ```
 
-```{r load_squads, warning=FALSE,message=FALSE}
-squads <- readRDS("C:/Users/rob-getty/Desktop/squads.rds")
+```{r load_squads, warning=FALSE,message=FALSE,echo=FALSE}
+squads <- readRDS("C:/Users/robwh/Desktop/netlify_blog/static/files/premier_league_squads.rds")
 ```
 
 To answer the question as asked, we'd want historical [FIFA ranking](https://www.fifa.com/fifa-world-ranking/ranking-table/men/) data. While it does exist going back to 2007, I'd prefer to have the full dataset back to 1993, and in any case, there are also [some problems](https://en.wikipedia.org/wiki/World_Football_Elo_Ratings) with the historical calculation FIFA used for it's ratings.
 
-```{r}
-elo_data <- readRDS("../../scraped_elo_ratings.rds") %>%
-  select(date, home, away, rating_home = r1, rating_away = r2, ranking_home = ranking1, ranking_away = ranking2) %>%
-  gather("location", "nation", -rating_home, -rating_away, -ranking_home, -ranking_away, -date) %>%
-  gather("measure", "value", -nation, -date, -location) %>%
-  filter((location == "home" & measure %in% c("rating_home", "ranking_home")) |
-           (location == "away" & measure %in% c("rating_away", "ranking_away"))) %>%
-  separate(measure, into = c("measure", "location"), "_") %>%
-  filter(!duplicated(.)) %>%
-  filter(date > "1992-01-01")
+Instead, we can use the ELO method of rating teams (most commonly used to rank chess players). There are two ways to do this- we can calculate the ratings ourselves using a dataframe of international results, or we can take the accepted ratings at [eloratings.net](https://www.eloratings.net).
 
+I'll outline the first method here and then use the data from the second further below [here]().
+
+## Calculating ELO ratings
+
+To calculate our ratings, first we need to to load up a dataframe of international football results. The one I'm using comes from [kaggle]() and has 40k matches listed since the start of international football in 1872:
+
+```{r load_international_results, warning=FALSE,message=FALSE}
+international_results <- readRDS("../../static/files/international_results.rds")
+
+head(international_results)
+```
+
+We only need a few of these variables- enough to know who wins each match and when/where it was played. We can then use this data to initialise several parameters to be used in our ELO calculation. For team i (in a match of teams i and j), this is [calculated as](https://eloratings.net/about):
+
+$$ rating_{i_{t}} = rating_{i_{t-1}} + K \cdot G \cdot (R - E(R)) $$
+The rating of team i is their old rating plus the difference between the actual result (R = 1 for a win, 0.5 for a draw, 0 for a loss) and the expected result (where 1 means certain win for team i).
+
+The unexpectedness of the result is then multiplied by two parameters. The first K, is to account for the importance of the match, with more important matches having a higher K factor, and a greater influence of team rating.
+
+$$
+\begin{equation}
+K = 
+\begin{cases} 
+60 & \text{if World Cup Final} \\
+50 & \text{if World Cup/ Major Intercontinental Matches} \\
+40 & \text{if World Cup/Continental Competition Qualifiers} \\
+30 & \text{if Other Tournaments}\\
+20 & \text{if Friendly} \\
+\end{cases}
+
+\end{equation}
+$$
+The second parameter, G is controlled by the strength of the result
+
+$$
+\begin{equation}
+G = 
+\begin{cases} 
+1 & \text{if } N < 2 \\
+1.5 & \text{if } N = 2 \\
+1.75 & \text{if } N = 3 \\
+1.75 + \frac{N-3}{8} & \text{if N > 3} \\
+\end{cases}
+
+\end{equation}
+$$
+
+where N is the goal difference:
+
+$$ N = Goals_{i} - Goals_{j} $$
+
+The expected result is calculated based on the rankings of both teams going into the match
+
+$$ E(result) = \frac{1}{10 ^ \frac{-dr_{i,j}}{400} + 1} $$
+where the difference in rankings (dr) is calculated as
+
+$$
+\begin{equation}
+dr_{i,j} = 
+\begin{cases} 
+rating_{i, t-1} + 100 - rating_{j, t-1} & \text{if i at home} \\
+rating_{i, t-1} - 100 - rating_{j, t-1} & \text{if j at home} \\
+rating_{i, t-1} - rating_{j, t-1} & \text{if neutral} \\
+\end{cases}
+
+\end{equation}
+$$
+
+We then add K, G and R to each row of the data frame to make our calculations easier down the line. Unfortunately, my dataset doesn't give the context of each game, so I've set K to 40 for every match. In theory this shouldn't make a difference, but will affect the ratings of teams who over/under perform in big matches.
+
+```{r iniatilise_df, warning=FALSE,message=FALSE}
+international_results %<>%
+  # select relevant columns
+  select(date, home = home_team, away = away_team, hgoal = home_score, agoal = away_score, neutral) %>%
+  # convert date to date format
+  mutate(date = as.Date(date)) %>%
+  # K = match importance
+  # don't have competition data in this dataset so just set to 40
+  mutate(K =  40) %>%
+  # G = goal difference factor
+  # takes into account how much a team is beaten by
+  mutate(G = case_when(
+    abs(hgoal-agoal) < 2 ~ 1,
+    abs(hgoal-agoal) < 3 ~ 1.5,
+    abs(hgoal-agoal) >= 3 ~ 1.75 + (abs(hgoal-agoal)-3)/8
+  )) %>%
+  # results = 1 for win and 0.5 for a draw
+  mutate(result = case_when(
+    hgoal > agoal ~ 1,
+    hgoal < agoal ~ 0,
+    hgoal == agoal ~ 0.5
+  )) %>%
+  # arrange by date so ELO can be updated sequentially
+  arrange(date)
+```
+
+We still need to initialise our rating (R) for each team, which for simplicty I've set to 1200 to start with. That is, every team starts with the same rating and will gradually tend towards their 'natural' rating. Given There's probably at least 50 years of data for most teams before the Premier League begins in 1992, hopefully it should be enough for this to level out.
+
+```{r init_team_ratings, warning=FALSE,message=FALSE}
+team_ratings <- international_results %>%
+  # select date and teams
+  select(date, home, away) %>%
+  # melt
+  gather(., "location", "nation", home, away) %>%
+  select(-location) %>%
+  arrange(date) %>%
+  # set out unique teams with a rating of 1200
+  filter(!duplicated(nation)) %>%
+  mutate(rating = 1200) %>%
+  select(-date)
 
 ```
 
+Therefore, using the very first international fixture between England and Scotland in 1872 we have parameters of
 
+```{r first_fixtures, warning=FALSE,message=FALSE}
+head(international_results, n = 1)
+```
+
+ratings(t-1) = 1200 for both England and Sctoland
+K = 40
+G = 1 for a draw
+R = 0.5 for a draw
+
+the equal ratings, but home location for Scotland mean that for England:
+
+$$ dr_{i,j} = 1200 + 100 - 1200  = 100 $$
+and so an expected result (1- the expected home result)
+
+$$ E(R) = 1 - \frac{1}{10 ^ {100/400} + 1} = 1 - \frac{1}{2.78}  =  0.36$$
+and so England will get a post match rating of
+
+$$ rating_{j} = 1200 + (40 \cdot 1 \cdot (0.5 - 0.36)) = 1207.2 $$
+
+
+```{r elo_function, warning=FALSE,message=FALSE}
+calc_ELO <- function(date, home, away, K, G, result) {
+  #get the difference in ratings
+  hr <- team_ratings$rating[which(team_ratings$nation == home)]
+  vr <- team_ratings$rating[which(team_ratings$nation == away)]
+  dr <- vr - (hr + 100)
+  
+  # calculate expected results
+  e_result <- 1/ ((10^(dr/400))+1)
+  
+  # calculate new ratings
+  new_hr <- hr + ((K*G) * (result - e_result))
+  new_vr <- vr + ((K*G) * ((1-result) - (1-e_result)))
+  
+  # pipe these back into a df of team ratings to sample from
+  team_ratings$rating[which(team_ratings$nation == home)] <<- new_hr
+  team_ratings$rating[which(team_ratings$nation == away)] <<- new_vr
+  
+  # return new ratings
+  return(list(h_rating = new_hr, v_rating = new_vr))
+}
+
+```
+
+which can be applied to the dataframe of match information using pmap_df from the [purrr]() package, which allows for some pleasing conciseness. It allows for the speed of applying a function, without needing to split the data frame by row and pass into lapply and rebind together.
+
+
+```{r calc_elos, warning=FALSE,message=FALSE}
+elo_data <- international_results %>%
+  # select relevant variable
+  # keep date so we know a teams ELO at specific date
+  select(date, home, away, K, G, result) %>%
+  bind_cols(pmap_df(., calc_ELO)) %>%
+  # get rid of ELO parameters
+  select(date, home, away, h_rating, v_rating) %>%
+  # gather twice to get a long df of teams ratings after matches
+  gather("location", "nation", -date, -h_rating, -v_rating) %>%
+  gather("rating", "value", -date, -location, -nation) %>%
+  # filter for home rating for teams at home and vice versa
+  filter((location == "home" & rating == "h_rating") |
+           (location == "away" & rating == "v_rating")) %>%
+  select(date, nation, rating = value) %>%
+  # we only care about ratings from August 1992
+  filter(date > "1992-07-31")
+
+```
+
+We're left with a dataframe of 46992 observations (one row the hcnage in ratings as matches are played for each team) for 3 variables: date, nation and the ranking of the nation at that time. We can plot a random selection of 5 teams just to sanity check and see that teams we know have historically been stronger (e.g. Argentina) show conssitently higher rankings than weaker nations (e.g. Greece).
+
+```{r plot_teams_elo, warning=FALSE,message=FALSE}
+teams <- elo_data %>%
+  filter(rating > 1600) %>%
+  .$nation %>%
+  unique() %>%
+  .[sample(length(.), 5)]
+
+p1 <- elo_data %>%
+  filter(nation %in% teams) %>%
+  ggplot(aes(x = date, y = rating, colour = nation, group = nation)) +
+  geom_point() +
+  geom_line() +
+  scale_colour_manual(values = c("skyblue", "darkblue", "darkorange", "darkgreen", "red")) +
+  scale_colour_manual(values = c("skyblue", 
+                                 "darkblue",
+                                 "darkorange",
+                                 "darkgreen",
+                                 "red")) +
+  theme_minimal()
+
+plot(p1)
+```
+
+I'm pretty happy with how the code works. With a more complete dataset of matches, and also the time to properly filter countries in and out as they are formed/dissolved, I think it would make a pretty viable answer, however, I wanted to be as accurate as possible, and I can't compete with the official-unofficial ratings of [eloratings.net](https://www.eloratings.net).
+
+## Dynamic Scraping
+
+When scraing data for blog posts, I typically rely on [rvest]() and it's read_html(url) function. However, while this works for the static websites which make up the vast majority of sites containing tables of data, it struggles with websites that use javascript to dynamically generate pages.
+
+Eloratings.net is one such website which rvest is unable to scrape. E.g.
+
+```{r failed_scrape, warning=FALSE,message=FALSE}
+url <- "https://eloratings.net/Brazil"
+
+read <-read_html(url) %>%
+  html_nodes("#mainheader")
+
+read
+
+```
+
+does not manage to capture the data displayed in the page mainheader (it 'should' return "World Football Elo Ratings: Brazil" from the title of that page).
+
+Instead, what we want to do is save a copy of the generated page as a .html file and then read that into R using read_html(). Luckily, a way exists to do just that, using the (now deprecated, but still working) [PhantomJS headless browser](http://phantomjs.org/). Much of the code I used to get going with this is adapted from a tutorial [here](https://velaco.github.io/how-to-scrape-data-from-javascript-websites-with-R/).
+
+First you want to install PhantomJS from the above website and run through it's [quick start guide](http://phantomjs.org/quick-start.html). This is a pretty thorough guide, I would say that there are really only three steps from installation to getting going:
+
+1) [Add phantomjs to the system PATH](https://www.howtogeek.com/118594/how-to-edit-your-system-path-for-easy-command-line-access/)
+2) Open a text editor and save one of the [tutorial scripts]() as filename.js
+3) run > phantomjs C:/Users/usr/path/to/file.js 
+    in a command line console
+    
+The file we're going to use to render the javescript pages and then save the html is below:
+
+
+```{r phantomjs_code, warning=FALSE,message=FALSE,eval=FALSE}
+// scrapes a given url (for eloratings.net)
+
+// create a webpage object
+var page = require('webpage').create(),
+  system = require('system')
+
+// the url for each country provided as an argument
+country= system.args[1];
+
+// include the File System module for writing to files
+var fs = require('fs');
+
+// specify source and path to output file
+// we'll just overwirte iteratively to a page in the same directory
+var path = 'elopage.html'
+
+page.open(country, function (status) {
+  var content = page.content;
+  fs.write(path,content,'w')
+  phantom.exit();
+});
+```
+
+(which, again, is stolen and adapted from [here](https://velaco.github.io/how-to-scrape-data-from-javascript-websites-with-R/))
+
+This is saved as scrape_ELO.js in the static directory of my blog folder.
+
+To keep everything in R, we can use the system() family of functions, which provides acess to the OS command line. Though the referenced tutorial uses system(), it relies on scraping a single referenced page. To iteratively scrape every country, we'll need to provide an argument (country) which will contain the link to the page on eloratings.net for that country.
+
+E.g. for Brazil we will provide "https://www.eloratings.net/Brazil" as the country argument
+
+```{r scrape_example, warning=FALSE,message=FALSE,echo=FALSE}
+phantom_dir <- "C:/Users/robwh/Desktop/netlify_blog/static/files/phantomjs_scraping"
+country_url <- "https://www.eloratings.net/Brazil"
+
+# use system2 to invoke phantomjs via it's executable
+system2("C:/Users/robwh/Downloads/phantomjs-2.1.1-windows/bin/phantomjs.exe",
+        #provide the path to the scraping script and the country url as argument
+        args = c(file.path(phantom_dir, "scrape_ELO.js"), country_url))
+
+```
+```{r scrape_example_display, warning=FALSE,message=FALSE,eval=FALSE}
+phantom_dir <- "C:/Users/path/to/scrape_ELO/"
+country_url <- "https://www.eloratings.net/Brazil"
+
+# use system2 to invoke phantomjs via it's executable
+system2("C:/Users/robwh/Downloads/phantomjs-2.1.1-windows/bin/phantomjs.exe",
+        #provide the path to the scraping script and the country url as argument
+        args = c(file.path(phantom_dir, "scrape_ELO.js"), country_url))
+
+```
+
+We can then read in this saved html page using rvest as per usual and recover the information therein.
+
+```{r read_scraped_page, warning=FALSE,message=FALSE}
+page <- read_html("elopage.html")
+
+country_name <- page %>%
+  html_nodes("#mainheader") %>%
+  html_text() %>%
+  gsub("Elo Ratings: ", "", .)
+
+country_name
+
+```
+
+I'm not going to include my full script for scraping eloratings.net as usually a reason for doing this obscuring of the data is to prevent exaclty what I'm doing. Instead I'll give a skeleton function of the one I use. If you are having problems with setting up phantomjs to scrape pages, my contact details are listed on my [blog homepage](http://www.robert-hickman.eu/)
+
+```{r scrape_elo_ratings, warning=FALSE,message=FALSE,eval=FALSE}
+scrape_nation <- function(country) {
+  # download the page
+  url <- paste0("https://eloratings.net/", country)
+  system2("C:/Users/robwh/Downloads/phantomjs-2.1.1-windows/bin/phantomjs.exe", 
+          args = c(file.path(phantom_dir, "scrape_ELO.js"), url))
+  
+  # read in downloaded page
+  page <- read_html("elopage.html")
+  
+  # recover information
+  country_name <- page %>%
+    html_nodes("#mainheader") %>%
+    html_text() %>%
+    gsub("Elo Ratings: ", "", .)
+  
+  opposing <- page %>%
+      html_nodes(".r1 a") %>%
+      html_text()
+  
+  teams <- page %>%
+      html_nodes(".r1")
+  
+  fixtures <- map2_df(teams, opposing, split_teams)
+
+  ratings <- page %>%
+    html_nodes(".r4") %>%
+    html_text() %>%
+    map_df(., split_ratings)
+  
+  rankings <- page %>%
+    html_nodes(".r6") %>%
+    map_df(., split_rankings)
+
+  dates <- page %>%
+    html_nodes(".r0") %>%
+    html_text() %>%
+    map_df(., convert_date)
+
+  # bind into a data frame
+  df <- fixtures %>%
+    cbind(., ratings) %>%
+    cbind(., rankings) %>%
+    cbind(., dates) %>%
+    mutate(table_country = country_name)
+}
+
+elO_data <- map_df(country_links, scrape_nation)
+
+```
+
+```{r load_elo_data, warning=FALSE,message=FALSE,echo=FALSE}
+elo_data <- readRDS("C:/Users/robwh/Desktop/netlify_blog/static/files/scraped_elo_data.rds")
+
+```
+
+Finally, we want to convert this to long format. We have two observations per country and any point in time- the rating, and the ranking. I'm going to filter out just the ranking, as that's what the questions ask, but if anything there's possibly more information in the rating data.
+
+```{r convert_elo_to_long, warning=FALSE,message=FALSE}
+elo_data %<>%
+  # rename and select variables
+  select(date, home, away, rating_home = r1, rating_away = r2, ranking_home = ranking1, ranking_away = ranking2) %>%
+  # melt twice to convert to long format
+  gather("location", "nation", -rating_home, -rating_away, -ranking_home, -ranking_away, -date) %>%
+  gather("measure", "value", -nation, -date, -location) %>%
+  # take only relevant information
+  filter((location == "home" & measure %in% c("rating_home", "ranking_home")) |
+           (location == "away" & measure %in% c("rating_away", "ranking_away"))) %>%
+  separate(measure, into = c("measure", "location"), "_") %>%
+  # filter out relevant data
+  filter(!duplicated(.)) %>%
+  filter(date > "1992-01-01") %>%
+  filter(measure == "ranking") %>%
+  select(-measure, ranking = value, -location)
+
+```
+
+## Answering the Question
+
+So now we have a database of Premier League players' nationalities, and also of the ELO rankings of countries since 1992, we can answer the original questions.
+
+First we need to make sure that the data can join to each other, which means making sure that the nation names are common between the two data sets.
 
 ```{r check_nation_names, warning=FALSE,message=FALSE}
+# get unique names for countries in both data sets
 squad_teams <- unique(squads$nation)
 rating_teams <- unique(elo_data$nation)
 
+# find non joining country names
 squad_teams[!squad_teams %in% rating_teams]
 
 ```
 
+Some are missing where country names follow different convetion- e.g. the Democratic Republic of Congo is named DR Congo in one, and Congo DR in the other. We can quickly convert these odd countries and join the two data sets together using dplyr. Then we can get an idea of the national rankings of the nationality of Premier League players since it's inception
+
 ```{r combine_elo_data, warning=FALSE,message=FALSE}
 players_national_elo <- squads %>%
+  # rename countries
   mutate(nation = case_when(
     grepl("Ireland Republic", nation) ~ "Republic of Ireland",
     grepl("Trinidad and Tobago", nation) ~ "Trinidad/Tobago",
@@ -176,21 +568,24 @@ players_national_elo <- squads %>%
     grepl("Equatorial Guinea", nation) ~ "Equat Guinea",
     TRUE ~ nation
   )) %>%
+  # convert dates
   mutate(year = as.numeric(year)) %>%
   mutate(s_start = as.Date(paste0(year-1, "-08-01")),
          s_end = as.Date(paste0(year, "-06-01"))) %>%
+  # join elo rating data
   left_join(., elo_data, by = "nation") %>%
+  # take only relevant data per season
   filter(date > s_start & date < s_end)
 
 p2 <- players_national_elo %>%
-  arrange(rating) %>%
+  arrange(ranking) %>%
   filter(!duplicated(paste(player, team, year), fromLast = TRUE)) %>%
   mutate(decade = case_when(
     year < 2000 ~ "1990",
     year < 2010 ~ "2000",
     year < 2020 ~ "2010"
   )) %>%
-  ggplot(aes(rating)) +
+  ggplot(aes(ranking)) +
   geom_histogram() +
   labs(title = "",
        subtitle = "",
@@ -203,16 +598,23 @@ plot(p2)
 
 ```
 
+We can easily then take the players with the worst national team ranking by arranging by the ranking of national teams (and removing duplicate players so it isn't just filled with the same 2/3 names)
+
 ```{r worst_elo_players, warning=FALSE,message=FALSE}
 worst_national_team_players <- players_national_elo %>%
-  arrange(rating) %>%
-  filter(appearances > 0) %>%
+  # arrange rating from low to high
+  arrange(-ranking) %>%
+  # remove duplicated players
   filter(!duplicated(player)) %>%
-  select(year, team, player, nation, rating)
+  # select only relevant info
+  select(year, team, player, url, nation, ranking)
 
-head(worst_national_team_players, n = 25)
+# show the 25 players with the worst ranking their nation had during that time
+head(select(worst_national_team_players, -url), n = 25)
 
 ```
+
+We can then find the players with the worst national team rankings by joining in and selecting for teams that won the league. As the nation's world ranking needs to have been acheived during that season, a small function to find a nations lowest ranking during a time frame (from august of the preceeding year to june just after they would have been crowned champions) is required.
 
 ```{r worst_epl_winning_rankings, warning=FALSE,message=FALSE}
 epl_winners <- data.frame(
@@ -251,8 +653,7 @@ get_nation_ranking <- function(season_end_date, player_nationality) {
   df <- elo_data %>%
     filter(date < season_end_date) %>%
     filter(!duplicated(nation, fromLast = TRUE)) %>%
-    arrange(-rating) %>%
-    mutate(ranking = seq(nrow(.))) %>%
+    arrange(-ranking) %>%
     filter(nation == player_nationality) %>%
     select(ranking)
 }
@@ -260,24 +661,37 @@ get_nation_ranking <- function(season_end_date, player_nationality) {
 epl_winning_squads <- players_national_elo %>%
   left_join(., epl_winners, by = "year") %>%
   filter(team == champion) %>%
-  arrange(rating) %>%
+  arrange(-ranking) %>%
   filter(appearances > 0 | sub_appearances > 0) %>%
   filter(!duplicated(paste(player, year), fromLast = TRUE)) %>%
   bind_cols(map2_df(.$s_end, .$nation, get_nation_ranking)) %>%
-  select(year, team, player, apps = appearances, sub_apps = sub_appearances, nation, rating, ranking) %>%
-  arrange(-ranking, rating)
+  select(year, team, player, url, apps = appearances, sub_apps = sub_appearances, nation, ranking) %>%
+  arrange(-ranking)
 
 head(epl_winning_squads, n = 25)
 
-  
-  
-  
 ```
 
+
 ```{r}
-test <- "http://www.eloratings.net/Northern_Ireland" %>%
-  read_html() %>%
-  html_nodes(xpath = "#maintable_Brazil") %>%
-  html_table()
+get_international_matches <- function(url) {
+  i <<- url
+  read <- paste0("https://www.11v11.com", url) %>%
+    read_html() %>%
+    html_nodes("#matchHistory") %>%
+    html_table(fill = TRUE) 
+  
+  if(length(read) > 1) {
+    national_team_data <- read %>%
+    .[[2]] 
+  } else {
+    national_team_data <- NULL
+  }
+}
+
+
+x <- map_df(worst_national_team_players$url[1:10], get_international_matches) %>%
+  mutate(date = as.Date(Date, "%d %b %Y")) %>%
+  select(date, match = Match)
 ```
 

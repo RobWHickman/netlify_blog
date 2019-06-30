@@ -1,0 +1,101 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r libraries, warning=FALSE,message=FALSE}
+library(tidyverse)
+
+squads <- readRDS("./static/files/premier_league_squads.rds") %>%
+  mutate(nation = case_when(
+    grepl("Ireland Republic", nation) ~ "Ireland",
+    grepl("Czech Republic", nation) ~ "Czechia",
+    grepl("Trinidad and Tobago", nation) ~ "Trinidad/Tobago",
+    grepl("Macedonia FYR", nation) ~ "Macedonia",
+    grepl("St. Kitts and Nevis", nation) ~ "St Kitts and Nevis",
+    grepl("Bosnia and Herzegovina", nation) ~ "Bosnia/Herzeg",
+    grepl("Congo DR", nation) ~ "DR Congo",
+    grepl("Antigua and Barbuda", nation) ~ "Antigua/Barbuda",
+    grepl("Korea Republic", nation) ~ "South Korea",
+    grepl("Curacao", nation) ~ "Curaçao",
+    grepl("Cape Verde Islands", nation) ~ "Cape Verde",
+    grepl("Equatorial Guinea", nation) ~ "Equat Guinea",
+    TRUE ~ nation
+  )) %>%
+  mutate(year = as.numeric(year))
+
+rankings <- readRDS("./static/files/scraped_elo_data.rds") %>%
+  select(date, home, away, rating_home = r1, rating_away = r2, ranking_home = ranking1, ranking_away = ranking2) %>%
+  gather("location", "nation", -rating_home, -rating_away, -ranking_home, -ranking_away, -date) %>%
+  gather("measure", "value", -nation, -date, -location) %>%
+  filter((location == "home" & measure %in% c("rating_home", "ranking_home")) |
+           (location == "away" & measure %in% c("rating_away", "ranking_away"))) %>%
+  separate(measure, into = c("measure", "location"), "_") %>%
+  select(-location) %>%
+  filter(!duplicated(.)) %>%
+  filter(date > "1992-01-01") %>%
+  filter(measure == "ranking")
+  
+```
+
+```{r}
+squad_nations <- unique(squads$nation)
+nations <- unique(rankings$nation)
+```
+
+```{r}
+squad_nations[which(!squad_nations %in% nations)]
+```
+
+```{r}
+lowest_rankings <- left_join(squads, rankings, by = "nation") %>%
+  filter(appearances > 0 | sub_appearances >0 ) %>%
+  arrange(-value) %>%
+  filter(!duplicated(player))
+```
+
+```{r}
+epl_winners <- data.frame(
+  champion = c(
+    "manchester-united",
+    "manchester-united",
+    "blackburn-rovers",
+    "manchester-united",
+    "manchester-united",
+    "arsenal",
+    "manchester-united",
+    "manchester-united",
+    "manchester-united",
+    "arsenal",
+    "manchester-united",
+    "arsenal",
+    "chelsea",
+    "chelsea",
+    "manchester-united",
+    "manchester-united",
+    "manchester-united",
+    "chelsea",
+    "manchester-united",
+    "manchester-city",
+    "manchester-united",
+    "manchester-city",
+    "chelsea",
+    "leicester-city",
+    "chelsea",
+    "manchester-city",
+    "manchester-city"),
+  year = 1993:2019
+) 
+
+epl_winning_squads <- squads %>%
+  mutate(s_start = as.Date(paste0(year-1, "-08-01")),
+         s_end = as.Date(paste0(year, "-06-01"))) %>%
+  left_join(., epl_winners, by = "year") %>%
+  filter(team == champion) %>%
+  left_join(., rankings, by = "nation") %>%
+  filter(date > s_start & date < s_end) %>%
+  select(-s_start, -s_end, -champion, -measure) %>%
+  arrange(date) %>%
+  filter(!duplicated(paste(player, year), fromLast = TRUE))
+```
+
