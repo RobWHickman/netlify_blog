@@ -708,15 +708,35 @@ x <- worst_national_team_players$url %>%
   filter(!duplicated(player, fromLast = TRUE))
 
 
-filter_year_season <- function(df_row) {
-  year <- as.numeric(df_row$year)
+filter_year_season <- function(year, date) {
+  year <- as.numeric(year)
   
   start <- as.Date(paste0(year-1, "-07-01"))
-  end <- as.Date(paste0(year-1, "-06-30"))
+  end <- as.Date(paste0(year, "-06-30"))
   
-  if(df_row$date > start & df_row$date < end) {
-    return(df_row)
+  if(date > start & date < end) {
+    return(data.frame(year, date))
   }
 }
+
+y <- x %>%
+  select(year, date) %>%
+  pmap_df(~c(..., filter_year_season(...)))
+
+y <- x %>%
+  bind_cols(pmap_df(select(., year, date), filter_year_season)) %>%
+  filter(x== 1)
+y <- map2_df(x$year, x$date, filter_year_season)
+
+
+times_2_if <- function(data) {
+  if(data$condition == 1) {
+    data$value = data$value*2
+  }
+  return(data)
+}
+
+data <- data.frame(condition = c(1,0,1,0,1,0),
+                   value = c(1,2,3,4,5,6))
 ```
 
