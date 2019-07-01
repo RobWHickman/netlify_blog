@@ -141,7 +141,7 @@ head(squads, n = 10)
 ```
 
 ```{r load_squads, warning=FALSE,message=FALSE,echo=FALSE}
-squads <- readRDS("C:/Users/robwh/Desktop/netlify_blog/static/files/premier_league_squads.rds")
+squads <- readRDS("../../static/files/premier_league_squads.rds")
 ```
 
 To answer the question as asked, we'd want historical [FIFA ranking](https://www.fifa.com/fifa-world-ranking/ranking-table/men/) data. While it does exist going back to 2007, I'd prefer to have the full dataset back to 1993, and in any case, there are also [some problems](https://en.wikipedia.org/wiki/World_Football_Elo_Ratings) with the historical calculation FIFA used for it's ratings.
@@ -508,7 +508,7 @@ elO_data <- map_df(country_links, scrape_nation)
 ```
 
 ```{r load_elo_data, warning=FALSE,message=FALSE,echo=FALSE}
-elo_data <- readRDS("C:/Users/robwh/Desktop/netlify_blog/static/files/scraped_elo_data.rds")
+elo_data <- readRDS("../../static/files/scraped_elo_data.rds")
 
 ```
 
@@ -552,22 +552,25 @@ squad_teams[!squad_teams %in% rating_teams]
 Some are missing where country names follow different convetion- e.g. the Democratic Republic of Congo is named DR Congo in one, and Congo DR in the other. We can quickly convert these odd countries and join the two data sets together using dplyr. Then we can get an idea of the national rankings of the nationality of Premier League players since it's inception
 
 ```{r combine_elo_data, warning=FALSE,message=FALSE}
-players_national_elo <- squads %>%
-  # rename countries
+# rename mismatching nations
+elo_data %<>%
   mutate(nation = case_when(
-    grepl("Ireland Republic", nation) ~ "Republic of Ireland",
-    grepl("Trinidad and Tobago", nation) ~ "Trinidad/Tobago",
-    grepl("Macedonia FYR", nation) ~ "Macedonia",
-    grepl("St. Kitts and Nevis", nation) ~ "St Kitts and Nevis",
-    grepl("Bosnia and Herzegovina", nation) ~ "Bosnia/Herzeg",
-    grepl("Congo DR", nation) ~ "DR Congo",
-    grepl("Antigua and Barbuda", nation) ~ "Antigua/Barbuda",
-    grepl("Korea Republic", nation) ~ "South Korea",
-    grepl("Curacao", nation) ~ "Curaçao",
-    grepl("Cape Verde Islands", nation) ~ "Cape Verde",
-    grepl("Equatorial Guinea", nation) ~ "Equat Guinea",
+    grepl("^Ireland", nation) ~ "Ireland Republic",
+    grepl("^Czechia", nation) ~ "Czech Republic",
+    grepl("Trinidad/Tobago", nation) ~ "Trinidad and Tobago",
+    grepl("Macedonia", nation) ~ "Macedonia FYR",
+    grepl("St Kitts and Nevis", nation) ~ "St. Kitts and Nevis",
+    grepl("Bosnia/Herzeg", nation) ~ "Bosnia and Herzegovina",
+    grepl("DR Congo", nation) ~ "Congo DR",
+    grepl("Antigua/Barbuda", nation) ~ "Antigua and Barbuda",
+    grepl("South Korea", nation) ~ "Korea Republic",
+    grepl("Curaçao", nation) ~ "Curacao",
+    grepl("Cape Verde", nation) ~ "Cape Verde Islands",
+    grepl("Equat Guinea", nation) ~ "Equatorial Guinea",
     TRUE ~ nation
-  )) %>%
+  ))
+
+players_national_elo <- squads %>%
   # convert dates
   mutate(year = as.numeric(year)) %>%
   mutate(s_start = as.Date(paste0(year-1, "-08-01")),
@@ -607,10 +610,10 @@ worst_national_team_players <- players_national_elo %>%
   # remove duplicated players
   filter(!duplicated(player)) %>%
   # select only relevant info
-  select(year, team, player, url, nation, ranking)
+  select(year, team, player, url, nation, ranking, s_end, s_start)
 
 # show the 25 players with the worst ranking their nation had during that time
-head(select(worst_national_team_players, -url), n = 25)
+head(select(worst_national_team_players, -url, -s_end, -s_start), n = 25)
 
 ```
 
@@ -675,7 +678,6 @@ head(epl_winning_squads, n = 25)
 
 ```{r}
 get_international_matches <- function(url) {
-  i <<- url
   read <- paste0("https://www.11v11.com", url) %>%
     read_html() %>%
     html_nodes("#matchHistory") %>%
@@ -683,15 +685,38 @@ get_international_matches <- function(url) {
   
   if(length(read) > 1) {
     national_team_data <- read %>%
-    .[[2]] 
+    .[[2]] %>%
+      .[1:2] %>%
+      mutate(url = url)
   } else {
     national_team_data <- NULL
   }
 }
 
-
-x <- map_df(worst_national_team_players$url[1:10], get_international_matches) %>%
+x <- worst_national_team_players$url %>%
+  .[1:20] %>%
+  map_df(., get_international_matches) %>%
   mutate(date = as.Date(Date, "%d %b %Y")) %>%
-  select(date, match = Match)
+  select(date, match = Match, url) %>%
+  left_join(., squads, by = "url") %>%
+  filter(unlist(map2(nation, match, grepl))) %>%
+  mutate(s_start = as.Date(paste0(as.numeric(year)-1, "-08-01")),
+         s_end = as.Date(paste0(as.numeric(year), "-06-01"))) %>%
+  filter(date < s_end & date > s_start) %>%
+  select(date, match, player, nation, ranking) %>%
+  arrange(-ranking) %>%
+  filter(!duplicated(player, fromLast = TRUE))
+
+
+filter_year_season <- function(df_row) {
+  year <- as.numeric(df_row$year)
+  
+  start <- as.Date(paste0(year-1, "-07-01"))
+  end <- as.Date(paste0(year-1, "-06-30"))
+  
+  if(df_row$date > start & df_row$date < end) {
+    return(df_row)
+  }
+}
 ```
 
