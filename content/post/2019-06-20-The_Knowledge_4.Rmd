@@ -46,7 +46,7 @@ The first thing we need to answer these is the nationality of EPL players. For t
 
 To start, we need to get the links to every team to have competed in the premier league
 
-```{r epl_teams, warning=FALSE,message=FALSE}
+```{r epl_teams, warning=FALSE,message=FALSE,eval=FALSE}
 # get years of EPL seasons
 years <- 1993:2019
 # base url we'll scrape from
@@ -573,12 +573,11 @@ elo_data %<>%
 players_national_elo <- squads %>%
   # convert dates
   mutate(year = as.numeric(year)) %>%
-  mutate(s_start = as.Date(paste0(year-1, "-08-01")),
-         s_end = as.Date(paste0(year, "-06-01"))) %>%
   # join elo rating data
   left_join(., elo_data, by = "nation") %>%
   # take only relevant data per season
-  filter(date > s_start & date < s_end)
+  filter(date < as.Date(paste0(year, "-06-30")) &
+           date > as.Date(paste0(year-1, "-07-01")))
 
 p2 <- players_national_elo %>%
   arrange(ranking) %>%
@@ -610,16 +609,19 @@ worst_national_team_players <- players_national_elo %>%
   # remove duplicated players
   filter(!duplicated(player)) %>%
   # select only relevant info
-  select(year, team, player, url, nation, ranking, s_end, s_start)
+  select(year, team, player, url, nation, ranking)
 
 # show the 25 players with the worst ranking their nation had during that time
-head(select(worst_national_team_players, -url, -s_end, -s_start), n = 25)
+head(select(worst_national_team_players, 
+            year, player, team, apps, sub_apps, nation, ranking),
+     n = 25)
 
 ```
 
 We can then find the players with the worst national team rankings by joining in and selecting for teams that won the league. As the nation's world ranking needs to have been acheived during that season, a small function to find a nations lowest ranking during a time frame (from august of the preceeding year to june just after they would have been crowned champions) is required.
 
 ```{r worst_epl_winning_rankings, warning=FALSE,message=FALSE}
+# data frame of EPL winners over year
 epl_winners <- data.frame(
   champion = c(
     "manchester-united",
@@ -652,91 +654,76 @@ epl_winners <- data.frame(
   year = 1993:2019
 ) 
 
-get_nation_ranking <- function(season_end_date, player_nationality) {
-  df <- elo_data %>%
-    filter(date < season_end_date) %>%
-    filter(!duplicated(nation, fromLast = TRUE)) %>%
-    arrange(-ranking) %>%
-    filter(nation == player_nationality) %>%
-    select(ranking)
-}
-
+# merge in winning temas
 epl_winning_squads <- players_national_elo %>%
   left_join(., epl_winners, by = "year") %>%
+  # filter for players that win the league that season
   filter(team == champion) %>%
+  # filter for the year that player wins the league
+  filter(date < as.Date(paste0(year, "-06-30")) &
+           date > as.Date(paste0(year-1, "-07-01"))) %>%
+  # take the lowest ranking per player/year combination
   arrange(-ranking) %>%
-  filter(appearances > 0 | sub_appearances > 0) %>%
   filter(!duplicated(paste(player, year), fromLast = TRUE)) %>%
-  bind_cols(map2_df(.$s_end, .$nation, get_nation_ranking)) %>%
-  select(year, team, player, url, apps = appearances, sub_apps = sub_appearances, nation, ranking) %>%
-  arrange(-ranking)
+  select(year, team, player, url, apps = appearances, sub_apps = sub_appearances, nation, ranking)
 
-head(epl_winning_squads, n = 25)
+head(select(epl_winning_squads,
+            year, player, team, apps, sub_apps, nation, ranking),
+     n = 25)
 
 ```
 
+## Extra Credit
 
-```{r}
+```{r get_international_appearances, warning=FALSE,message=FALSE}
 get_international_matches <- function(url) {
-  read <- paste0("https://www.11v11.com", url) %>%
-    read_html() %>%
-    html_nodes("#matchHistory") %>%
-    html_table(fill = TRUE) 
-  
-  if(length(read) > 1) {
-    national_team_data <- read %>%
-    .[[2]] %>%
-      .[1:2] %>%
-      mutate(url = url)
-  } else {
-    national_team_data <- NULL
+  if(!is.na(url)) {
+    read <- paste0("https://www.11v11.com", url) %>%
+      read_html() %>%
+      html_nodes("#matchHistory") %>%
+      html_table(fill = TRUE) 
+    
+    if(length(read) > 1) {
+      national_team_data <- read %>%
+      .[[2]] %>%
+        .[1:2] %>%
+        mutate(url = url)
+    } else {
+      national_team_data <- NULL
+    }
   }
 }
 
-x <- worst_national_team_players$url %>%
+lowest_ranked_appearances <- worst_national_team_players$url %>%
   .[1:20] %>%
   map_df(., get_international_matches) %>%
   mutate(date = as.Date(Date, "%d %b %Y")) %>%
   select(date, match = Match, url) %>%
-  left_join(., squads, by = "url") %>%
+  left_join(., players_national_elo, by = "url") %>%
   filter(unlist(map2(nation, match, grepl))) %>%
-  mutate(s_start = as.Date(paste0(as.numeric(year)-1, "-08-01")),
-         s_end = as.Date(paste0(as.numeric(year), "-06-01"))) %>%
-  filter(date < s_end & date > s_start) %>%
-  select(date, match, player, nation, ranking) %>%
+  filter(date.x == date.y) %>%
   arrange(-ranking) %>%
-  filter(!duplicated(player, fromLast = TRUE))
+  filter(!duplicated(player, fromLast = TRUE)) %>%
+  select(date = date.x, match, player, team, nation, ranking)
 
+head(lowest_ranked_appearances, n = 10)
 
-filter_year_season <- function(year, date) {
-  year <- as.numeric(year)
-  
-  start <- as.Date(paste0(year-1, "-07-01"))
-  end <- as.Date(paste0(year, "-06-30"))
-  
-  if(date > start & date < end) {
-    return(data.frame(year, date))
-  }
-}
+```
 
-y <- x %>%
-  select(year, date) %>%
-  pmap_df(~c(..., filter_year_season(...)))
+```{r}
+lowest_champ_appearances <- epl_winning_squads$url %>%
+  .[1:20] %>%
+  map_df(., get_international_matches) %>%
+  mutate(date = as.Date(Date, "%d %b %Y")) %>%
+  select(date, match = Match, url) %>%
+  left_join(., players_national_elo, by = "url") %>%
+  filter(unlist(map2(nation, match, grepl))) %>%
+  filter(date.x == date.y) %>%
+  arrange(-ranking) %>%
+  filter(!duplicated(player, fromLast = TRUE)) %>%
+  select(date = date.x, match, player, team, nation, ranking)
 
-y <- x %>%
-  bind_cols(pmap_df(select(., year, date), filter_year_season)) %>%
-  filter(x== 1)
-y <- map2_df(x$year, x$date, filter_year_season)
+head(lowest_champ_appearances, n = 10)
 
-
-times_2_if <- function(data) {
-  if(data$condition == 1) {
-    data$value = data$value*2
-  }
-  return(data)
-}
-
-data <- data.frame(condition = c(1,0,1,0,1,0),
-                   value = c(1,2,3,4,5,6))
 ```
 
