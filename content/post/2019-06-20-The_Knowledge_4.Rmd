@@ -1,7 +1,7 @@
 ---
 title: "The Guardian Knowledge June 2019"
 author: "Robert Hickman"
-date: '2019-06-20'
+date: '2019-07-02'
 output:
   html_document:
     df_print: paged
@@ -113,14 +113,20 @@ squads <- competing_teams %>%
     if(length(flags) != length(nations)) {
       missing <- which(!grepl("img", flags))
       
-      nations <- c(nations[1:(missing-1)], NA, nations[missing:length(nations)])
+      nations <- c(
+        nations[1:(missing-1)],
+        NA,
+        nations[missing:length(nations)]
+      )
     }
     
     # mutate nationality and team and season
     squad %>%
-      mutate(nation = nations,
-             year = gsub(".*season\\/", "", gsub("\\/comp.*", "", y)),
-             team = gsub("\\/tab\\/players.*", "", gsub(".*teams\\/", "", y))) %>%
+      mutate(
+        nation = nations,
+        year = gsub(".*season\\/", "", gsub("\\/comp.*", "", y)),
+        team = gsub("\\/tab\\/players.*", "", gsub(".*teams\\/", "", y))
+      ) %>%
       # select useful appearance information
       select(player = Player, url, position = Position,
              appearances = A, sub_appearances = S, 
@@ -152,9 +158,10 @@ I'll outline the first method here and then use the data from the second further
 
 ## Calculating ELO ratings
 
-To calculate our ratings, first we need to to load up a dataframe of international football results. The one I'm using comes from [kaggle]() and has 40k matches listed since the start of international football in 1872:
+To calculate our ratings, first we need to to load up a dataframe of international football results. The one I'm using comes from [kaggle](https://www.kaggle.com/martj42/international-football-results-from-1872-to-2017) and has 40k matches listed since the start of international football in 1872:
 
 ```{r load_international_results, warning=FALSE,message=FALSE}
+# https://www.kaggle.com/martj42/international-football-results-from-1872-to-2017
 international_results <- readRDS("../../static/files/international_results.rds")
 
 head(international_results)
@@ -221,7 +228,12 @@ We then add K, G and R to each row of the data frame to make our calculations ea
 ```{r iniatilise_df, warning=FALSE,message=FALSE}
 international_results %<>%
   # select relevant columns
-  select(date, home = home_team, away = away_team, hgoal = home_score, agoal = away_score, neutral) %>%
+  select(
+    date,
+    home = home_team, away = away_team,
+    hgoal = home_score, agoal = away_score,
+    neutral
+  ) %>%
   # convert date to date format
   mutate(date = as.Date(date)) %>%
   # K = match importance
@@ -333,18 +345,20 @@ elo_data <- international_results %>%
 We're left with a dataframe of 46992 observations (one row the hcnage in ratings as matches are played for each team) for 3 variables: date, nation and the ranking of the nation at that time. We can plot a random selection of 5 teams just to sanity check and see that teams we know have historically been stronger (e.g. Argentina) show conssitently higher rankings than weaker nations (e.g. Greece).
 
 ```{r plot_teams_elo, warning=FALSE,message=FALSE}
+# randomly choose 5 teams with max ELOs > 1600
 teams <- elo_data %>%
   filter(rating > 1600) %>%
   .$nation %>%
   unique() %>%
   .[sample(length(.), 5)]
 
+# plot rating over time for these 5 teams
 p1 <- elo_data %>%
   filter(nation %in% teams) %>%
   ggplot(aes(x = date, y = rating, colour = nation, group = nation)) +
   geom_point() +
   geom_line() +
-  scale_colour_manual(values = c("skyblue", "darkblue", "darkorange", "darkgreen", "red")) +
+  # colour by football shirt colour
   scale_colour_manual(values = c("skyblue", 
                                  "darkblue",
                                  "darkorange",
@@ -364,9 +378,11 @@ When scraing data for blog posts, I typically rely on [rvest]() and it's read_ht
 Eloratings.net is one such website which rvest is unable to scrape. E.g.
 
 ```{r failed_scrape, warning=FALSE,message=FALSE}
+# url to data on Brazil's ELO rating over time
 url <- "https://eloratings.net/Brazil"
 
 read <-read_html(url) %>%
+  # this is the CSS selector for the page title
   html_nodes("#mainheader")
 
 read
@@ -385,7 +401,6 @@ First you want to install PhantomJS from the above website and run through it's 
     in a command line console
     
 The file we're going to use to render the javescript pages and then save the html is below:
-
 
 ```{r phantomjs_code, warning=FALSE,message=FALSE,eval=FALSE}
 // scrapes a given url (for eloratings.net)
@@ -420,7 +435,7 @@ To keep everything in R, we can use the system() family of functions, which prov
 E.g. for Brazil we will provide "https://www.eloratings.net/Brazil" as the country argument
 
 ```{r scrape_example, warning=FALSE,message=FALSE,echo=FALSE}
-phantom_dir <- "C:/Users/robwh/Desktop/netlify_blog/static/files/phantomjs_scraping"
+phantom_dir <- "../../static/files/phantomjs_scraping"
 country_url <- "https://www.eloratings.net/Brazil"
 
 # use system2 to invoke phantomjs via it's executable
@@ -434,7 +449,7 @@ phantom_dir <- "C:/Users/path/to/scrape_ELO/"
 country_url <- "https://www.eloratings.net/Brazil"
 
 # use system2 to invoke phantomjs via it's executable
-system2("C:/Users/robwh/Downloads/phantomjs-2.1.1-windows/bin/phantomjs.exe",
+system2("C:/Users/path/to/phantomjs-2.1.1-windows/bin/phantomjs.exe",
         #provide the path to the scraping script and the country url as argument
         args = c(file.path(phantom_dir, "scrape_ELO.js"), country_url))
 
@@ -443,8 +458,10 @@ system2("C:/Users/robwh/Downloads/phantomjs-2.1.1-windows/bin/phantomjs.exe",
 We can then read in this saved html page using rvest as per usual and recover the information therein.
 
 ```{r read_scraped_page, warning=FALSE,message=FALSE}
+# read in the saved html file
 page <- read_html("elopage.html")
 
+# scrape with rvest as normal
 country_name <- page %>%
   html_nodes("#mainheader") %>%
   html_text() %>%
@@ -460,7 +477,7 @@ I'm not going to include my full script for scraping eloratings.net as usually a
 scrape_nation <- function(country) {
   # download the page
   url <- paste0("https://eloratings.net/", country)
-  system2("C:/Users/robwh/Downloads/phantomjs-2.1.1-windows/bin/phantomjs.exe", 
+  system2("C:/Users/path/to/phantomjs-2.1.1-windows/bin/phantomjs.exe", 
           args = c(file.path(phantom_dir, "scrape_ELO.js"), url))
   
   # read in downloaded page
@@ -517,13 +534,23 @@ Finally, we want to convert this to long format. We have two observations per co
 ```{r convert_elo_to_long, warning=FALSE,message=FALSE}
 elo_data %<>%
   # rename and select variables
-  select(date, home, away, rating_home = r1, rating_away = r2, ranking_home = ranking1, ranking_away = ranking2) %>%
+  select(
+    date,
+    home, away,
+    rating_home = r1, rating_away = r2,
+    ranking_home = ranking1, ranking_away = ranking2
+  ) %>%
   # melt twice to convert to long format
-  gather("location", "nation", -rating_home, -rating_away, -ranking_home, -ranking_away, -date) %>%
+  gather(
+    "location", "nation",
+    -rating_home, -rating_away, -ranking_home, -ranking_away, -date
+  ) %>%
   gather("measure", "value", -nation, -date, -location) %>%
   # take only relevant information
-  filter((location == "home" & measure %in% c("rating_home", "ranking_home")) |
-           (location == "away" & measure %in% c("rating_away", "ranking_away"))) %>%
+  filter(
+    (location == "home" & measure %in% c("rating_home", "ranking_home")) |
+      (location == "away" & measure %in% c("rating_away", "ranking_away"))
+  ) %>%
   separate(measure, into = c("measure", "location"), "_") %>%
   # filter out relevant data
   filter(!duplicated(.)) %>%
@@ -551,7 +578,7 @@ squad_teams[!squad_teams %in% rating_teams]
 
 Some are missing where country names follow different convetion- e.g. the Democratic Republic of Congo is named DR Congo in one, and Congo DR in the other. We can quickly convert these odd countries and join the two data sets together using dplyr. Then we can get an idea of the national rankings of the nationality of Premier League players since it's inception
 
-```{r combine_elo_data, warning=FALSE,message=FALSE}
+```{r rename_elo_nations, warning=FALSE,message=FALSE}
 # rename mismatching nations
 elo_data %<>%
   mutate(nation = case_when(
@@ -570,6 +597,9 @@ elo_data %<>%
     TRUE ~ nation
   ))
 
+```
+
+```{r combine_datasets, warning=FALSE,message=FALSE}
 players_national_elo <- squads %>%
   # convert dates
   mutate(year = as.numeric(year)) %>%
@@ -580,9 +610,12 @@ players_national_elo <- squads %>%
   # take only relevant data per season
   filter(date > s_start & date < s_end)
 
+# histogram of players national team lowest ratings
 p2 <- players_national_elo %>%
   arrange(ranking) %>%
+  # take only lowest ranked observations
   filter(!duplicated(paste(player, team, year), fromLast = TRUE)) %>%
+  # group by decade
   mutate(decade = case_when(
     year < 2000 ~ "1990",
     year < 2010 ~ "2000",
@@ -601,6 +634,8 @@ plot(p2)
 
 ```
 
+It surprised me that the distribution hasn't obviously changed over the year. There's maybe a few more players from 'mid-level' nations (ranking 30-50) this decade but I'd doubt it's significantly more. The majority of players come from nations in the top 20 worldwide consistently since the Premier League's inception.
+
 We can easily then take the players with the worst national team ranking by arranging by the ranking of national teams (and removing duplicate players so it isn't just filled with the same 2/3 names)
 
 ```{r worst_elo_players, warning=FALSE,message=FALSE}
@@ -617,7 +652,16 @@ head(select(worst_national_team_players, -url, -s_end, -s_start), n = 25)
 
 ```
 
-We can then find the players with the worst national team rankings by joining in and selecting for teams that won the league. As the nation's world ranking needs to have been acheived during that season, a small function to find a nations lowest ranking during a time frame (from august of the preceeding year to june just after they would have been crowned champions) is required.
+So Zesh Rehman as the question supposes, is one of the players from extremely low ranked nations. However, he is beaten by Brandom Comley at QPR who represents* Montserrat internationally, who fell as low as 227 in the ELO world rankings. The 204 for Zesh Rehman is different to the 168 listed in the question for three reasons:
+
+1) As earlier discussed we are using ELO rankings, not the official FIFA rankings (and are probably right to)
+2) This lists the _lowest_ that nation fell in the time that player was in the Premier League, not just at the time Zesh Rehman (or any other player) made his debut for Pakistan (/other nation)
+
+Indeed, Brandom Comley did not start to play for Montserrat until September 2018, by which time he was playing for Colchester in League Two. 
+
+What is interesting though, is that there are 19 instances of players of nationalities ranked lower than 164- many more than I would have imagined. We'll get a fuller answer to the original question (rankings at time players played for their national team) later.
+
+First, we can answer the first question and find the players with the worst national team rankings by joining in and selecting for teams that won the league. This is done by first initialising a simple df with the league winners per season.
 
 ```{r worst_epl_winning_rankings, warning=FALSE,message=FALSE}
 epl_winners <- data.frame(
