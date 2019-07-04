@@ -89,16 +89,6 @@ squads <- competing_teams %>%
       # get rid of rows without player info
       filter(!is.na(Player))
     
-    player_details <- read %>%
-      html_nodes(".sortable a")
-    
-    df <- data.frame(Player = player_details %>%
-                       html_text(),
-                     url = player_details %>%
-                       html_attr("href"))
-    
-    squad <- left_join(squad, df, by = "Player")
-    
     # get the listed nationalities
     flags <- read %>%
       html_nodes(".squad > tbody:nth-child(2) > tr > td:nth-child(3)")
@@ -128,7 +118,7 @@ squads <- competing_teams %>%
         team = gsub("\\/tab\\/players.*", "", gsub(".*teams\\/", "", y))
       ) %>%
       # select useful appearance information
-      select(player = Player, url, position = Position,
+      select(player = Player, position = Position,
              appearances = A, sub_appearances = S, 
              nation, year, team)
   }) %>%
@@ -607,7 +597,9 @@ players_national_elo <- squads %>%
   left_join(., elo_data, by = "nation") %>%
   # take only relevant data per season
   filter(date < as.Date(paste0(year, "-06-30")) &
-           date > as.Date(paste0(year-1, "-07-01")))
+           date > as.Date(paste0(year-1, "-07-01"))) %>%
+  # rename for concise printing
+  rename(apps = appearances, sub_apps = sub_appearances)
 
 # histogram of players national team lowest ratings
 p2 <- players_national_elo %>%
@@ -644,23 +636,104 @@ worst_national_team_players <- players_national_elo %>%
   # remove duplicated players
   filter(!duplicated(player)) %>%
   # select only relevant info
-  select(year, team, player, url, nation, ranking)
+  select(year, player, url, team, apps, sub_apps, nation, ranking)
 
 # show the 25 players with the worst ranking their nation had during that time
-head(select(worst_national_team_players, 
-            year, player, team, apps, sub_apps, nation, ranking),
-     n = 25)
+head(select(worst_national_team_players, -url), n = 25)
 
 ```
 
-So Zesh Rehman as the question supposes, is one of the players from extremely low ranked nations. However, he is beaten by Brandom Comley at QPR who represents* Montserrat internationally, who fell as low as 227 in the ELO world rankings. The 204 for Zesh Rehman is different to the 168 listed in the question for three reasons:
+So Zesh Rehman as the question supposes, is one of the players from extremely low ranked nations. However, he is beaten by Brandom Comley at QPR who represents Montserrat internationally, who fell as low as 227 in the ELO world rankings. The 204 for Zesh Rehman is different to the 168 listed in the question for three reasons:
 
 1) As earlier discussed we are using ELO rankings, not the official FIFA rankings (and are probably right to)
 2) This lists the _lowest_ that nation fell in the time that player was in the Premier League, not just at the time Zesh Rehman (or any other player) made his debut for Pakistan (/other nation)
 
 Indeed, Brandom Comley did not start to play for Montserrat until September 2018, by which time he was playing for Colchester in League Two. 
 
-What is interesting though, is that there are 19 instances of players of nationalities ranked lower than 164- many more than I would have imagined. We'll get a fuller answer to the original question (rankings at time players played for their national team) later.
+What is interesting though, is that there are 19 instances of players of nationalities ranked lower than 164- many more than I would have imagined.
+
+We can get a fuller answer by scraping the international data for the players who have played for low ranked nations.
+
+```{r get_international_appearances, warning=FALSE,message=FALSE}
+players_df <- worst_national_team_players %>%
+  .[1:20,] %>%
+  mutate(url = c(
+    "https://www.national-football-teams.com/player/71845/Brandon_Comley.html",
+    "https://www.national-football-teams.com/player/12929/Zesh_Rehman.html",
+    NA,
+    "https://www.national-football-teams.com/player/63672/Leandro_Bacuna.html",
+    "https://www.national-football-teams.com/player/59413/Kemy_Agustien.html",
+    "https://www.national-football-teams.com/player/74671/Kenji_Gorre.html",
+    "https://www.national-football-teams.com/player/54141/Danny_Higginbotham.html",
+    "https://www.national-football-teams.com/player/45586/Carl_Cort.html",
+    "https://www.national-football-teams.com/player/28934/Mikele_Leigertwood.html",
+    "https://www.national-football-teams.com/player/48656/Moses_Ashikodi.html",
+    "https://www.national-football-teams.com/player/44883/Cuco_Martina.html",
+    "https://www.national-football-teams.com/player/58935/Neil_Danns.html",
+    "https://www.national-football-teams.com/player/46836/Dexter_Blackstock.html",
+    "https://www.national-football-teams.com/player/26057/Neil_Etheridge.html",
+    "https://www.national-football-teams.com/player/25318/Emmerson_Boyce.html",
+    "https://www.national-football-teams.com/player/2258/Mart_Poom.html",
+    "https://www.national-football-teams.com/player/58934/Matthew_Briggs.html",
+    "https://www.national-football-teams.com/player/31769/Nahki_Wells.html",
+    "https://www.national-football-teams.com/player/2679/Jason_Roberts.html",
+    "https://www.national-football-teams.com/player/8017/Sagi_Burton.html"
+  )) %>%
+  select(player, url)
+  
+
+get_international_matches <- function(player, url) {
+  if(!is.na(url)) {
+    df <- url %>%
+      read_html() %>%
+      html_nodes("#games > table") %>%
+      html_table(fill = TRUE) %>%
+      as.data.frame() %>%
+      .[c(1:2, 5:7)] %>%
+      filter(Date != "") %>%
+      mutate(result = gsub("\n.*", "", Result), player = player, match_date = as.Date(Date)) %>%
+      select(player, match_date, home = Home.Team, away = Away.Team.1, result, event = Event)
+  }
+}
+
+low_ranked_appearances <- players_df %>%
+  pmap_df(., get_international_matches) %>%
+  left_join(., players_national_elo, by = "player") %>%
+  filter(match_date == date) 
+
+lowest_ranked_appearances <- low_ranked_appearances %>%
+  arrange(-ranking) %>%
+  filter(!duplicated(player, fromLast = TRUE)) %>%
+  mutate(match = paste(home, "vs", away)) %>%
+  select(date, player, team, nation, ranking, match, result)
+
+head(lowest_ranked_appearances, n = 10)
+
+```
+
+```{r}
+
+p3 <- elo_data %>%
+  filter(nation %in% low_ranked_appearances$nation) %>%
+  mutate(date = as.Date(date)) %>%
+  ggplot(aes(x = date, y = ranking, colour = nation, group = nation)) +
+  geom_point() +
+  geom_point(data = low_ranked_appearances, colour = "red", aes(x = match_date), size = 3) +
+  geom_line() +
+  # colour by football shirt colour
+  scale_colour_manual(values = c("yellow", "darkblue", "lightblue", "green", "darkgreen", "darkgoldenrod")) +
+  scale_x_date() +
+  ggtitle("Lowest National Ranking of Premier League International Caps",
+          subtitle = "premier league player caps in red",
+          y = "national team ELO ranking") +
+  theme_minimal()
+
+plot(p3)
+
+
+```
+
+
 
 First, we can answer the first question and find the players with the worst national team rankings by joining in and selecting for teams that won the league. This is done by first initialising a simple df with the league winners per season.
 
@@ -706,68 +779,55 @@ epl_winning_squads <- players_national_elo %>%
   # filter for the year that player wins the league
   filter(date < as.Date(paste0(year, "-06-30")) &
            date > as.Date(paste0(year-1, "-07-01"))) %>%
+  group_by(player, year, team, apps, sub_apps, nation) %>%
+  summarise(av_ranking = mean(ranking)) %>%
+  arrange(-av_ranking) %>%
   # take the lowest ranking per player/year combination
-  arrange(-ranking) %>%
-  filter(!duplicated(paste(player, year), fromLast = TRUE)) %>%
-  select(year, team, player, url, apps = appearances, sub_apps = sub_appearances, nation, ranking)
+  select(year, player, team, apps, sub_apps, nation, av_ranking)
 
-head(select(epl_winning_squads,
-            year, player, team, apps, sub_apps, nation, ranking),
-     n = 25)
+# show the 25 players with the worst ranking their nation had during that time
+head(select(worst_national_team_players, -url), n = 25)
 
 ```
 
 ## Extra Credit
 
-```{r get_international_appearances, warning=FALSE,message=FALSE}
-get_international_matches <- function(url) {
-  if(!is.na(url)) {
-    read <- paste0("https://www.11v11.com", url) %>%
-      read_html() %>%
-      html_nodes("#matchHistory") %>%
-      html_table(fill = TRUE) 
-    
-    if(length(read) > 1) {
-      national_team_data <- read %>%
-      .[[2]] %>%
-        .[1:2] %>%
-        mutate(url = url)
-    } else {
-      national_team_data <- NULL
-    }
-  }
-}
-
-lowest_ranked_appearances <- worst_national_team_players$url %>%
-  .[1:20] %>%
-  map_df(., get_international_matches) %>%
-  mutate(date = as.Date(Date, "%d %b %Y")) %>%
-  select(date, match = Match, url) %>%
-  left_join(., players_national_elo, by = "url") %>%
-  filter(unlist(map2(nation, match, grepl))) %>%
-  filter(date.x == date.y) %>%
-  arrange(-ranking) %>%
-  filter(!duplicated(player, fromLast = TRUE)) %>%
-  select(date = date.x, match, player, team, nation, ranking)
-
-head(lowest_ranked_appearances, n = 10)
-
-```
 
 ```{r}
-lowest_champ_appearances <- epl_winning_squads$url %>%
-  .[1:20] %>%
-  map_df(., get_international_matches) %>%
-  mutate(date = as.Date(Date, "%d %b %Y")) %>%
-  select(date, match = Match, url) %>%
-  left_join(., players_national_elo, by = "url") %>%
-  filter(unlist(map2(nation, match, grepl))) %>%
-  filter(date.x == date.y) %>%
-  arrange(-ranking) %>%
-  filter(!duplicated(player, fromLast = TRUE)) %>%
-  select(date = date.x, match, player, team, nation, ranking)
+champions_df <- epl_winning_squads %>%
+  .[1:20,] %>%
+  filter(!duplicated(player)) %>%
+  mutate(url = c(
+    "https://www.national-football-teams.com/player/13930/Christopher_Wreh.html",
+    "https://www.national-football-teams.com/player/67629/Gael_Kakuta.html",
+    "https://www.national-football-teams.com/player/16586/Jonny_Evans.html",
+    "https://www.national-football-teams.com/player/3728/Igors_N_Stepanovs.html",
+    "https://www.national-football-teams.com/player/52483/Justin_Hoyte.html",
+    "https://www.national-football-teams.com/player/14353/Manucho_Goncalves.html",
+    "https://www.national-football-teams.com/player/3056/Eidur_Gudjohnsen.html",
+    "https://www.national-football-teams.com/player/4881/David_Healy.html",
+    "https://www.national-football-teams.com/player/4896/Roy_Carroll.html",
+    "https://www.national-football-teams.com/player/70781/Yohan_Benalouane.html",
+    "https://www.national-football-teams.com/player/7293/Ryan_Giggs.html",
+    "https://www.national-football-teams.com/player/10002/Dwight_Yorke.html",
+    "https://www.national-football-teams.com/player/12993/Fangzhuo_Dong.html",
+    "https://www.national-football-teams.com/player/55595/Riyad_Mahrez.html"
+  )) %>%
+  select(player, url)
 
-head(lowest_champ_appearances, n = 10)
+low_ranked_champs <- champions_df %>%
+  pmap_df(., get_international_matches) %>%
+  left_join(., players_national_elo, by = "player") %>%
+  filter(match_date == date) 
+
+lowest_ranked_champs <- low_ranked_champs %>%
+  arrange(-ranking) %>%
+  filter(!duplicated(player)) %>%
+  mutate(match = paste(home, "vs", away)) %>%
+  select(date, player, team, nation, ranking, match, result)
+
+head(lowest_ranked_champs, n = 10)
 
 ```
 
+but https://www.11v11.com/players/christopher-wreh-4/ lists wreh playing on July 27th 1997 (1997/1998 season) at which point Liberia were ranked 110th in the world.
