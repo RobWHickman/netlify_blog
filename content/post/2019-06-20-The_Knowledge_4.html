@@ -1,0 +1,800 @@
+---
+title: "The Guardian Knowledge June 2019"
+author: "Robert Hickman"
+date: '2019-07-06'
+output:
+  html_document:
+    df_print: paged
+header:
+  caption: ''
+  image: ''
+slug: guardian_knowledge_june
+tags:
+- rstats
+- football
+- the_knowledge
+categories: []
+---
+
+
+
+<p>Most Wednesday’s I enjoy reading <a href="https://www.theguardian.com/football/series/theknowledge">The Knowledge</a> blog on the Guardian’s website and reading the football trivia therein. When time (and questions) allow, I like to answer some of the questions posed, example of which are <a href="http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/">here</a>, <a href="http://www.robert-hickman.eu/post/counties_league_points/">here</a>, and <a href="http://www.robert-hickman.eu/post/the-knowledge-7th-february-2019/">here</a>.</p>
+<div id="league-of-nations" class="section level1">
+<h1>League of Nations</h1>
+<p>The first question comes from</p>
+<blockquote class="twitter-tweet" data-lang="en">
+<p lang="en" dir="ltr">
+Which player had the nationality with the lowest FIFA World Ranking at the time of him winning the Premier League?
+</p>
+— The Tin Boonie (<span class="citation">@TheTinBoonie</span>) <a href="https://twitter.com/TheTinBoonie/status/1140936272862691328?ref_src=twsrc%5Etfw">June 18, 2019</a>
+</blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<p>a similar question is also answered in this weeks column:</p>
+<p>‘<em>“Fulham defender Zesh Rehman made his debut for Pakistan, who are ranked 168 by Fifa. Is that the lowest-ranked country a Premier League player has played for?”</em> wondered Zulfiqar Shah in January 2006.’</p>
+<p>I thought I’d answer both of these using R.</p>
+<p>First some libraries we’ll need, and also set a seed for reproducibility.</p>
+<pre class="r"><code>library(tidyverse)
+library(magrittr)
+library(rvest)
+
+set.seed(3459)</code></pre>
+<p>The first thing we need to answer these is the nationality of EPL players. For this two good sources are <a href="https://www.transfermarkt.co.uk/">transfermarkt.co.uk</a> and <a href="https://www.11v11.com/">11v11.com</a>. I’m going to opt for the later, just because the tables are a little easier to scrape.</p>
+<p>To start, we need to get the links to every team to have competed in the premier league</p>
+<pre class="r"><code># get years of EPL seasons
+years &lt;- 1993:2019
+# base url we&#39;ll scrape from
+base_url &lt;- &quot;https://www.11v11.com&quot;
+
+# cat together
+tables &lt;- paste0(base_url, &quot;/league-tables/premier-league/01-june-&quot;, years)
+
+competing_teams &lt;- tables %&gt;%
+  # get a list of the links to every teams squad page
+  map(., function(x) {
+    x %&gt;%
+      read_html() %&gt;%
+      html_nodes(&quot;#table-league &gt; tbody:nth-child(2) &gt; tr &gt; td:nth-child(2) &gt; a:nth-child(1)&quot;) %&gt;%
+      html_attr(&quot;href&quot;) %&gt;%
+      # paste into working link for year and competition (EPL)
+      paste0(base_url, ., &quot;tab/players/season/&quot;, gsub(&quot;.*01-june-&quot;, &quot;&quot;, x), &quot;/comp/1/&quot;)
+  }) %&gt;%
+  unlist()
+
+head(competing_teams, n = 5)</code></pre>
+<p>We can then scrape the squads for these teams in that specific season. We want the players, their nationality and also the number of appearances they made in the league that season</p>
+<pre class="r"><code>squads &lt;- competing_teams %&gt;%
+  # get the players/appearances/nationalities
+  map_df(., function(y) {
+    # read once to save server calls
+    read &lt;- y %&gt;%
+      read_html() 
+    
+    # get the squad info
+    squad &lt;- read %&gt;%
+      html_nodes(&quot;.squad&quot;) %&gt;%
+      html_table(fill = TRUE) %&gt;%
+      as.data.frame() %&gt;%
+      # get rid of rows without player info
+      filter(!is.na(Player))
+    
+    # get the listed nationalities
+    flags &lt;- read %&gt;%
+      html_nodes(&quot;.squad &gt; tbody:nth-child(2) &gt; tr &gt; td:nth-child(3)&quot;)
+    
+    # from here get the actual nationalities per player
+    nations &lt;- flags %&gt;%
+      html_nodes(&quot;img&quot;) %&gt;%
+      html_attr(&quot;title&quot;)
+    
+    # these might mismatch in length
+    # in which case append NA
+    if(length(flags) != length(nations)) {
+      missing &lt;- which(!grepl(&quot;img&quot;, flags))
+      
+      nations &lt;- c(
+        nations[1:(missing-1)],
+        NA,
+        nations[missing:length(nations)]
+      )
+    }
+    
+    # mutate nationality and team and season
+    squad %&gt;%
+      mutate(
+        nation = nations,
+        year = gsub(&quot;.*season\\/&quot;, &quot;&quot;, gsub(&quot;\\/comp.*&quot;, &quot;&quot;, y)),
+        team = gsub(&quot;\\/tab\\/players.*&quot;, &quot;&quot;, gsub(&quot;.*teams\\/&quot;, &quot;&quot;, y))
+      ) %&gt;%
+      # select useful appearance information
+      select(player = Player, position = Position,
+             appearances = A, sub_appearances = S, 
+             nation, year, team)
+  }) %&gt;%
+  # manually add in some missing nationalities
+  mutate(nation = case_when(
+    grepl(&quot;Steffen Karl&quot;, player) ~ &quot;Germany&quot;,
+    grepl(&quot;Marc Muniesa&quot;, player) ~ &quot;Spain&quot;,
+    grepl(&quot;Oriol Romeu&quot;, player) ~ &quot;Spain&quot;,
+    grepl(&quot;Aleix García&quot;, player) ~ &quot;Spain&quot;,
+    grepl(&quot;Martín Montoya&quot;, player) ~ &quot;Spain&quot;,
+    TRUE ~ nation
+  ))
+
+head(squads, n = 10)</code></pre>
+<p>To answer the question as asked, we’d want historical <a href="https://www.fifa.com/fifa-world-ranking/ranking-table/men/">FIFA ranking</a> data. While it does exist going back to 2007, I’d prefer to have the full data set back to 1993, and in any case, there are also <a href="https://en.wikipedia.org/wiki/World_Football_Elo_Ratings">some problems</a> with the historical calculation FIFA used for it’s ratings.</p>
+<p>Instead, we can use the ELO method of rating teams (most commonly used to rank chess players). There are two ways to do this- we can calculate the ratings ourselves using a dataframe of international results, or we can take the accepted ratings at <a href="https://www.eloratings.net">eloratings.net</a>.</p>
+<p>I’ll outline the first method here and then use the data from the second further below <a href="">here</a>.</p>
+<div id="calculating-elo-ratings" class="section level2">
+<h2>Calculating ELO ratings</h2>
+<p>To calculate our ratings, first we need to to load up a dataframe of international football results. The one I’m using comes from <a href="https://www.kaggle.com/martj42/international-football-results-from-1872-to-2017">kaggle</a> and has 40k matches listed since the start of international football in 1872:</p>
+<pre class="r"><code># https://www.kaggle.com/martj42/international-football-results-from-1872-to-2017
+international_results &lt;- readRDS(&quot;../../static/files/international_results.rds&quot;)
+
+head(international_results)</code></pre>
+<pre><code>##         date home_team away_team home_score away_score tournament    city
+## 1 1872-11-30  Scotland   England          0          0   Friendly Glasgow
+## 2 1873-03-08   England  Scotland          4          2   Friendly  London
+## 3 1874-03-07  Scotland   England          2          1   Friendly Glasgow
+## 4 1875-03-06   England  Scotland          2          2   Friendly  London
+## 5 1876-03-04  Scotland   England          3          0   Friendly Glasgow
+## 6 1876-03-25  Scotland     Wales          4          0   Friendly Glasgow
+##    country neutral
+## 1 Scotland   FALSE
+## 2  England   FALSE
+## 3 Scotland   FALSE
+## 4  England   FALSE
+## 5 Scotland   FALSE
+## 6 Scotland   FALSE</code></pre>
+<p>We only need a few of these variables- enough to know who wins each match and when/where it was played. We can then use this data to initialise several parameters to be used in our ELO calculation. For team i (in a match of teams i and j), this is <a href="https://eloratings.net/about">calculated as</a>:</p>
+<p><span class="math display">\[ rating_{i_{t}} = rating_{i_{t-1}} + K \cdot G \cdot (R - E(R)) \]</span>
+The rating of team i is their old rating plus the difference between the actual result (R = 1 for a win, 0.5 for a draw, 0 for a loss) and the expected result (where 1 means certain win for team i).</p>
+<p>The unexpectedness of the result is then multiplied by two parameters. The first K, is to account for the importance of the match, with more important matches having a higher K factor, and a greater influence of team rating.</p>
+<p><span class="math display">\[\begin{equation}
+K = 
+\begin{cases} 
+60 &amp; \text{if World Cup Final} \\
+50 &amp; \text{if World Cup/ Major Intercontinental Matches} \\
+40 &amp; \text{if World Cup/Continental Competition Qualifiers} \\
+30 &amp; \text{if Other Tournaments}\\
+20 &amp; \text{if Friendly} \\
+\end{cases}
+
+\end{equation}\]</span></p>
+<p>The second parameter, G is controlled by the strength of the result</p>
+<p><span class="math display">\[\begin{equation}
+G = 
+\begin{cases} 
+1 &amp; \text{if } N &lt; 2 \\
+1.5 &amp; \text{if } N = 2 \\
+1.75 &amp; \text{if } N = 3 \\
+1.75 + \frac{N-3}{8} &amp; \text{if N &gt; 3} \\
+\end{cases}
+
+\end{equation}\]</span></p>
+<p>where N is the goal difference:</p>
+<p><span class="math display">\[ N = Goals_{i} - Goals_{j} \]</span></p>
+<p>The expected result is calculated based on the rankings of both teams going into the match</p>
+<p><span class="math display">\[ E(result) = \frac{1}{10 ^ \frac{-dr_{i,j}}{400} + 1} \]</span>
+where the difference in rankings (dr) is calculated as</p>
+<p><span class="math display">\[\begin{equation}
+dr_{i,j} = 
+\begin{cases} 
+rating_{i, t-1} + 100 - rating_{j, t-1} &amp; \text{if i at home} \\
+rating_{i, t-1} - 100 - rating_{j, t-1} &amp; \text{if j at home} \\
+rating_{i, t-1} - rating_{j, t-1} &amp; \text{if neutral} \\
+\end{cases}
+
+\end{equation}\]</span></p>
+<p>We then add K, G and R to each row of the data frame to make our calculations easier down the line. Unfortunately, my dataset doesn’t give the context of each game, so I’ve set K to 40 for every match. In theory this shouldn’t make a difference, but will affect the ratings of teams who over/under perform in big matches.</p>
+<pre class="r"><code>international_results %&lt;&gt;%
+  # select relevant columns
+  select(
+    date,
+    home = home_team, away = away_team,
+    hgoal = home_score, agoal = away_score,
+    neutral
+  ) %&gt;%
+  # convert date to date format
+  mutate(date = as.Date(date)) %&gt;%
+  # K = match importance
+  # don&#39;t have competition data in this dataset so just set to 40
+  mutate(K =  40) %&gt;%
+  # G = goal difference factor
+  # takes into account how much a team is beaten by
+  mutate(G = case_when(
+    abs(hgoal-agoal) &lt; 2 ~ 1,
+    abs(hgoal-agoal) &lt; 3 ~ 1.5,
+    abs(hgoal-agoal) &gt;= 3 ~ 1.75 + (abs(hgoal-agoal)-3)/8
+  )) %&gt;%
+  # results = 1 for win and 0.5 for a draw
+  mutate(result = case_when(
+    hgoal &gt; agoal ~ 1,
+    hgoal &lt; agoal ~ 0,
+    hgoal == agoal ~ 0.5
+  )) %&gt;%
+  # arrange by date so ELO can be updated sequentially
+  arrange(date)</code></pre>
+<p>We still need to initialise our rating (R) for each team, which for simplicity I’ve set to 1200 to start with. That is, every team starts with the same rating and will gradually tend towards their ‘natural’ rating. Given There’s probably at least 50 years of data for most teams before the Premier League begins in 1992, hopefully it should be enough for this to level out.</p>
+<pre class="r"><code>team_ratings &lt;- international_results %&gt;%
+  # select date and teams
+  select(date, home, away) %&gt;%
+  # melt
+  gather(., &quot;location&quot;, &quot;nation&quot;, home, away) %&gt;%
+  select(-location) %&gt;%
+  arrange(date) %&gt;%
+  # set out unique teams with a rating of 1200
+  filter(!duplicated(nation)) %&gt;%
+  mutate(rating = 1200) %&gt;%
+  select(-date)</code></pre>
+<p>Therefore, using the very first international fixture between England and Scotland in 1872 we have parameters of</p>
+<pre class="r"><code>head(international_results, n = 1)</code></pre>
+<pre><code>##         date     home    away hgoal agoal neutral  K G result
+## 1 1872-11-30 Scotland England     0     0   FALSE 40 1    0.5</code></pre>
+<p>ratings(t-1) = 1200 for both England and Scotland
+K = 40
+G = 1 for a draw
+R = 0.5 for a draw</p>
+<p>the equal ratings, but home location for Scotland mean that for England:</p>
+<p><span class="math display">\[ dr_{i,j} = 1200 + 100 - 1200  = 100 \]</span>
+and so an expected result (1- the expected home result)</p>
+<p><span class="math display">\[ E(R) = 1 - \frac{1}{10 ^ {100/400} + 1} = 1 - \frac{1}{2.78}  =  0.36\]</span>
+and so England will get a post match rating of</p>
+<p><span class="math display">\[ rating_{j} = 1200 + (40 \cdot 1 \cdot (0.5 - 0.36)) = 1207.2 \]</span></p>
+<pre class="r"><code>calc_ELO &lt;- function(date, home, away, K, G, result) {
+  #get the difference in ratings
+  hr &lt;- team_ratings$rating[which(team_ratings$nation == home)]
+  vr &lt;- team_ratings$rating[which(team_ratings$nation == away)]
+  dr &lt;- vr - (hr + 100)
+  
+  # calculate expected results
+  e_result &lt;- 1/ ((10^(dr/400))+1)
+  
+  # calculate new ratings
+  new_hr &lt;- hr + ((K*G) * (result - e_result))
+  new_vr &lt;- vr + ((K*G) * ((1-result) - (1-e_result)))
+  
+  # pipe these back into a df of team ratings to sample from
+  team_ratings$rating[which(team_ratings$nation == home)] &lt;&lt;- new_hr
+  team_ratings$rating[which(team_ratings$nation == away)] &lt;&lt;- new_vr
+  
+  # return new ratings
+  return(list(h_rating = new_hr, v_rating = new_vr))
+}</code></pre>
+<p>which can be applied to the dataframe of match information using pmap_df from the <a href="">purrr</a> package, which allows for some pleasing conciseness. It allows for the speed of applying a function, without needing to split the data frame by row and pass into lapply and rebind together.</p>
+<pre class="r"><code>elo_data &lt;- international_results %&gt;%
+  # select relevant variable
+  # keep date so we know a teams ELO at specific date
+  select(date, home, away, K, G, result) %&gt;%
+  bind_cols(pmap_df(., calc_ELO)) %&gt;%
+  # get rid of ELO parameters
+  select(date, home, away, h_rating, v_rating) %&gt;%
+  # gather twice to get a long df of teams ratings after matches
+  gather(&quot;location&quot;, &quot;nation&quot;, -date, -h_rating, -v_rating) %&gt;%
+  gather(&quot;rating&quot;, &quot;value&quot;, -date, -location, -nation) %&gt;%
+  # filter for home rating for teams at home and vice versa
+  filter((location == &quot;home&quot; &amp; rating == &quot;h_rating&quot;) |
+           (location == &quot;away&quot; &amp; rating == &quot;v_rating&quot;)) %&gt;%
+  select(date, nation, rating = value) %&gt;%
+  # we only care about ratings from August 1992
+  filter(date &gt; &quot;1992-07-31&quot;)</code></pre>
+<p>We’re left with a dataframe of 46992 observations for 3 variables: date, nation and the ranking of the nation at that time. We can plot a random selection of 5 teams just to sanity check and see that teams we know have historically been stronger (e.g. Argentina) show consistently higher rankings than weaker nations (e.g. Greece).</p>
+<pre class="r"><code># randomly choose 5 teams with max ELOs &gt; 1600
+teams &lt;- elo_data %&gt;%
+  filter(rating &gt; 1600) %&gt;%
+  .$nation %&gt;%
+  unique() %&gt;%
+  .[sample(length(.), 5)]
+
+# plot rating over time for these 5 teams
+p1 &lt;- elo_data %&gt;%
+  filter(nation %in% teams) %&gt;%
+  ggplot(aes(x = date, y = rating, colour = nation, group = nation)) +
+  geom_point() +
+  geom_line() +
+  # colour by football shirt colour
+  scale_colour_manual(values = c(&quot;skyblue&quot;, 
+                                 &quot;darkblue&quot;,
+                                 &quot;darkorange&quot;,
+                                 &quot;darkgreen&quot;,
+                                 &quot;red&quot;)) +
+  labs(title = &quot;ELO Ratings of Select Countries over Time&quot;,
+       subtitle = &quot;ratings calculated using homebrew script&quot;,
+       x = &quot;date&quot;,
+       y = &quot;rating&quot;) +
+  theme_minimal()
+
+plot(p1)</code></pre>
+<p><img src="/post/2019-06-20-The_Knowledge_4_files/figure-html/plot_teams_elo-1.png" width="672" /></p>
+<p>I’m pretty happy with how the code works. With a more complete dataset of matches, and also the time to properly filter countries in and out as they are formed/dissolved, I think it would make a pretty viable answer, however, I wanted to be as accurate as possible, and I can’t compete with the official-unofficial ratings of <a href="https://www.eloratings.net">eloratings.net</a>.</p>
+</div>
+<div id="dynamic-scraping" class="section level2">
+<h2>Dynamic Scraping</h2>
+<p>When scraping data for blog posts, I typically rely on <a href="">rvest</a> and it’s read_html(url) function. However, while this works for the static websites which make up the vast majority of sites containing tables of data, it struggles with websites that use JavaScript to dynamically generate pages.</p>
+<p>Eloratings.net is one such website which rvest is unable to scrape. E.g.</p>
+<pre class="r"><code># url to data on Brazil&#39;s ELO rating over time
+url &lt;- &quot;https://eloratings.net/Brazil&quot;
+
+read &lt;- read_html(url) %&gt;%
+  # this is the CSS selector for the page title
+  html_nodes(&quot;#mainheader&quot;)
+
+read</code></pre>
+<pre><code>## {xml_nodeset (1)}
+## [1] &lt;h1 id=&quot;mainheader&quot; class=&quot;mainheader&quot;&gt;&lt;/h1&gt;</code></pre>
+<p>does not manage to capture the data displayed in the page mainheader (it ‘should’ return “World Football Elo Ratings: Brazil” from the title of that page).</p>
+<p>Instead, what we want to do is save a copy of the generated page as a .html file and then read that into R using read_html(). Luckily, a way exists to do just that, using the (now deprecated, but still working) <a href="http://phantomjs.org/">PhantomJS headless browser</a>. Much of the code I used to get going with this is adapted from a tutorial <a href="https://velaco.github.io/how-to-scrape-data-from-javascript-websites-with-R/">here</a>.</p>
+<p>First you want to install PhantomJS from the above website and run through it’s <a href="http://phantomjs.org/quick-start.html">quick start guide</a>. This is a pretty thorough guide, I would say that there are really only three steps from installation to getting going:</p>
+<ol style="list-style-type: decimal">
+<li><a href="https://www.howtogeek.com/118594/how-to-edit-your-system-path-for-easy-command-line-access/">Add phantomjs to the system PATH</a></li>
+<li>Open a text editor and save one of the <a href="https://phantomjs.org/quick-start.html">tutorial scripts</a> as filename.js</li>
+<li>run &gt; phantomjs C:/Users/usr/path/to/file.js
+in a command line console</li>
+</ol>
+<p>The file we’re going to use to render the js pages and then save the html is below:</p>
+<pre class="r"><code>// scrapes a given url (for eloratings.net)
+
+// create a webpage object
+var page = require(&#39;webpage&#39;).create(),
+  system = require(&#39;system&#39;)
+
+// the url for each country provided as an argument
+country= system.args[1];
+
+// include the File System module for writing to files
+var fs = require(&#39;fs&#39;);
+
+// specify source and path to output file
+// we&#39;ll just overwirte iteratively to a page in the same directory
+var path = &#39;elopage.html&#39;
+
+page.open(country, function (status) {
+  var content = page.content;
+  fs.write(path,content,&#39;w&#39;)
+  phantom.exit();
+});</code></pre>
+<p>(which, again, is stolen and adapted from <a href="https://velaco.github.io/how-to-scrape-data-from-javascript-websites-with-R/">here</a>)</p>
+<p>This is saved as scrape_ELO.js in the static directory of my blog folder.</p>
+<p>To keep everything in R, we can use the system() family of functions, which provides access to the OS command line. Though the referenced tutorial uses system(), it relies on scraping a single referenced page. To iteratively scrape every country, we’ll need to provide an argument (country) which will contain the link to the page on eloratings.net for that country.</p>
+<p>E.g. for Brazil we will provide “<a href="https://www.eloratings.net/Brazil" class="uri">https://www.eloratings.net/Brazil</a>” as the country argument</p>
+<pre class="r"><code>phantom_dir &lt;- &quot;C:/Users/path/to/scrape_ELO/&quot;
+country_url &lt;- &quot;https://www.eloratings.net/Brazil&quot;
+
+# use system2 to invoke phantomjs via it&#39;s executable
+system2(&quot;C:/Users/path/to/phantomjs-2.1.1-windows/bin/phantomjs.exe&quot;,
+        #provide the path to the scraping script and the country url as argument
+        args = c(file.path(phantom_dir, &quot;scrape_ELO.js&quot;), country_url))</code></pre>
+<p>We can then read in this saved html page using rvest as per usual and recover the information therein.</p>
+<pre class="r"><code># read in the saved html file
+page &lt;- read_html(&quot;elopage.html&quot;)
+
+# scrape with rvest as normal
+country_name &lt;- page %&gt;%
+  html_nodes(&quot;#mainheader&quot;) %&gt;%
+  html_text() %&gt;%
+  gsub(&quot;Elo Ratings: &quot;, &quot;&quot;, .)
+
+country_name</code></pre>
+<pre><code>## [1] &quot;Brazil&quot;</code></pre>
+<p>I’m not going to include my full script for scraping eloratings.net as usually a reason for doing this obscuring of the data is to prevent exactly what I’m doing. Instead I’ll give a skeleton function of the one I use. If you are having problems with setting up phantomjs to scrape pages, my contact details are listed on my <a href="http://www.robert-hickman.eu/">blog homepage</a></p>
+<pre class="r"><code>scrape_nation &lt;- function(country) {
+  # download the page
+  url &lt;- paste0(&quot;https://eloratings.net/&quot;, country)
+  system2(&quot;C:/Users/path/to/phantomjs-2.1.1-windows/bin/phantomjs.exe&quot;, 
+          args = c(file.path(phantom_dir, &quot;scrape_ELO.js&quot;), url))
+  
+  # read in downloaded page
+  page &lt;- read_html(&quot;elopage.html&quot;)
+  
+  # recover information
+  country_name &lt;- page %&gt;%
+    html_nodes(&quot;#mainheader&quot;) %&gt;%
+    html_text() %&gt;%
+    gsub(&quot;Elo Ratings: &quot;, &quot;&quot;, .)
+  
+  opposing &lt;- page %&gt;%
+      html_nodes(&quot;.r1 a&quot;) %&gt;%
+      html_text()
+  
+  teams &lt;- page %&gt;%
+      html_nodes(&quot;.r1&quot;)
+  
+  fixtures &lt;- map2_df(teams, opposing, split_teams)
+
+  ratings &lt;- page %&gt;%
+    html_nodes(&quot;.r4&quot;) %&gt;%
+    html_text() %&gt;%
+    map_df(., split_ratings)
+  
+  rankings &lt;- page %&gt;%
+    html_nodes(&quot;.r6&quot;) %&gt;%
+    map_df(., split_rankings)
+
+  dates &lt;- page %&gt;%
+    html_nodes(&quot;.r0&quot;) %&gt;%
+    html_text() %&gt;%
+    map_df(., convert_date)
+
+  # bind into a data frame
+  df &lt;- fixtures %&gt;%
+    cbind(., ratings) %&gt;%
+    cbind(., rankings) %&gt;%
+    cbind(., dates) %&gt;%
+    mutate(table_country = country_name)
+}
+
+elO_data &lt;- map_df(country_links, scrape_nation)</code></pre>
+<p>Finally, we want to convert this to long format. We have two observations per country and any point in time- the rating, and the ranking. I’m going to filter out just the ranking, as that’s what the questions ask, but if anything there’s possibly more information in the rating data.</p>
+<pre class="r"><code>elo_data %&lt;&gt;%
+  # rename and select variables
+  select(
+    date,
+    home, away,
+    rating_home = r1, rating_away = r2,
+    ranking_home = ranking1, ranking_away = ranking2
+  ) %&gt;%
+  # melt twice to convert to long format
+  gather(
+    &quot;location&quot;, &quot;nation&quot;,
+    -rating_home, -rating_away, -ranking_home, -ranking_away, -date
+  ) %&gt;%
+  gather(&quot;measure&quot;, &quot;value&quot;, -nation, -date, -location) %&gt;%
+  # take only relevant information
+  filter(
+    (location == &quot;home&quot; &amp; measure %in% c(&quot;rating_home&quot;, &quot;ranking_home&quot;)) |
+      (location == &quot;away&quot; &amp; measure %in% c(&quot;rating_away&quot;, &quot;ranking_away&quot;))
+  ) %&gt;%
+  separate(measure, into = c(&quot;measure&quot;, &quot;location&quot;), &quot;_&quot;) %&gt;%
+  # filter out relevant data
+  filter(!duplicated(.)) %&gt;%
+  filter(date &gt; &quot;1992-01-01&quot;) %&gt;%
+  filter(measure == &quot;ranking&quot;) %&gt;%
+  select(-measure, ranking = value, -location)</code></pre>
+</div>
+<div id="answering-the-question" class="section level2">
+<h2>Answering the Question</h2>
+<p>So now we have a database of Premier League players’ nationalities, and also of the ELO rankings of countries since 1992, we can answer the original questions.</p>
+<p>First we need to make sure that the data can join to each other, which means making sure that the nation names are common between the two data sets.</p>
+<pre class="r"><code># get unique names for countries in both data sets
+squad_teams &lt;- unique(squads$nation)
+rating_teams &lt;- unique(elo_data$nation)
+
+# find non joining country names
+squad_teams[!squad_teams %in% rating_teams]</code></pre>
+<pre><code>##  [1] &quot;Ireland Republic&quot;       &quot;Trinidad and Tobago&quot;   
+##  [3] &quot;Czech Republic&quot;         &quot;Macedonia FYR&quot;         
+##  [5] &quot;St. Kitts and Nevis&quot;    &quot;Bosnia and Herzegovina&quot;
+##  [7] &quot;Congo DR&quot;               &quot;Antigua and Barbuda&quot;   
+##  [9] &quot;Korea Republic&quot;         &quot;Curacao&quot;               
+## [11] &quot;Cape Verde Islands&quot;     &quot;Equatorial Guinea&quot;</code></pre>
+<p>Some are missing where country names follow different convention- e.g. the Democratic Republic of Congo is named DR Congo in one, and Congo DR in the other. We can quickly convert these odd countries and join the two data sets together using dplyr. Then we can get an idea of the national rankings of the nationality of Premier League players since it’s inception</p>
+<pre class="r"><code># rename mismatching nations
+elo_data %&lt;&gt;%
+  mutate(nation = case_when(
+    grepl(&quot;^Ireland&quot;, nation) ~ &quot;Ireland Republic&quot;,
+    grepl(&quot;^Czechia&quot;, nation) ~ &quot;Czech Republic&quot;,
+    grepl(&quot;Trinidad/Tobago&quot;, nation) ~ &quot;Trinidad and Tobago&quot;,
+    grepl(&quot;Macedonia&quot;, nation) ~ &quot;Macedonia FYR&quot;,
+    grepl(&quot;St Kitts and Nevis&quot;, nation) ~ &quot;St. Kitts and Nevis&quot;,
+    grepl(&quot;Bosnia/Herzeg&quot;, nation) ~ &quot;Bosnia and Herzegovina&quot;,
+    grepl(&quot;DR Congo&quot;, nation) ~ &quot;Congo DR&quot;,
+    grepl(&quot;Antigua/Barbuda&quot;, nation) ~ &quot;Antigua and Barbuda&quot;,
+    grepl(&quot;South Korea&quot;, nation) ~ &quot;Korea Republic&quot;,
+    grepl(&quot;Curaçao&quot;, nation) ~ &quot;Curacao&quot;,
+    grepl(&quot;Cape Verde&quot;, nation) ~ &quot;Cape Verde Islands&quot;,
+    grepl(&quot;Equat Guinea&quot;, nation) ~ &quot;Equatorial Guinea&quot;,
+    TRUE ~ nation
+  ))</code></pre>
+<pre class="r"><code>players_national_elo &lt;- squads %&gt;%
+  # convert dates
+  mutate(year = as.numeric(year)) %&gt;%
+  # join elo rating data
+  left_join(., elo_data, by = &quot;nation&quot;) %&gt;%
+  # take only relevant data per season
+  filter(date &lt; as.Date(paste0(year, &quot;-06-30&quot;)) &amp;
+           date &gt; as.Date(paste0(year-1, &quot;-07-01&quot;))) %&gt;%
+  # rename for concise printing
+  rename(apps = appearances, sub_apps = sub_appearances)
+
+# histogram of players national team lowest ratings
+p2 &lt;- players_national_elo %&gt;%
+  arrange(ranking) %&gt;%
+  # take only lowest ranked observations
+  filter(!duplicated(paste(player, team, year), fromLast = TRUE)) %&gt;%
+  # group by decade
+  mutate(decade = case_when(
+    year &lt; 2000 ~ &quot;1990&quot;,
+    year &lt; 2010 ~ &quot;2000&quot;,
+    year &lt; 2020 ~ &quot;2010&quot;
+  )) %&gt;%
+  ggplot(aes(ranking)) +
+  geom_histogram() +
+  labs(title = &quot;Distribution of EPL Player&#39;s Nation&#39;s Ranking&quot;,
+       subtitle = &quot;(taking lowest point of ranking data&quot;,
+       x = &quot;lowest national team ELO rating&quot;,
+       y = &quot;player count&quot;) +
+  theme_minimal() +
+  facet_wrap(~decade)
+
+plot(p2)</code></pre>
+<p><img src="/post/2019-06-20-The_Knowledge_4_files/figure-html/combine_datasets-1.png" width="672" /></p>
+<p>It surprised me that the distribution hasn’t obviously changed over the year. There’s maybe a few more players from ‘mid-level’ nations (ranking 30-50) this decade but I’d doubt it’s significantly more. The majority of players come from nations in the top 20 worldwide consistently since the Premier League’s inception.</p>
+<p>We can easily then take the players with the worst national team ranking by arranging by the ranking of national teams (and removing duplicate players so it isn’t just filled with the same 2/3 names)</p>
+<pre class="r"><code>worst_national_team_players &lt;- players_national_elo %&gt;%
+  # arrange rating from low to high
+  arrange(-ranking) %&gt;%
+  # remove duplicated players
+  filter(!duplicated(player)) %&gt;%
+  # select only relevant info
+  select(year, player, team, apps, sub_apps, nation, ranking)
+
+# show the 25 players with the worst ranking their nation had during that time
+head(worst_national_team_players, n = 25)</code></pre>
+<pre><code>##    year             player                    team apps sub_apps
+## 1  2015     Brandon Comley     queens-park-rangers    0        1
+## 2  2004        Zesh Rehman                  fulham    0        1
+## 3  2012     George Elokobi wolverhampton-wanderers    3        6
+## 4  2014     Leandro Bacuna             aston-villa   28        7
+## 5  2013      Kemy Agustien            swansea-city    4       14
+## 6  2015        Kenji Gorré            swansea-city    0        1
+## 7  1998 Danny Higginbotham       manchester-united    0        1
+## 8  1999          Carl Cort               wimbledon    6       10
+## 9  2007 Mikele Leigertwood        sheffield-united   16        3
+## 10 2007     Moses Ashikodi                 watford    0        2
+## 11 2016       Cuco Martina             southampton   11        4
+## 12 2003         Neil Danns        blackburn-rovers    1        1
+## 13 2005  Dexter Blackstock             southampton    8        1
+## 14 2019     Neil Etheridge            cardiff-city   38        0
+## 15 2013     Emmerson Boyce          wigan-athletic   36        0
+## 16 1997          Mart Poom            derby-county    4        0
+## 17 2007     Matthew Briggs                  fulham    0        1
+## 18 2018        Nahki Wells                 burnley    0        9
+## 19 2012      Jason Roberts        blackburn-rovers    5        5
+## 20 1998 Sagi Burton-Godwin          crystal-palace    1        1
+## 21 2010     Gunnar Nielsen         manchester-city    0        1
+## 22 2009          Leon Cort              stoke-city    9        2
+## 23 2000        Adam Newton         west-ham-united    0        2
+## 24 2004       Delroy Facey        bolton-wanderers    0        1
+## 25 2013    Gaël Bigirimana        newcastle-united    3       10
+##                 nation ranking
+## 1           Montserrat     227
+## 2             Pakistan     204
+## 3              Somalia     199
+## 4              Curacao     188
+## 5              Curacao     186
+## 6              Curacao     186
+## 7            Gibraltar     181
+## 8               Guyana     179
+## 9  Antigua and Barbuda     179
+## 10 Antigua and Barbuda     179
+## 11             Curacao     179
+## 12              Guyana     175
+## 13 Antigua and Barbuda     174
+## 14         Philippines     174
+## 15            Barbados     173
+## 16             Estonia     169
+## 17              Guyana     169
+## 18             Bermuda     167
+## 19             Grenada     166
+## 20 St. Kitts and Nevis     160
+## 21       Faroe Islands     160
+## 22              Guyana     153
+## 23 St. Kitts and Nevis     147
+## 24             Grenada     145
+## 25             Burundi     143</code></pre>
+<p>So Zesh Rehman as the question supposes, is one of the players from extremely low ranked nations. However, he is beaten by Brandon Comley at QPR who represents Montserrat internationally, who fell as low as 227 in the ELO world rankings. The 204 for Zesh Rehman is different to the 168 listed in the question for three reasons:</p>
+<ol style="list-style-type: decimal">
+<li>As earlier discussed we are using ELO rankings, not the official FIFA rankings (and are probably right to)</li>
+<li>This lists the <em>lowest</em> that nation fell in the time that player was in the Premier League, not just at the time Zesh Rehman (or any other player) made his debut for Pakistan (/other nation)</li>
+</ol>
+<p>Indeed, Brandon Comley did not start to play for Montserrat until September 2018, by which time he was playing for Colchester in League Two.</p>
+<p>What is interesting though, is that there are 19 instances of players of nationalities ranked lower than 164- many more than I would have imagined.</p>
+<p>To truly answer the question, that is, to only count rankings in games Premier League players played in, we can scrape international match data from <a href="https://www.national-football-teams.com/">national_football-teams.com</a>. 11v11.com which I’ve used thus far does list international appearances, but tends to have thinner data (and vice versa for national-football-teams.com with regards to Premier League squad data).</p>
+<p>First, we’ll manually add the links to the profiles of players who are contenders for having the lowest ranked appearance (the lowest 20 in the above dataframe), then we can use this to scrape the international matches they’ve played in. This is then matched by data to the ELO ranking data to find the national ranking of the country they represented. Finally, we take the lowest ranked appearance for each player and see if any can beat Zesh Rehman.</p>
+<pre class="r"><code>head(players_intl_links)</code></pre>
+<pre><code>##           player
+## 1 Brandon Comley
+## 2    Zesh Rehman
+## 3 George Elokobi
+## 4 Leandro Bacuna
+## 5  Kemy Agustien
+## 6    Kenji Gorré
+##                                                                        url
+## 1 https://www.national-football-teams.com/player/71845/Brandon_Comley.html
+## 2    https://www.national-football-teams.com/player/12929/Zesh_Rehman.html
+## 3                                                                     &lt;NA&gt;
+## 4 https://www.national-football-teams.com/player/63672/Leandro_Bacuna.html
+## 5  https://www.national-football-teams.com/player/59413/Kemy_Agustien.html
+## 6    https://www.national-football-teams.com/player/74671/Kenji_Gorre.html</code></pre>
+<pre class="r"><code>get_international_matches &lt;- function(player, url) {
+  if(!is.na(url)) {
+    df &lt;- url %&gt;%
+      read_html() %&gt;%
+      html_nodes(&quot;#games &gt; table&quot;) %&gt;%
+      html_table(fill = TRUE) %&gt;%
+      as.data.frame() %&gt;%
+      .[c(1:2, 5:7)] %&gt;%
+      filter(Date != &quot;&quot;) %&gt;%
+      mutate(result = gsub(&quot;\n.*&quot;, &quot;&quot;, Result), player = player, match_date = as.Date(Date)) %&gt;%
+      select(player, match_date, home = Home.Team, away = Away.Team.1, result, event = Event)
+  }
+}
+
+low_ranked_appearances &lt;- players_intl_links %&gt;%
+  pmap_df(., get_international_matches) %&gt;%
+  left_join(., players_national_elo, by = &quot;player&quot;) %&gt;%
+  filter(match_date == date) 
+
+lowest_ranked_appearances &lt;- low_ranked_appearances %&gt;%
+  arrange(-ranking) %&gt;%
+  filter(!duplicated(player, fromLast = TRUE)) %&gt;%
+  mutate(match = paste(home, &quot;vs&quot;, away)) %&gt;%
+  select(date, player, team, nation, ranking, match, result)
+
+lowest_ranked_appearances</code></pre>
+<pre><code>##          date         player             team            nation ranking
+## 1  2005-12-07    Zesh Rehman           fulham          Pakistan     197
+## 2  2018-11-13 Neil Etheridge     cardiff-city       Philippines     165
+## 3  2018-03-26   Cuco Martina          everton           Curacao     136
+## 4  2004-05-20  Jason Roberts       portsmouth           Grenada     131
+## 5  2008-03-26 Emmerson Boyce   wigan-athletic          Barbados     126
+## 6  2019-03-22   Pedro Obiang  west-ham-united Equatorial Guinea     125
+## 7  2015-06-13   Modou Barrow     swansea-city            Gambia     122
+## 8  2006-11-21     Paul Ifill sheffield-united          Barbados     119
+## 9  2019-06-21 Leandro Bacuna     cardiff-city           Curacao     118
+## 10 2003-06-07      Mart Poom       sunderland           Estonia      85
+##                                     match result
+## 1                   Pakistan vs Sri Lanka    1:0
+## 2                Philippines vs Singapore    1:0
+## 3                      Curaçao vs Bolivia    1:0
+## 4                         Cuba vs Grenada    2:2
+## 5                    Barbados vs Dominica    1:0
+## 6              Sudan vs Equatorial Guinea    1:4
+## 7                  South Africa vs Gambia    0:0
+## 8  Barbados vs Saint Vincent &amp; Grenadines    3:0
+## 9                     Honduras vs Curaçao    0:1
+## 10                     Estonia vs Andorra    2:0</code></pre>
+<p>And it appears not! It’s quite incredible that in the 13.5 years since the question was answered noone has even got close. This is probably due to the fact that though Pakistan were ranked 168th by FIFA at the time, using the ELO system, they come out as the 197th best team at the end of 2005.</p>
+<p>Perhaps more surprising is that it seems that until 2003 the record was 85th, held by Mart Poom playing for Estonia (though this might also be because data on low ranking international matches gets worse as you go back past this point- Mart Poom probably played for Estonia in).</p>
+<p>We can graph the appearances by Premier League players in matches involving low ranked nations to see how close people have gotten pretty easily. The below shows the rankings for the countries in the above printed data frame. Matches where Premier League players made an appearance are highlighted in black boxes.</p>
+<pre class="r"><code>p3 &lt;- elo_data %&gt;%
+  filter(nation %in% low_ranked_appearances$nation) %&gt;%
+  mutate(date = as.Date(date)) %&gt;%
+  ggplot(aes(x = date, y = ranking, colour = nation, group = nation)) +
+  geom_point(alpha = 0.5, size = 2) +
+  geom_line(alpha = 0.5, size = 2) +
+  geom_point(data = low_ranked_appearances, aes(x = match_date),
+             colour = &quot;black&quot;, fill = NA, size = 3,stroke = 2, shape = 22) +
+  # colour by football shirt colour
+  scale_colour_manual(values = c(&quot;yellow&quot;, &quot;darkblue&quot;, &quot;darkred&quot;, &quot;lightblue&quot;, &quot;green&quot;, &quot;red&quot;, &quot;darkgreen&quot;, &quot;darkgoldenrod&quot;)) +
+  scale_x_date() +
+  labs(title = &quot;Lowest National Ranking of Premier League International Caps&quot;,
+          subtitle = &quot;premier league player caps in red&quot;,
+          y = &quot;national team ELO ranking&quot;) +
+  theme_minimal()
+
+plot(p3)</code></pre>
+<p><img src="/post/2019-06-20-The_Knowledge_4_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<p>It seems Pakistan have continued to hover around the 200th position pretty consistently over the last 25 years. Indeed, if Zesh Rehman was still playing in the Premier League he would have broken his own record less than 1 month ago, when Pakistan sank to 201st position after <a href="https://www.national-football-teams.com/matches/report/23278/Pakistan_Cambodia.html">a defeat to Cambodia</a>. The Philippines, represented by Neil Etheridge in recent years, have been ranked lower, but not since 2010. Other than that Curacao can be seen to only have come close near to their formation as a FIFA member, and are clearly rapidly improving. Barbados and Grenada might be fruitful for any possible record taker, but are still a good 30 places higher than Pakistan.</p>
+</div>
+<div id="lowest-ranked-countries-of-premier-league-winners" class="section level2">
+<h2>Lowest Ranked Countries of Premier League Winners</h2>
+<p>We can answer the first question and find the players with the worst national team rankings by joining in and selecting for teams that won the league. This is done by first initializing a simple df with the league winners per season. The given answers to this question have differed in when they take the country’s rankings, whether at their lowest point within the season, or at the season’s end. I decided to use a different method- to take the average ranking of the nation over the whole season.</p>
+<pre class="r"><code># data frame of EPL winners over year
+epl_winners &lt;- data.frame(
+  champion = c(
+    &quot;manchester-united&quot;,
+    &quot;manchester-united&quot;,
+    &quot;blackburn-rovers&quot;,
+    &quot;manchester-united&quot;,
+    &quot;manchester-united&quot;,
+    &quot;arsenal&quot;,
+    &quot;manchester-united&quot;,
+    &quot;manchester-united&quot;,
+    &quot;manchester-united&quot;,
+    &quot;arsenal&quot;,
+    &quot;manchester-united&quot;,
+    &quot;arsenal&quot;,
+    &quot;chelsea&quot;,
+    &quot;chelsea&quot;,
+    &quot;manchester-united&quot;,
+    &quot;manchester-united&quot;,
+    &quot;manchester-united&quot;,
+    &quot;chelsea&quot;,
+    &quot;manchester-united&quot;,
+    &quot;manchester-city&quot;,
+    &quot;manchester-united&quot;,
+    &quot;manchester-city&quot;,
+    &quot;chelsea&quot;,
+    &quot;leicester-city&quot;,
+    &quot;chelsea&quot;,
+    &quot;manchester-city&quot;,
+    &quot;manchester-city&quot;),
+  year = 1993:2019
+) 
+
+# merge in winning temas
+epl_winning_squads &lt;- players_national_elo %&gt;%
+  left_join(., epl_winners, by = &quot;year&quot;) %&gt;%
+  # filter for players that win the league that season
+  filter(team == champion) %&gt;%
+  # filter for the year that player wins the league
+  filter(date &lt; as.Date(paste0(year, &quot;-06-30&quot;)) &amp;
+           date &gt; as.Date(paste0(year-1, &quot;-07-01&quot;))) %&gt;%
+  group_by(player, year, team, apps, sub_apps, nation) %&gt;%
+  summarise(av_ranking = mean(ranking)) %&gt;%
+  arrange(-av_ranking) %&gt;%
+  # take the lowest ranking per player/year combination
+  select(year, player, team, apps, sub_apps, nation, av_ranking)
+
+# show the 25 players with the worst ranking their nation had during that time
+head(epl_winning_squads, n = 25)</code></pre>
+<pre><code>## # A tibble: 25 x 7
+## # Groups:   player, year, team, apps, sub_apps [25]
+##     year player       team           apps sub_apps nation        av_ranking
+##    &lt;dbl&gt; &lt;chr&gt;        &lt;chr&gt;         &lt;int&gt;    &lt;int&gt; &lt;chr&gt;              &lt;dbl&gt;
+##  1  1998 Christopher~ arsenal           7        9 Liberia            114. 
+##  2  2010 Gaël Kakuta  chelsea           0        1 Congo DR           106. 
+##  3  2004 Justin Hoyte arsenal           0        1 Trinidad and~      102. 
+##  4  2013 Jonny Evans  manchester-u~    21        2 Northern Ire~      101. 
+##  5  2002 Igors Stepa~ arsenal           6        0 Latvia              99.1
+##  6  2009 Manucho      manchester-u~     0        1 Angola              89.9
+##  7  2006 Eidur Gudjo~ chelsea          16       10 Iceland             79.8
+##  8  2003 Roy Carroll  manchester-u~     8        2 Northern Ire~       76.5
+##  9  2001 David Healy  manchester-u~     0        1 Northern Ire~       76  
+## 10  1999 Dwight Yorke manchester-u~    32        0 Trinidad and~       75.8
+## # ... with 15 more rows</code></pre>
+<p>Here we have another quite clear winner Christopher Wreh, whose Liberia averaged a ranking of 114 over the 1997/1998 season. Gael Kakuta and Justin Hoyte (and Igors Stepanovs and Manucho) seem like false answers as they only achieved a handful of appearances on the way to winning the league, which only leaves Jonny Evans in 2013 as a real contender for this record. Northern Ireland in this season averaged just under 100th place.</p>
+</div>
+<div id="extra-credit" class="section level2">
+<h2>Extra Credit</h2>
+<p>We can pretty quickly and easily see how these players compare to what we found above in terms of the lowest ranked nation they’ve turned out for. Again, first i had to manually add links to their pages of <a href="www.national-football-teams.com">www.national-football-teams.com</a> and then scrape each match they’ve appeared for their home country in.</p>
+<pre class="r"><code>head(champions_df)</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   player         url                                                       
+##   &lt;chr&gt;          &lt;chr&gt;                                                     
+## 1 Christopher W~ https://www.national-football-teams.com/player/13930/Chri~
+## 2 Gaël Kakuta    https://www.national-football-teams.com/player/67629/Gael~
+## 3 Justin Hoyte   https://www.national-football-teams.com/player/52483/Just~
+## 4 Jonny Evans    https://www.national-football-teams.com/player/16586/Jonn~
+## 5 Igors Stepano~ https://www.national-football-teams.com/player/3728/Igors~
+## 6 Manucho        https://www.national-football-teams.com/player/14353/Manu~</code></pre>
+<p>When we do this scrape and analyse we get Jonny Evans as the Premier League winner who appeared for the lowest rated nation during a championship campaign. He’s Northern Ireland team slumped to a 2-0 defeat to Israel in 2013 which left them 106th in the world rankings. 2 months later, he won the Premier League with Manchester United. There’s relatively few challengers with only Igors Stepanovs (Latvia 101st, 6 appearances for Arsenal in 2002) getting close and then Roy Carroll (Northern Ireland), Eidur GOdjohnsen (Iceland), and Rihad Mahrez (Algeria) in the 80s (Manucho excluded due to lack of appearances in Manchester United’s 2009 Premier League campaign).</p>
+<pre class="r"><code>low_ranked_champs &lt;- champions_df %&gt;%
+  pmap_df(., get_international_matches) %&gt;%
+  left_join(., players_national_elo, by = &quot;player&quot;) %&gt;%
+  left_join(., epl_winners, by = &quot;year&quot;) %&gt;%
+  filter(team == champion) %&gt;%
+  filter(match_date == date) 
+
+lowest_ranked_champs &lt;- low_ranked_champs %&gt;%
+  arrange(-ranking) %&gt;%
+  filter(!duplicated(player)) %&gt;%
+  mutate(match = paste(home, &quot;vs&quot;, away)) %&gt;%
+  select(date, player, team, nation, ranking, match, result)
+
+head(lowest_ranked_champs, n = 10)</code></pre>
+<pre><code>##          date           player              team           nation ranking
+## 1  2013-03-26      Jonny Evans manchester-united Northern Ireland     106
+## 2  2001-11-14  Igors Stepanovs           arsenal           Latvia     101
+## 3  2009-06-14          Manucho manchester-united           Angola      94
+## 4  2003-06-03      Roy Carroll manchester-united Northern Ireland      87
+## 5  2018-10-16     Riyad Mahrez   manchester-city          Algeria      85
+## 6  2006-02-28 Eidur Gudjohnsen           chelsea          Iceland      82
+## 7  2001-06-06      David Healy manchester-united Northern Ireland      82
+## 8  2016-06-13       Wes Morgan    leicester-city          Jamaica      72
+## 9  2000-09-02       Ryan Giggs manchester-united            Wales      70
+## 10 2007-06-02   DONG Fang Zhou manchester-united            China      64
+##                                 match result
+## 1          Northern Ireland vs Israel    0:2
+## 2                    Latvia vs Russia    1:3
+## 3                    Angola vs Guinea    0:0
+## 4           Italy vs Northern Ireland    2:0
+## 5                    Benin vs Algeria    1:0
+## 6        Trinidad &amp; Tobago vs Iceland    2:0
+## 7  Czech Republic vs Northern Ireland    3:1
+## 8                  Uruguay vs Jamaica    3:0
+## 9                    Belarus vs Wales    2:1
+## 10                       USA vs China    4:1</code></pre>
+<p>However! One notable omission is Christopher Wreh, who played in 16 matches for Arsenal in the 1997/1998 season. Wreh only played 26 times for his nation so I assumed he just hadn’t appeared for them that year, but <a href="https://www.11v11.com/players/christopher-wreh-4/">11v11.com</a> lists him playing on July 27th 1997 (1997/1998 season) at which point Liberia were ranked 110th in the world.</p>
+</div>
+</div>

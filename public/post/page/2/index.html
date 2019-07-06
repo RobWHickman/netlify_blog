@@ -70,7 +70,7 @@
   <meta property="og:description" content="PhD student in Physiology, Development, and Neuroscience">
   <meta property="og:locale" content="en-us">
   
-  <meta property="og:updated_time" content="2018-08-04T00:00:00&#43;00:00">
+  <meta property="og:updated_time" content="2018-10-04T00:00:00&#43;00:00">
   
 
   <script type="text/x-mathjax-config">
@@ -236,6 +236,120 @@ MathJax.Hub.Config({
   
 
   
+  
+    
+    
+
+<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
+  
+  
+  <h3 class="article-title" itemprop="headline">
+    <a href="/post/getis-ord-heatmaps-tutorial/" itemprop="url">How I Learned To Stop Worrying and Love Heatmaps</a>
+  </h3>
+  
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2018-10-04 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Oct 4, 2018
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    6 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+
+</div>
+
+  <div class="article-style" itemprop="articleBody">
+    
+    Whilst getting some work done browsing twitter at work today, I came across this tweet from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.
+For instance, lets load some mapping libraries
+library(tidyverse)library(sf)library(rgdal)For this blog I’m going to use data of bus stops in London, because there’s an absolute ton of them and because I love the London Datastore and it was the first public, heavy, point data file I came across.
+    
+  </div>
+  <p class="read-more" itemprop="mainEntityOfPage">
+    <a href="/post/getis-ord-heatmaps-tutorial/" class="btn btn-primary btn-outline">
+      CONTINUE READING
+    </a>
+  </p>
+</div>
+
+  
+    
+    
+
+<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
+  
+  
+  <h3 class="article-title" itemprop="headline">
+    <a href="/post/sf.schlorodot/" itemprop="url">sf.chlorodot mini-package</a>
+  </h3>
+  
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2018-09-09 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Sep 9, 2018
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    4 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+
+</div>
+
+  <div class="article-style" itemprop="articleBody">
+    
+    Recently, I’d seen two tweets with stunning examples of maps by Paul Campbell here and (taken inspiration from the first) by Imer Muhović here.
+The basic idea of the dot chloropleths is to visualise not only the location clustering of each variable but the number of observations (something traditional ‘filled’ chloropleths don’t do). More importantly than this, the maps also just look really really cool.
+I had a spare few minutes during work on Friday which I tidied up into a package to calculate the random position of dots for such maps which can be found on my github.
+    
+  </div>
+  <p class="read-more" itemprop="mainEntityOfPage">
+    <a href="/post/sf.schlorodot/" class="btn btn-primary btn-outline">
+      CONTINUE READING
+    </a>
+  </p>
+</div>
+
   
     
     
@@ -686,64 +800,6 @@ Formally this is phrased as:
 </div>
 
   
-    
-    
-
-<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
-  
-  
-  <h3 class="article-title" itemprop="headline">
-    <a href="/post/hello-world-a-small-chess-plotting-package/" itemprop="url">Hello World! And A Small Chess Plotting Package</a>
-  </h3>
-  
-
-<div class="article-metadata">
-
-  <span class="article-date">
-    
-    <time datetime="2018-03-21 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
-      Mar 21, 2018
-    </time>
-  </span>
-  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
-    <meta itemprop="name" content="Robert Hickman">
-  </span>
-
-  
-  <span class="middot-divider"></span>
-  <span class="article-reading-time">
-    2 min read
-  </span>
-  
-
-  
-  
-
-  
-  
-  
-  
-
-  
-
-</div>
-
-  <div class="article-style" itemprop="articleBody">
-    
-    Finally gotten around to using my blogdown website!
-Feels like a fairly good place to publicise a small package to plot chess games using only the pgn using ggplot2 in R which can be found here
-To copy the readme mini-vignette provides a nice overview of the uber-function which goes from pgn -&gt; gif.
-As in the README massive thanks and inspiration to Joshua Kunst and his rchess package which I failed to get going on my laptop and decided to try my arm at writing something from scratch.
-    
-  </div>
-  <p class="read-more" itemprop="mainEntityOfPage">
-    <a href="/post/hello-world-a-small-chess-plotting-package/" class="btn btn-primary btn-outline">
-      CONTINUE READING
-    </a>
-  </p>
-</div>
-
-  
 
   
 <nav>
@@ -751,6 +807,8 @@ As in the README massive thanks and inspiration to Joshua Kunst and his rchess p
     
     <li><a href="/post/">&lt;</a></li>
     
+    
+    <li><a href="/post/page/3/">&gt;</a></li>
     
   </ul>
 </nav>
