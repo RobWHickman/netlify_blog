@@ -345,7 +345,13 @@ Which player had the nationality with the lowest FIFA World Ranking at the time 
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 <p>a similar question is also answered in this weeks column:</p>
 <p>‘<em>“Fulham defender Zesh Rehman made his debut for Pakistan, who are ranked 168 by Fifa. Is that the lowest-ranked country a Premier League player has played for?”</em> wondered Zulfiqar Shah in January 2006.’</p>
-<p>I thought I’d answer both of these using R.</p>
+<div id="answers" class="section level2">
+<h2>Answers</h2>
+<p>The latter question is more clear cut- noone has beaten the record set by Zesh Rehman in December 205 when he made his debut for Pakistan. Using ELO ratings which are more consistent over time, Pakistan were ranked as teh 197th best team in the world at that time. The nearest someone has gotten to this is Neil Etheridge in 2018 when playing for 165th ranked Philippines.</p>
+<p>For the first question, it depends how you take the rankings and if you require players to have appeared a certain number of time in the season, but Chistopher Wreh who represented 110th ranked Liberia whilst plaing for Arsenal in the 1997/1998 season is probably the winner with Jonny Evans (Northern Ireland and Manchester United, 2012/2013) and Igors Stepanovs (Latvia and Arsenal, 2001/2002) close behind.</p>
+</div>
+<div id="working" class="section level2">
+<h2>Working</h2>
 <p>First some libraries we’ll need, and also set a seed for reproducibility.</p>
 <pre class="r"><code>library(tidyverse)
 library(magrittr)
@@ -438,6 +444,7 @@ head(squads, n = 10)</code></pre>
 <p>To answer the question as asked, we’d want historical <a href="https://www.fifa.com/fifa-world-ranking/ranking-table/men/">FIFA ranking</a> data. While it does exist going back to 2007, I’d prefer to have the full data set back to 1993, and in any case, there are also <a href="https://en.wikipedia.org/wiki/World_Football_Elo_Ratings">some problems</a> with the historical calculation FIFA used for it’s ratings.</p>
 <p>Instead, we can use the ELO method of rating teams (most commonly used to rank chess players). There are two ways to do this- we can calculate the ratings ourselves using a dataframe of international results, or we can take the accepted ratings at <a href="https://www.eloratings.net">eloratings.net</a>.</p>
 <p>I’ll outline the first method here and then use the data from the second further below <a href="">here</a>.</p>
+</div>
 <div id="calculating-elo-ratings" class="section level2">
 <h2>Calculating ELO ratings</h2>
 <p>To calculate our ratings, first we need to to load up a dataframe of international football results. The one I’m using comes from <a href="https://www.kaggle.com/martj42/international-football-results-from-1872-to-2017">kaggle</a> and has 40k matches listed since the start of international football in 1872:</p>
@@ -823,7 +830,7 @@ p2 &lt;- players_national_elo %&gt;%
   ggplot(aes(ranking)) +
   geom_histogram() +
   labs(title = &quot;Distribution of EPL Player&#39;s Nation&#39;s Ranking&quot;,
-       subtitle = &quot;(taking lowest point of ranking data&quot;,
+       subtitle = &quot;(taking lowest point of ranking data)&quot;,
        x = &quot;lowest national team ELO rating&quot;,
        y = &quot;player count&quot;) +
   theme_minimal() +
@@ -1110,6 +1117,7 @@ head(lowest_ranked_champs, n = 10)</code></pre>
 ## 9                    Belarus vs Wales    2:1
 ## 10                       USA vs China    4:1</code></pre>
 <p>However! One notable omission is Christopher Wreh, who played in 16 matches for Arsenal in the 1997/1998 season. Wreh only played 26 times for his nation so I assumed he just hadn’t appeared for them that year, but <a href="https://www.11v11.com/players/christopher-wreh-4/">11v11.com</a> lists him playing on July 27th 1997 (1997/1998 season) at which point Liberia were ranked 110th in the world.</p>
+<p><img src="../../img/archives.png" alt="mfw incomplete data" /></p>
 </div>
 </div>
 

@@ -3,9 +3,9 @@ title: "Scraping Dynamic Websites with PhantomJS"
 author: "Robert Hickman"
 date: '2019-07-06'
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 header:
   caption: ''
   image: ''
@@ -14,7 +14,7 @@ tags:
 - rstats
 - football
 - scraping
-- javescript
+- javascript
 categories: []
 ---
 
@@ -213,7 +213,7 @@ head(elo_data)
 
 To cap off this little post, I decided to use [gganimate](https://github.com/thomasp85/gganimate) to show how the ratings of some nations have changed over time. It's a nice little sanity test that we've scraped data correctly, but also, as a football nerd, I enjoy seeing how nations have risen and fallen over the years
 
-```{r animate, warning=FALSE,message=FALSE}
+```{r animate, warning=FALSE,message=FALSE,eVal=FALSE}
 library(gganimate)
 
 p <- elo_data %>%
@@ -254,11 +254,12 @@ p <- elo_data %>%
   transition_reveal(year)
 
 # save the gif
-gif <- animate(p, nframes = 200)
-anim_save("../../static/files/nation_animation.gif", gif)
+gif <- animate(p, nframes = 20)
+
 ```
+
 Which if we render gives us
 
-![](../../static/files/nation_animation.gif)
+!()[https://i.imgur.com/4cgBX48.gif]
 
 And the data looks good! The [Mighty Magyar](https://en.wikipedia.org/wiki/Golden_Team) Hungary team of the 1950s can be seen to peak before the nations long decline, whereas the opposite is true for Japan. Overall, I'm pretty happy with the result. It could surely be cleaned up using rolling means and more careful plotting, but for a small example to plot the output from the scraping (the real point for this post) it serves a purpose.

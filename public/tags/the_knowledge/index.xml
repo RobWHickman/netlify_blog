@@ -32,7 +32,13 @@ Which player had the nationality with the lowest FIFA World Ranking at the time 
 &lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
 &lt;p&gt;a similar question is also answered in this weeks column:&lt;/p&gt;
 &lt;p&gt;‘&lt;em&gt;“Fulham defender Zesh Rehman made his debut for Pakistan, who are ranked 168 by Fifa. Is that the lowest-ranked country a Premier League player has played for?”&lt;/em&gt; wondered Zulfiqar Shah in January 2006.’&lt;/p&gt;
-&lt;p&gt;I thought I’d answer both of these using R.&lt;/p&gt;
+&lt;div id=&#34;answers&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Answers&lt;/h2&gt;
+&lt;p&gt;The latter question is more clear cut- noone has beaten the record set by Zesh Rehman in December 205 when he made his debut for Pakistan. Using ELO ratings which are more consistent over time, Pakistan were ranked as teh 197th best team in the world at that time. The nearest someone has gotten to this is Neil Etheridge in 2018 when playing for 165th ranked Philippines.&lt;/p&gt;
+&lt;p&gt;For the first question, it depends how you take the rankings and if you require players to have appeared a certain number of time in the season, but Chistopher Wreh who represented 110th ranked Liberia whilst plaing for Arsenal in the 1997/1998 season is probably the winner with Jonny Evans (Northern Ireland and Manchester United, 2012/2013) and Igors Stepanovs (Latvia and Arsenal, 2001/2002) close behind.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;working&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Working&lt;/h2&gt;
 &lt;p&gt;First some libraries we’ll need, and also set a seed for reproducibility.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
 library(magrittr)
@@ -125,6 +131,7 @@ head(squads, n = 10)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;To answer the question as asked, we’d want historical &lt;a href=&#34;https://www.fifa.com/fifa-world-ranking/ranking-table/men/&#34;&gt;FIFA ranking&lt;/a&gt; data. While it does exist going back to 2007, I’d prefer to have the full data set back to 1993, and in any case, there are also &lt;a href=&#34;https://en.wikipedia.org/wiki/World_Football_Elo_Ratings&#34;&gt;some problems&lt;/a&gt; with the historical calculation FIFA used for it’s ratings.&lt;/p&gt;
 &lt;p&gt;Instead, we can use the ELO method of rating teams (most commonly used to rank chess players). There are two ways to do this- we can calculate the ratings ourselves using a dataframe of international results, or we can take the accepted ratings at &lt;a href=&#34;https://www.eloratings.net&#34;&gt;eloratings.net&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;I’ll outline the first method here and then use the data from the second further below &lt;a href=&#34;&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
 &lt;div id=&#34;calculating-elo-ratings&#34; class=&#34;section level2&#34;&gt;
 &lt;h2&gt;Calculating ELO ratings&lt;/h2&gt;
 &lt;p&gt;To calculate our ratings, first we need to to load up a dataframe of international football results. The one I’m using comes from &lt;a href=&#34;https://www.kaggle.com/martj42/international-football-results-from-1872-to-2017&#34;&gt;kaggle&lt;/a&gt; and has 40k matches listed since the start of international football in 1872:&lt;/p&gt;
@@ -510,7 +517,7 @@ p2 &amp;lt;- players_national_elo %&amp;gt;%
   ggplot(aes(ranking)) +
   geom_histogram() +
   labs(title = &amp;quot;Distribution of EPL Player&amp;#39;s Nation&amp;#39;s Ranking&amp;quot;,
-       subtitle = &amp;quot;(taking lowest point of ranking data&amp;quot;,
+       subtitle = &amp;quot;(taking lowest point of ranking data)&amp;quot;,
        x = &amp;quot;lowest national team ELO rating&amp;quot;,
        y = &amp;quot;player count&amp;quot;) +
   theme_minimal() +
@@ -797,6 +804,7 @@ head(lowest_ranked_champs, n = 10)&lt;/code&gt;&lt;/pre&gt;
 ## 9                    Belarus vs Wales    2:1
 ## 10                       USA vs China    4:1&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;However! One notable omission is Christopher Wreh, who played in 16 matches for Arsenal in the 1997/1998 season. Wreh only played 26 times for his nation so I assumed he just hadn’t appeared for them that year, but &lt;a href=&#34;https://www.11v11.com/players/christopher-wreh-4/&#34;&gt;11v11.com&lt;/a&gt; lists him playing on July 27th 1997 (1997/1998 season) at which point Liberia were ranked 110th in the world.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;../../img/archives.png&#34; alt=&#34;mfw incomplete data&#34; /&gt;&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 </description>
