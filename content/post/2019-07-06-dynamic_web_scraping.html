@@ -1,0 +1,222 @@
+---
+title: "Scraping Dynamic Websites with PhantomJS"
+author: "Robert Hickman"
+date: '2019-07-06'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+header:
+  caption: ''
+  image: ''
+slug: dynamic_web_scraping
+tags:
+- rstats
+- football
+- scraping
+- javescript
+categories: []
+---
+
+
+
+<p>For <a href="http://www.robert-hickman.eu/post/guardian_knowledge_june">a recent blogpost</a>, I required data on the ELO ratings of national football teams over time. Such a list exists online at <a href="https://eloratings.net/">eloratings.net</a> and so in theory this was just a simple task for <a href="https://blog.rstudio.com/2014/11/24/rvest-easy-web-scraping-with-r/">rvest</a> to read the html pages on that site and then fish out the data I wanted. However, while this works for the static websites which make up the vast majority of sites containing tables of data, it struggles with websites that use JavaScript to dynamically generate pages.</p>
+<p>Eloratings.net is one such website which rvest is unable to scrape. E.g.</p>
+<pre class="r"><code>library(tidyverse)
+library(rvest)
+
+# url to data on Brazil&#39;s ELO rating over time
+url &lt;- &quot;https://eloratings.net/Brazil&quot;
+
+read &lt;- read_html(url) %&gt;%
+  # this is the CSS selector for the page title
+  html_nodes(&quot;#mainheader&quot;)
+
+read</code></pre>
+<pre><code>## {xml_nodeset (1)}
+## [1] &lt;h1 id=&quot;mainheader&quot; class=&quot;mainheader&quot;&gt;&lt;/h1&gt;</code></pre>
+<p>does not manage to capture the data displayed in the page mainheader (it ‘should’ return “World Football Elo Ratings: Brazil” from the title of that page).</p>
+<p>Instead, what we want to do is save a copy of the generated page as a .html file and then read that into R using read_html(). Luckily, a way exists to do just that, using the (now deprecated, but still working) <a href="http://phantomjs.org/">PhantomJS headless browser</a>. Much of the code I used to get going with this is adapted from a tutorial <a href="https://velaco.github.io/how-to-scrape-data-from-javascript-websites-with-R/">here</a>.</p>
+<p>First you want to install PhantomJS from the above website and run through it’s <a href="http://phantomjs.org/quick-start.html">quick start guide</a>. This is a pretty thorough guide, I would say that there are really only three steps from installation to getting going:</p>
+<ol style="list-style-type: decimal">
+<li><a href="https://www.howtogeek.com/118594/how-to-edit-your-system-path-for-easy-command-line-access/">Add phantomjs to the system PATH</a></li>
+<li>Open a text editor and save one of the <a href="https://phantomjs.org/quick-start.html">tutorial scripts</a> as filename.js</li>
+<li>run &gt; phantomjs C:/Users/usr/path/to/file.js
+in a command line console</li>
+</ol>
+<p>The file we’re going to use to render the js pages and then save the html is below:</p>
+<pre class="r"><code>// scrapes a given url (for eloratings.net)
+
+// create a webpage object
+var page = require(&#39;webpage&#39;).create(),
+  system = require(&#39;system&#39;)
+
+// the url for each country provided as an argument
+country= system.args[1];
+
+// include the File System module for writing to files
+var fs = require(&#39;fs&#39;);
+
+// specify source and path to output file
+// we&#39;ll just overwirte iteratively to a page in the same directory
+var path = &#39;elopage.html&#39;
+
+page.open(country, function (status) {
+  var content = page.content;
+  fs.write(path,content,&#39;w&#39;)
+  phantom.exit();
+});</code></pre>
+<p>(which, again, is stolen and adapted from <a href="https://velaco.github.io/how-to-scrape-data-from-javascript-websites-with-R/">here</a>)</p>
+<p>This is saved as scrape_ELO.js in the static directory of my blog folder.</p>
+<p>To keep everything in R, we can use the system() family of functions, which provides access to the OS command line. Though the referenced tutorial uses system(), it relies on scraping a single referenced page. To iteratively scrape every country, we’ll need to provide an argument (country) which will contain the link to the page on eloratings.net for that country.</p>
+<p>E.g. for Brazil we will provide “<a href="https://www.eloratings.net/Brazil" class="uri">https://www.eloratings.net/Brazil</a>” as the country argument</p>
+<pre class="r"><code>phantom_dir &lt;- &quot;C:/Users/path/to/scrape_ELO/&quot;
+country_url &lt;- &quot;https://www.eloratings.net/Brazil&quot;
+
+# use system2 to invoke phantomjs via it&#39;s executable
+system2(&quot;C:/Users/path/to/phantomjs-2.1.1-windows/bin/phantomjs.exe&quot;,
+        #provide the path to the scraping script and the country url as argument
+        args = c(file.path(phantom_dir, &quot;scrape_ELO.js&quot;), country_url))</code></pre>
+<p>We can then read in this saved html page using rvest as per usual and recover the information therein.</p>
+<pre class="r"><code># read in the saved html file
+page &lt;- read_html(&quot;elopage.html&quot;)
+
+# scrape with rvest as normal
+country_name &lt;- page %&gt;%
+  html_nodes(&quot;#mainheader&quot;) %&gt;%
+  html_text() %&gt;%
+  gsub(&quot;Elo Ratings: &quot;, &quot;&quot;, .)
+
+country_name</code></pre>
+<pre><code>## [1] &quot;Brazil&quot;</code></pre>
+<p>I’m not going to include my full script for scraping eloratings.net as usually a reason for doing this obscuring of the data is to prevent exactly what I’m doing. Instead I’ll give a skeleton function of the one I use. If you are having problems with setting up phantomjs to scrape pages, my contact details are listed on my <a href="http://www.robert-hickman.eu/">blog homepage</a></p>
+<pre class="r"><code>scrape_nation &lt;- function(country) {
+  # download the page
+  url &lt;- paste0(&quot;https://eloratings.net/&quot;, country)
+  system2(&quot;C:/Users/path/to/phantomjs-2.1.1-windows/bin/phantomjs.exe&quot;, 
+          args = c(file.path(phantom_dir, &quot;scrape_ELO.js&quot;), url))
+  
+  # read in downloaded page
+  page &lt;- read_html(&quot;elopage.html&quot;)
+  
+  # recover information
+  country_name &lt;- page %&gt;%
+    html_nodes(&quot;#mainheader&quot;) %&gt;%
+    html_text() %&gt;%
+    gsub(&quot;Elo Ratings: &quot;, &quot;&quot;, .)
+  
+  opposing &lt;- page %&gt;%
+      html_nodes(&quot;.r1 a&quot;) %&gt;%
+      html_text()
+  
+  teams &lt;- page %&gt;%
+      html_nodes(&quot;.r1&quot;)
+  
+  fixtures &lt;- map2_df(teams, opposing, split_teams)
+
+  ratings &lt;- page %&gt;%
+    html_nodes(&quot;.r4&quot;) %&gt;%
+    html_text() %&gt;%
+    map_df(., split_ratings)
+  
+  rankings &lt;- page %&gt;%
+    html_nodes(&quot;.r6&quot;) %&gt;%
+    map_df(., split_rankings)
+
+  dates &lt;- page %&gt;%
+    html_nodes(&quot;.r0&quot;) %&gt;%
+    html_text() %&gt;%
+    map_df(., convert_date)
+
+  # bind into a data frame
+  df &lt;- fixtures %&gt;%
+    cbind(., ratings) %&gt;%
+    cbind(., rankings) %&gt;%
+    cbind(., dates) %&gt;%
+    mutate(table_country = country_name)
+}
+
+elO_data &lt;- map_df(country_links, scrape_nation)</code></pre>
+<p>Finally, we want to convert this to long format. We have two observations per country and any point in time- the rating, and the ranking. For <a href="http://www.robert-hickman.eu/post/guardian_knowledge_june">the blogpost I needed the data for</a> I took just the ranking data in the end. Here, I’m going to do the opposite and take only the rating data to make a nice little plot of national teams ratings over time</p>
+<pre class="r"><code>elo_data %&lt;&gt;%
+  mutate(date = as.Date(date)) %&gt;%
+  # rename and select variables
+  select(
+    date,
+    home, away,
+    rating_home = r1, rating_away = r2,
+    ranking_home = ranking1, ranking_away = ranking2
+  ) %&gt;%
+  # melt twice to convert to long format
+  gather(
+    &quot;location&quot;, &quot;nation&quot;,
+    -rating_home, -rating_away, -ranking_home, -ranking_away, -date
+  ) %&gt;%
+  gather(&quot;measure&quot;, &quot;value&quot;, -nation, -date, -location) %&gt;%
+  # take only relevant information
+  filter(
+    (location == &quot;home&quot; &amp; measure %in% c(&quot;rating_home&quot;, &quot;ranking_home&quot;)) |
+      (location == &quot;away&quot; &amp; measure %in% c(&quot;rating_away&quot;, &quot;ranking_away&quot;))
+  ) %&gt;%
+  separate(measure, into = c(&quot;measure&quot;, &quot;location&quot;), &quot;_&quot;) %&gt;%
+  # filter out relevant data
+  filter(!duplicated(.)) %&gt;%
+  filter(date &gt; &quot;1950-01-01&quot;) %&gt;%
+  filter(measure == &quot;rating&quot;) %&gt;%
+  select(-measure, rating = value, -location)
+
+# print the df
+head(elo_data)</code></pre>
+<pre><code>##         date nation rating
+## 1 1950-05-06 Brazil   1957
+## 2 1950-05-07 Brazil   1969
+## 3 1950-05-13 Brazil   1961
+## 4 1950-05-14 Brazil   1965
+## 5 1950-05-18 Brazil   1969
+## 6 1950-06-24 Brazil   1991</code></pre>
+<p>To cap off this little post, I decided to use <a href="https://github.com/thomasp85/gganimate">gganimate</a> to show how the ratings of some nations have changed over time. It’s a nice little sanity test that we’ve scraped data correctly, but also, as a football nerd, I enjoy seeing how nations have risen and fallen over the years</p>
+<pre class="r"><code>library(gganimate)
+
+p &lt;- elo_data %&gt;%
+  # select out a few nations
+  filter(nation %in% c(
+    &quot;Brazil&quot;,
+    &quot;England&quot;,
+    &quot;Canada&quot;,
+    &quot;Hungary&quot;,
+    &quot;Nigeria&quot;,
+    &quot;Japan&quot;
+  )) %&gt;%
+  # going to take the average over every 4 months
+  # could use zoo::rollmean but also want to cut down plotting
+  mutate(month = as.numeric(format(date, &quot;%m&quot;)),
+         year = as.numeric(format(date, &quot;%Y&quot;))) %&gt;%
+  mutate(third = case_when(
+    month &lt; 5 ~ 0,
+    month &lt; 9 ~ 33,
+    TRUE ~ 66
+  )) %&gt;%
+  mutate(year = as.numeric(paste0(year, &quot;.&quot;, third))) %&gt;%
+  group_by(nation, year) %&gt;%
+  summarise(rating_av = mean(rating)) %&gt;%
+  ungroup() %&gt;%
+  # pipe into ggplot
+  ggplot(aes(x = year, y = rating_av, group = nation)) +
+  # coloured line per nations
+  geom_line(size = 1.5, aes(colour = nation)) +
+  scale_colour_manual(values = c(&quot;goldenrod&quot;, &quot;red&quot;, &quot;grey60&quot;, &quot;green&quot;, &quot;darkblue&quot;, &quot;forestgreen&quot;)) +
+  labs(title = &quot;ELO Rating of Selected Nations over Time&quot;,
+       subtitle = &quot;date from eloratings.net&quot;,
+       x = &quot;year&quot;,
+       y = &quot;ELO rating&quot;) +
+  theme_minimal() +
+  theme(legend.position=&quot;bottom&quot;) +
+  # gganimate reveal
+  transition_reveal(year)
+
+# save the gif
+gif &lt;- animate(p, nframes = 200)
+anim_save(&quot;../../static/files/nation_animation.gif&quot;, gif)</code></pre>
+<p>Which if we render gives us</p>
+<p><img src="../../static/files/nation_animation.gif" /></p>
+<p>And the data looks good! The <a href="https://en.wikipedia.org/wiki/Golden_Team">Mighty Magyar</a> Hungary team of the 1950s can be seen to peak before the nations long decline, whereas the opposite is true for Japan. Overall, I’m pretty happy with the result. It could surely be cleaned up using rolling means and more careful plotting, but for a small example to plot the output from the scraping (the real point for this post) it serves a purpose.</p>
