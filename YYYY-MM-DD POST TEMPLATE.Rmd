@@ -1,17 +1,18 @@
----
-title: Planning a Pub Crawl Using R
-author: Robert Hickman
-date: '2018-11-22'
-slug: cambridge_pub_crawl
-output: pdf_document
-categories: []
-tags:
-  - maps
-  - pubs
-  - cambridge
+title: "The Guardian Knowledge July 2019"
+author: "Robert Hickman"
+date: '2019-07-07'
+output:
+  html_document:
+    df_print: paged
 header:
   caption: ''
   image: ''
+slug: guardian_knowledge_july
+tags:
+- rstats
+- football
+- the_knowledge
+categories: []
 ---
 
 
