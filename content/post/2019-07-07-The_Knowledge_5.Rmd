@@ -24,7 +24,18 @@ categories: []
 library(tidyverse)
 library(broom)
 library(engsoccerdata)
+library(rvest)
+library(zoo)
+library(sf)
+
+set.seed(3459)
 ```
+
+# Question 1
+The first question this week is 
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">I wonder if any of any sporting leagues have ever ended in alphabetical order? <a href="https://t.co/you6u8Uzwz">pic.twitter.com/you6u8Uzwz</a></p>&mdash; P A Hunt (@TeachFMaths) <a href="https://twitter.com/TeachFMaths/status/1139832761295024128?ref_src=twsrc%5Etfw">June 15, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
 
 ```{r load_leagues, warning=FALSE,message=FALSE}
 league_data <- engsoccerdata::england %>%
@@ -140,13 +151,21 @@ or 1 in 2.4 [quintillion](https://en.wikipedia.org/wiki/Order_of_magnitude). In 
 
 We can test if our predictions bear out by looking at tiny leagues with small numbers of teams, e.g. [the group stages of the Champions/Europa Leagues](https://en.wikipedia.org/wiki/2018%E2%80%9319_UEFA_Champions_League_group_stage).
 
+First we need to scrape the final tables for the last 8 years of data from both competitions:
+
 ```{r get_uefa_data, warning=FALSE,message=FALSE}
-library(rvest)
-
+#website to scrape group stage data from
 fb_data <- "https://footballdatabase.com"
-ucl_links <- sprintf("/league-scores-tables/uefa-champions-league-20%s-%s", 10:18, 11:19)
-europa_links <- sprintf("/league-scores-tables/uefa-europa-league-20%s-%s", 10:18, 11:19)
+ucl_links <- sprintf(
+  "/league-scores-tables/uefa-champions-league-20%s-%s",
+  10:18, 11:19
+)
+europa_links <- sprintf(
+  "/league-scores-tables/uefa-europa-league-20%s-%s",
+  10:18, 11:19
+)
 
+#function to scrape the data from these links
 get_competition_data <- function(competition, links) {
   data <- links %>%
     paste0(fb_data, .) %>%
@@ -166,61 +185,329 @@ get_competition_data <- function(competition, links) {
     mutate(competition)
 }
 
+#scrape and bind the data
 uefa_data <- bind_rows(
   get_competition_data("champions", ucl_links),
   get_competition_data("europa", europa_links)
 )
 
-head(uefa_data)
+#print a cutdown version of the scraped data
+head(uefa_data %>% select(club = Club, points = P, year, competition))
   
 ```
 
+So now we have 128 (8 groups x 8 years x 2 competitions) 'mini-leagues' each of 4 teams.
+
+We can then munge this data to find all the groups where the teams finish in alphabetical order. We'd expect 128/4! leagues to finish in alphabetical order (or 5.33 to be exact).
+
 ```{r get_ordered_groups, warning=FALSE,message=FALSE}
 ordered_groups <- uefa_data %>%
+  #select relevant informatiob
   select(team = Club, league_pos = X., group, year, competition) %>%
+  #by group find where teams finish in alphabetical order
   group_by(year, group, competition) %>%
   mutate(alph_order = rank(team, ties.method = "first")) %>%
   filter(league_pos == alph_order) %>%
+  #keep only group where all (4) teams finish in order
   summarise(n = n()) %>%
   filter(n == 4) %>%
+  #join and filter back data
   left_join(uefa_data, ., by = c("group", "year", "competition")) %>%
   filter(!is.na(n)) %>%
-  select(team = Club, points = P, gd = X..., league_pos = X., group, year, competition) %>%
+  #select useful information
+  select(team = Club, points = P, gd = X..., league_pos = X.,
+         group, year, competition) %>%
+  #split groups up
   split(., list(.$year, .$group, .$competition)) %>%
   keep(function(x) nrow(x) > 0)
 
 ```
 
-```{r uefa_chance, warning=FALSE,message=FALSE}
-unique_leagues <- uefa_data %>%
-  mutate(id = paste(.$group, .$year, .$competition)) %>%
-  filter(!duplicated(id)) %>%
-  nrow()
+which leaves us with 5 leagues that have finished in order! almost exactly what we'd predict by chance if the first letter of a teams name had no effect on the outcome.
+
+```{r print_ordered_groups, warning=FALSE,message=FALSE}
+ordered_groups
+```
+
+We can also do a larger test by randomly selecting teams out of the English league data we looked at earlier. To do this I need two quick functions= one to sample randomly from the data, and another to carry out the correlation test.
+
+The first takes a number of samples (how many tests to run) and then selects a number of teams from each league sample. For instance, if I chose 3 teams, it might select Livepool, Manchester United, and Watford, from the [latest season of the Premier League](https://en.wikipedia.org/wiki/2018%E2%80%9319_Premier_League). These teams finished 2nd, 6th, and 11th respecitvely, so this 'sampled league' would fulfill the criteria of finishing in alphabetical order.
+
+```{r test_cutdown_leagues, warning=FALSE,message=FALSE}
+#take a random sample of leagues and teams withing those leagues
+sample_cutdown_leagues <- function(nteams, nsamples, data) {
+  samples <- sample(length(data), nsamples, replace = TRUE)
+  
+  sampled_league_data <- data[samples]
+  
+  league_team_serials <- sampled_league_data %>%
+    lapply(., nrow) %>%
+    lapply(., sample, size = nteams)
+  
+  #carry out the correlation test
+  league_cor_test <- map2_df(
+    .x = sampled_league_data,
+    .y = league_team_serials,
+    .f = cor_test_data
+  )
+}
+  
+#function for correlation test
+cor_test_data <- function(full_league_data, sampled_teams) {
+  sampled_league <- full_league_data[sampled_teams,] %>%
+    arrange(league_pos)
+  cor_test <- cor.test(
+    sampled_league$league_pos,
+    sampled_league$alph_order,
+    method = "spearman"
+  ) %>%
+    tidy() %>%
+    #mutate on information about that season and teams chosen
+    mutate(teams = paste(sampled_league$team, collapse = ", "),
+           season = unique(sampled_league$season),
+           division = unique(sampled_league$division))
+}
+
+```
+  
+So for instance if I just run it once, randomly selecting 4 teams:
+
+```{r show_example, warning=FALSE,message=FALSE}
+test <- sample_cutdown_leagues(4, 1, league_data)
+
+#print the teams selected
+test$teams
+
+test
+```
+
+It gives me 4 teams from the 1998 division 3 championship which didn't finish in alphabetical order. 
+
+We can then carry this out with 10000 samples for nteam numbers of 2:6 to see if we get roughly the expected numbers of exactly correlated league finish positions (this will take 1-2mins) by finidng out how many tests give an estimate of 1 (finished exactly correlated with alphabetical order) or -1 (finished exactly anti-correlated with alphabetical order).
+
+Both these numbers should be roughly equal to the number of samples (10000) divided by the factorial of the number of teams selected.
+
+```{r test_different_n, warning=FALSE,message=FALSE}
+test_n_numbers <- function(nteams) {
+  sampling <- sample_cutdown_leagues(nteams, 10000, league_data)
+  
+  correlated <- length(which(sampling$estimate == max(sampling$estimate)))
+  anti_correlated <- length(which(sampling$estimate == min(sampling$estimate)))
+
+  expected <- nrow(sampling) / factorial(nteams)
+  
+  df <- data.frame(n = nteams,
+                   sample_cor = correlated,
+                   sample_anticor = anti_correlated,
+                   sample_expected = expected)
+}
+
+#run the function
+testing <- map_df(2:6, test_n_numbers)
+
+#print results
+print(testing)
+
+```
+
+Finally, we can do a Pearson's product moment correlation test to see if there is any relationship between alphabetical team name order and final league finish for all out our English league data
+
+```{r}
+all_data <- league_data %>%
+  bind_rows() 
+
+pearsons_test <- cor.test(all_data$alph_order,
+                          all_data$league_pos) %>%
+  tidy() %>%
+  print()
+```
+And can see that, as expected, there's no real relationship between the two and so it makes sense that we only see it happen on a chance level.
+
+
+# Question 2
+“Berwick Rangers have conceded 42 goals in competitive matches – Scottish League 2, relegation play-off, Scottish League – since last scoring themselves, against Peterhead, on March 19th. Is this a record for a league club (I know they’ve now lost that status, but all of these matches are league level competition)?” asks Huw Richards.
+
+
+
+```{r load_league_cup_hidden, warning=FALSE,message=FALSE,echo=FALSE}
+league_cup <- readRDS("C:/Users/robwh/Documents/full_league_cup_data.rds") %>%
+  select(date = Date, home, visitor, hgoal, vgoal)
 ```
 
 
+```{r load_league_cup_public, warning=FALSE,message=FALSE,eval=FALSE}
+#load league cup data from local data
+league_cup <- readRDS("C:/local/data/full_league_cup_data.rds") %>%
+  select(date = Date, home, visitor, hgoal, vgoal)
 
-```{r all_leagues_data, warning=FALSE,message=FALSE}
-sample_cutdown_leagues <- function(teams, samples, data) {
-  samples <- sample(length(data), samples, replace = TRUE)
-  
-  sampled_league_data <- data[samples]
-  i <<- sampled_league_data
-  tests <- lapply(sampled_league_data, function(data) {
-    teams <- sample(nrow(data), teams)
-    team_finishes <- data[teams,]
-    test <- cor.test(
-      team_finishes$league_pos,
-      team_finishes$alph_order,
-      method = "spearman"
-    ) %>%
-      tidy() %>%
-      mutate(teams = paste(data$team[teams], collapse = ", "))
-  })
-}
+```
 
-x <- sample_cutdown_leagues(6, 100000, league_data) %>%
-  map_df(.f = bind_rows, .id = "league")
- 
+```{r munge_data, warning=FALSE,message=FALSE}
+#bind all the match data together with relevant variables
+scoring_data <- bind_rows(
+  engsoccerdata::england %>%
+    select(date = Date, tier, home, visitor, hgoal, vgoal) %>%
+    mutate(competition = "league"),
+  engsoccerdata::facup %>%
+    select(date = Date, home, visitor, hgoal, vgoal) %>%
+    mutate(tier = NA, competition = "fa_cup"),
+  engsoccerdata::englandplayoffs %>%
+    select(date = Date, home, visitor, hgoal, vgoal, htier, vtier) %>%
+    mutate(date = as.Date(date), tier = (htier+vtier)/2, 
+           competition = "league_playoffs") %>%
+    select(-htier, -vtier),
+  league_cup %>%
+    mutate(tier = NA, competition = "league_cup")
+) %>%
+  #gather and find matches for each team
+  gather("location", "team", -date, -hgoal, -vgoal, -competition, -tier) %>%
+  split(f = .$location) %>%
+  map2_df(., rev(.), function(df, vs_data) 
+    mutate(df, opponent = vs_data$team)
+  ) %>%
+  #add in goals for and against
+  mutate(goals_for = case_when(
+    location == "home" ~ hgoal,
+    TRUE ~ vgoal
+  )) %>%
+  mutate(goals_against = case_when(
+    location == "visitor" ~ hgoal,
+    TRUE ~ vgoal
+  )) %>%
+  arrange(team, date) %>%
+  group_by(team)
+
+```
+
+```{r find_dry_runs, warning=FALSE,message=FALSE}
+dry_runs <- scoring_data %>%
+  mutate(run_start = case_when(
+    goals_for == 0 & lag(goals_for, default = 1) != 0 ~ 1:n()
+  )) %>%
+  filter(goals_for == 0) %>%
+  mutate(run_id = na.locf(run_start, na.rm = FALSE)) 
+
+longest_dry_runs <- dry_runs %>%
+  group_by(run_id, team) %>%
+  mutate(total_conceeded = sum(goals_against),
+         run_start_date = min(date)) %>%
+  filter(!duplicated(run_id, fromLast = TRUE)) %>%
+  select(run_start_date, run_end_date = date, team, run_id, total_conceeded) %>%
+  filter(total_conceeded > 15) %>%
+  arrange(-total_conceeded)
+
+dry_run_matches <- dry_runs %>%
+  left_join(longest_dry_runs, by = c("team", "run_id")) %>%
+  filter(!is.na(total_conceeded)) %>%
+  select(date, team, opponent, goals_for, goals_against,
+         competition, tier, total_conceeded) %>%
+  arrange(-total_conceeded)
+
+```
+
+```{r find_dry_runs, warning=FALSE,message=FALSE}
+scoring_runs <- scoring_data %>%
+  mutate(run_start = case_when(
+    goals_against == 0 & lag(goals_against, default = 1) != 0 ~ 1:n()
+  )) %>%
+  filter(goals_against == 0) %>%
+  mutate(run_id = na.locf(run_start, na.rm = FALSE)) 
+
+longest_scoring_runs <- scoring_runs %>%
+  group_by(run_id, team) %>%
+  mutate(total_scored = sum(goals_for),
+         run_start_date = min(date)) %>%
+  filter(!duplicated(run_id, fromLast = TRUE)) %>%
+  select(run_start_date, run_end_date = date, team, run_id, total_scored) %>%
+  filter(total_scored > 15) %>%
+  arrange(-total_scored)
+
+scoring_run_matches <- scoring_runs %>%
+  left_join(longest_scoring_runs, by = c("team", "run_id")) %>%
+  filter(!is.na(total_scored)) %>%
+  select(date, team, opponent, goals_for, goals_against,
+         competition, tier, total_scored) %>%
+  arrange(-total_scored)
+
+```
+
+# Question 3
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">Which team has had to travel the shortest combined distance in a cup run? (excluding regional competitions, just to make it interesting)</p>&mdash; Chris van Thomas (@chrisvanthomas) <a href="https://twitter.com/chrisvanthomas/status/1148879896430731266?ref_src=twsrc%5Etfw">July 10, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+```{r load_data, warning=FALSE,message=FALSE}
+team_locations <- readRDS("C:/Users/robwh/Documents/england_teams.rds") %>%
+  st_set_crs(st_crs(st_crs("+init=epsg:4326")))
+ground_locations <- readRDS("C:/Users/robwh/Documents/neutral_ground_locations.rds") %>%
+  st_set_crs(st_crs(st_crs("+init=epsg:4326"))) %>%
+  mutate_at(c("lat", "lon"), as.numeric)
+matches <- readRDS("C:/Users/robwh/Documents/fa_cup_data.rds")
+```
+
+```{r find_distanaces, warning=FALSE,message=FALSE}
+long_campaigns <- matches %>%
+  filter(!is.na(Date)) %>%
+  select(Season, home, visitor) %>%
+  gather("location", "team", -Season) %>%
+  filter(!is.na(team)) %>%
+  group_by(team, Season) %>%
+  summarise(matches = n()) %>%
+  filter(matches > 4) %>%
+  filter(Season > 1920) %>%
+  ungroup() %>%
+  arrange(Season) %>%
+  mutate(id = 1:n())
+
+melted_data <- matches %>%
+  select(., Season, Date, round, neutral, Venue, team = home, opponent = visitor) %>%
+  mutate(location = "home") %>%
+  bind_rows(., mutate(select(., Season, Date, round, neutral, Venue, team = opponent, opponent = team), location = "away")) %>%
+  filter(!is.na(team)) %>%
+  left_join(., long_campaigns, by = c("Season", "team")) %>%
+  filter(!is.na(matches)) %>%
+  mutate(home_ground = case_when(
+    neutral == "yes" ~ Venue,
+    location == "home" ~ team,
+    location == "away" ~ opponent,
+  )) 
+
+located_home_matches <- melted_data %>%
+  filter(is.na(neutral)) %>%
+  select(id, Date, ground = home_ground) %>%
+  left_join(rename(team_locations, ground = team), by = "ground")
+
+located_neutral_matches <- melted_data %>%
+  filter(neutral == "yes") %>%
+  select(id, Date, ground = home_ground) %>%
+  left_join(ground_locations, by = "ground")
+
+located_run_matches <- rbind(located_home_matches, located_neutral_matches)
+
+```
+
+```{r find_run_distances, warning=FALSE,message=FALSE}
+#https://github.com/r-spatial/sf/issues/799
+
+empty <- st_as_sfc("POINT(EMPTY)")
+
+run_distances <- located_run_matches %>%
+  arrange(id, Date) %>%
+  filter(!is.na(Date)) %>%
+  group_by(id) %>%
+  mutate(
+    distance_to_next = sf::st_distance(
+      geometry, 
+      lag(geometry, default = empty), 
+      by_element = TRUE)
+    ) 
+
+grouped_run_distances <- run_distances %>%
+  summarise(travel_distance = sum(distance_to_next, na.rm = TRUE)) %>%
+  merge(long_campaigns, by = "id") %>%
+  mutate(total_route = travel_distance / 1000) %>%
+  select(id, team, matches, season = Season, total_route) %>%
+  mutate(av_distance = total_route / matches) %>%
+  arrange(-total_route)
+
+
 ```
 
