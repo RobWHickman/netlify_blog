@@ -330,14 +330,14 @@ And can see that, as expected, there's no real relationship between the two and 
 
 
 ```{r load_league_cup_hidden, warning=FALSE,message=FALSE,echo=FALSE}
-league_cup <- readRDS("C:/Users/robwh/Documents/full_league_cup_data.rds") %>%
+league_cup <- readRDS("../../static/full_league_cup_data.rds") %>%
   select(date = Date, home, visitor, hgoal, vgoal)
 ```
 
 
 ```{r load_league_cup_public, warning=FALSE,message=FALSE,eval=FALSE}
 #load league cup data from local data
-league_cup <- readRDS("C:/local/data/full_league_cup_data.rds") %>%
+league_cup <- readRDS("../../static/full_league_cup_data.rds") %>%
   select(date = Date, home, visitor, hgoal, vgoal)
 
 ```
@@ -347,13 +347,17 @@ league_cup <- readRDS("C:/local/data/full_league_cup_data.rds") %>%
 scoring_data <- bind_rows(
   engsoccerdata::england %>%
     select(date = Date, tier, home, visitor, hgoal, vgoal) %>%
-    mutate(competition = "league"),
+    mutate(date = as.Date(date),
+           competition = "league"),
   engsoccerdata::facup %>%
     select(date = Date, home, visitor, hgoal, vgoal) %>%
-    mutate(tier = NA, competition = "fa_cup"),
+    mutate(date = as.Date(date),
+           tier = NA, 
+           competition = "fa_cup"),
   engsoccerdata::englandplayoffs %>%
     select(date = Date, home, visitor, hgoal, vgoal, htier, vtier) %>%
-    mutate(date = as.Date(date), tier = (htier+vtier)/2, 
+    mutate(date = as.Date(date), 
+           tier = (htier+vtier)/2, 
            competition = "league_playoffs") %>%
     select(-htier, -vtier),
   league_cup %>%
@@ -434,14 +438,51 @@ scoring_run_matches <- scoring_runs %>%
 # Question 3
 <blockquote class="twitter-tweet"><p lang="en" dir="ltr">Which team has had to travel the shortest combined distance in a cup run? (excluding regional competitions, just to make it interesting)</p>&mdash; Chris van Thomas (@chrisvanthomas) <a href="https://twitter.com/chrisvanthomas/status/1148879896430731266?ref_src=twsrc%5Etfw">July 10, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
+
+
 ```{r load_data, warning=FALSE,message=FALSE}
 team_locations <- readRDS("../../static/england_teams.rds") %>%
   st_set_crs(st_crs(st_crs("+init=epsg:4326")))
 ground_locations <- readRDS("../../static/neutral_ground_locations.rds") %>%
   st_set_crs(st_crs(st_crs("+init=epsg:4326"))) %>%
   mutate_at(c("lat", "lon"), as.numeric)
-matches <- readRDS("../../static/fa_cup_data.rds")
+matches <- readRDS("../../static//fa_cup_data.rds")
 ```
+
+There's some ambiguity in the question as to how the distance of a cup run should be measured. There's really two ways we can do this, which I will henforth refer to as a 'routing' as ''. To illustrate the two different approaches, I'll use Brighton & Hove Albion's 2018/2019 FA cup run
+
+```{r brighton_hove_run, warning=FALSE,message=FALSE}
+brighton <- matches %>%
+    filter(Season == 2019 & 
+             (home == "Brighton & Hove Albion" | 
+                visitor == "Brighton & Hove Albion")
+           ) %>%
+  select(Venue, Date, home, visitor, neutral) %>%
+  gather("location", "team", -Venue, -Date, -neutral) %>%
+  filter(location == "home" | neutral == "yes") %>%
+  filter(!duplicated(Date)) %>%
+  mutate(location = case_when(
+    neutral == "yes" ~ Venue,
+    TRUE ~ team
+  ))
+
+brighton
+>>>>>>> 59c17cba56f9640782023c1b871811383d908ddc
+```
+
+```{r brighton_path, warning=FALSE,message=FALSE}
+team_locations <- bind_rows(
+  team_locations,
+  rename(ground_locations, team = ground)
+)
+
+brighton_home <- team_locations %>%
+  filter(team == "Brighton & Hove Albion")
+
+routing <- brighton %>%
+  left_join(., rename(team_locations, location = team), by = "location")
+```
+
 
 ```{r find_distanaces, warning=FALSE,message=FALSE}
 long_campaigns <- matches %>%

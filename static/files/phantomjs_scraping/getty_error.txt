@@ -1,0 +1,15 @@
+Out of memory. Type HELP MEMORY for your options.
+
+Error in saveRAD (line 63)
+    rawanInt16 = normRa .* 32767;
+
+Error in saveData (line 42)
+        saveRAD(rawan)
+
+Error in runsession (line 79)
+        dataCollection();
+
+Error in gettygui/run_callback (line 200)
+        runsession
+ 
+Error while evaluating UIControl Callback
