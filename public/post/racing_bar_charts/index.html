@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="theme" content="hugo-academic">
-  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="generator" content="Hugo 0.32.2" />
   <meta name="author" content="Robert Hickman">
 
   
@@ -17,7 +17,8 @@
       
     
   
-  <meta name="description" content="Reproducing Racing Bar Charts in Rlibrary(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.">
+  <meta name="description" content="Reproducing Racing Bar Charts in Rtext
+library(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.">
 
   
   <link rel="alternate" hreflang="en-us" href="/post/racing_bar_charts/">
@@ -78,7 +79,8 @@
   <meta property="og:site_name" content="Robert Hickman">
   <meta property="og:url" content="/post/racing_bar_charts/">
   <meta property="og:title" content="Racing Bar Charts and Some Gnarly data.table Munging | Robert Hickman">
-  <meta property="og:description" content="Reproducing Racing Bar Charts in Rlibrary(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.">
+  <meta property="og:description" content="Reproducing Racing Bar Charts in Rtext
+library(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.">
   <meta property="og:locale" content="en-us">
   
   <meta property="article:published_time" content="2019-11-17T00:00:00&#43;00:00">
@@ -265,7 +267,7 @@ MathJax.Hub.Config({
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    5 min read
+    11 min read
   </span>
   
 
@@ -325,11 +327,9 @@ MathJax.Hub.Config({
 
 
       <div class="article-style" itemprop="articleBody">
-        
-
-
-<div id="reproducing-racing-bar-charts-in-r" class="section level1">
+        <div id="reproducing-racing-bar-charts-in-r" class="section level1">
 <h1>Reproducing Racing Bar Charts in R</h1>
+<p>text</p>
 <pre class="r"><code>library(tidyverse)
 library(gganimate)
 library(tweenr)
@@ -461,7 +461,7 @@ head(frame_data)</code></pre>
 ## 4 Afghanistan      Asia 0.25
 ## 5 Afghanistan      Asia 0.18
 ## 6 Afghanistan      Asia 0.34</code></pre>
-<pre class="r"><code>p &lt;- frame_data %&gt;%
+<pre class="r"><code>p_cities &lt;- frame_data %&gt;%
   #only want to plot the top 10
   filter(order &lt; 10.8) %&gt;%
   ggplot(aes(y = order, x = pop)) +
@@ -498,8 +498,8 @@ head(frame_data)</code></pre>
   exit_fade() +
   enter_fade()
 
-#save the gif
-city_gif &lt;- animate(p, frames, start_pause = 0.5, end_pause = 1)
+#animate the gif
+city_gif &lt;- animate(p_cities, frames, start_pause = 0.5, end_pause = 1)
 #e.g. if you want to save the output
 #anim_save(&quot;city_gif.gif&quot;, gif)</code></pre>
 <pre class="r"><code>city_gif</code></pre>
@@ -507,6 +507,222 @@ city_gif &lt;- animate(p, frames, start_pause = 0.5, end_pause = 1)
 </div>
 <div id="the-next-level" class="section level1">
 <h1>The Next Level</h1>
+<pre class="r"><code>#use James Curley&#39;s engsoccer data for the match data
+library(engsoccerdata)
+#this file will be in the next version of engsoccerdata but isn&#39;t at time of writing
+club_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/england_club_data.csv&quot;,
+                      stringsAsFactors = FALSE)
+
+#data.table and zoo for munging
+library(data.table)
+library(zoo)</code></pre>
+<pre class="r"><code>match_data &lt;- engsoccerdata::england %&gt;%
+  mutate(date = as.Date(Date)) %&gt;%
+  select(date, season = Season, home, visitor, tier, hgoal, vgoal, result) %&gt;%
+  mutate(K = (5-tier) * 10) %&gt;%
+  mutate(G = case_when(
+    abs(hgoal-vgoal) &lt; 2 ~ 1,
+    abs(hgoal-vgoal) &lt; 3 ~ 1.5,
+    abs(hgoal-vgoal) &gt;= 3 ~ (11 + abs(hgoal-vgoal)) / 8
+  )) %&gt;%
+  mutate(result = case_when(
+    result == &quot;H&quot; ~ 1,
+    result == &quot;A&quot; ~ 0,
+    result == &quot;D&quot; ~ 0.5
+  )) %&gt;%
+  arrange(date)
+
+head(match_data)</code></pre>
+<pre><code>## # A tibble: 6 x 10
+##   date       season home     visitor    tier hgoal vgoal result     K     G
+##   &lt;date&gt;      &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 1888-09-08   1888 Bolton ~ Derby Co~     1     3     6    0      40  1.75
+## 2 1888-09-08   1888 Everton  Accringt~     1     2     1    1      40  1   
+## 3 1888-09-08   1888 Preston~ Burnley       1     5     2    1      40  1.75
+## 4 1888-09-08   1888 Stoke C~ West Bro~     1     0     2    0      40  1.5 
+## 5 1888-09-08   1888 Wolverh~ Aston Vi~     1     1     1    0.5    40  1   
+## 6 1888-09-15   1888 Aston V~ Stoke Ci~     1     5     1    1      40  1.88</code></pre>
+<pre class="r"><code>#start all teams with an ELO of 1000
+team_ratings &lt;- data.frame(team = unique(match_data$home),
+                           rating = 1000)
+
+#function to calculate team ELO and update back to the ratings df
+calc_ELO &lt;- function(row) {
+  #get the difference in ratings
+  hr &lt;- team_ratings$rating[which(team_ratings$team == row$home)]
+  vr &lt;- team_ratings$rating[which(team_ratings$team == row$visitor)]
+  dr &lt;- (hr + 100) - vr
+  
+  e_result &lt;- 1/ (10^(-dr/400)+1)
+  new_hr &lt;- hr + ((row$K*row$G) * (row$result - e_result))
+  new_vr &lt;- vr + ((row$K*row$G) * ((1-row$result) - (1-e_result)))
+  
+  team_ratings$rating[which(team_ratings$team == row$home)] &lt;&lt;- new_hr
+  team_ratings$rating[which(team_ratings$team == row$visitor)] &lt;&lt;- new_vr
+  
+  output_row &lt;- row %&gt;%
+    mutate(h_rating = new_hr, v_rating = new_vr)
+  
+  return(output_row)
+}
+
+#split and lapply function
+elo_data &lt;- match_data %&gt;%
+  split(f = seq(nrow(.))) %&gt;%
+  lapply(., calc_ELO) %&gt;%
+  do.call(rbind, .)
+
+#melt the elo data
+melt &lt;- elo_data %&gt;%
+  select(date, season, home, visitor, h_rating, v_rating) %&gt;%
+  reshape2::melt(id.vars = c(&quot;date&quot;, &quot;season&quot;, &quot;h_rating&quot;, &quot;v_rating&quot;),
+                 variable.name = &quot;location&quot;, value.name = &quot;team&quot;) %&gt;%
+  mutate(rating = case_when(
+    location == &quot;home&quot; ~ h_rating,
+    location == &quot;visitor&quot; ~ v_rating
+  )) %&gt;%
+  select(date, season, team, rating)
+
+#df of each teams rating after each game day
+head(melted_elo_data)</code></pre>
+<pre class="r"><code>#init the days we want to run the race over
+days &lt;- data.table(date = seq.Date(
+  min(melted_elo_data$date), 
+  max(melted_elo_data$date),
+  by = &quot;day&quot;)
+  )
+
+munged_football_data &lt;- melted_elo_data %&gt;%
+  #start by merging in all the &quot;missing&quot; days
+  #ie. days where matches were not played
+  merge.data.frame(., days, all.y = TRUE) %&gt;%
+  #complete by team in dataset
+  complete(date, nesting(team)) %&gt;%
+  #delete the completion of NA data
+  filter(!is.na(team)) %&gt;%
+  #set as DT for munging
+  setDT()
+
+munged_football_dt &lt;- munged_football_data %&gt;%
+  #order by date
+  .[order(date)] %&gt;%
+  #find the first game in any league for each season
+  .[.[!is.na(season), .I[which.min(date)], by = c(&quot;season&quot;)]$V1, actual_season := season] %&gt;%
+  #fill down
+  .[order(date, actual_season), actual_season := na.locf(actual_season, na.rm = FALSE)]</code></pre>
+<pre class="r"><code>#subset season breaks out
+munged_football_dt &lt;- munged_football_dt %&gt;%
+  #label each game a team players in a season
+  .[!is.na(rating), game := 1:.N, by = c(&quot;team&quot;, &quot;actual_season&quot;)] %&gt;%
+  #find the first game each team plays in a season
+  .[.[, .I[which.min(game)], by = c(&quot;team&quot;, &quot;actual_season&quot;)]$V1, first_game := 1] %&gt;%
+  #find the earliest game which is labelled as the first game in a season
+  #this is the &#39;start&#39; of that season
+  .[.[first_game == 1, .I[which.min(date)], by = c(&quot;actual_season&quot;)]$V1, first_date := 1] %&gt;%
+  #we&#39;ll use a binary &#39;keep&#39; variable when we delete days in between seasons
+  #wil lfill this down later
+  .[date %in% unique(date[which(!is.na(.$first_date))]), keep := 1] %&gt;%
+  #do the same with the last game played in any division in a season
+  .[.[, .I[which.max(game) + 7], by = c(&quot;team&quot;, &quot;actual_season&quot;)]$V1, last_game := 1] %&gt;%
+  .[.[last_game == 1, .I[which.max(date)], by = c(&quot;actual_season&quot;)]$V1, last_date := 1] %&gt;%
+  .[date %in% unique(date[which(!is.na(.$last_date))]), keep := 0] %&gt;%
+  #fill down the keep value and keep only those with a 1
+  .[, keep := na.locf(keep, na.rm = TRUE), by = team] %&gt;%
+  .[keep == 1]</code></pre>
+<pre class="r"><code>#tween the ratings between matches
+munged_football_dt &lt;- munged_football_dt %&gt;%
+  #make sure in date order
+  .[order(date)] %&gt;%
+  #use tween fill for each team to get intermediate ratings
+  .[, rating := tween_fill(rating, ease = &quot;linear&quot;), by = team] %&gt;%
+  #for each teams last season in the data frame will be some days overhanging
+  #fill these down as rating obviously won&#39;t change
+  .[actual_season == max(actual_season), rating := na.locf(rating, na.rm = FALSE), by = team] %&gt;%
+  #label each unique date as another frame grouped by season
+  .[, frame := .GRP, by = date] %&gt;%
+  .[frame %% 5 == 1] %&gt;%
+  #take the rolling mean over 10 days to smooth out jumps
+  .[order(date), roll_rating := frollmean(rating, n = 10, algo = &quot;exact&quot;, align = &quot;left&quot;), by = &quot;team&quot;] %&gt;%
+  #remove unrated rows
+  .[!is.na(roll_rating)]</code></pre>
+<pre class="r"><code>#use decimal labelling for days in each season
+munged_football_dt &lt;- munged_football_dt %&gt;%
+  .[frame != lag(frame, default = 0), season_frame := 1:.N, by = actual_season] %&gt;%
+  #fill down
+  .[, season_frame := na.locf(season_frame)] %&gt;%
+  #frame is the season plus the amount through that season
+  #could probably do something fancy and label as unique days but this suffices
+  .[, season_frame := actual_season + season_frame/(max(season_frame) + 1)]
+
+#y axis ordering
+football_data &lt;- munged_football_dt %&gt;%
+  #order by rolling rating
+  .[order(-roll_rating)] %&gt;%
+  #only going to take every 10th day
+  #order by rating (as with the cities when rating by size)
+  .[frame %% 10 == 1, team_order := 1:.N, by = date] %&gt;%
+  #use tweenr to make transitions smooth
+  .[order(date), order_fill := tween_fill(team_order, ease = &quot;cubic-in-out&quot;), by = team] %&gt;%
+  #delete superfluous data
+  .[, c(&quot;team_order&quot;, &quot;keep&quot;, &quot;last_game&quot;, &quot;last_date&quot;, &quot;first_game&quot;, &quot;first_date&quot;) := NULL] %&gt;%
+  .[!is.na(order_fill)]
+
+head(football_data)</code></pre>
+<pre><code>##          date    team season   rating actual_season game frame roll_rating
+## 1: 2005-12-12 Chelsea     NA 1866.517          2005   NA 28016    1884.170
+## 2: 2005-12-17 Chelsea     NA 1879.139          2005   NA 28021    1883.840
+## 3: 2005-12-07 Chelsea     NA 1860.552          2005   NA 28011    1883.139
+## 4: 2005-12-22 Chelsea     NA 1882.525          2005   NA 28026    1882.839
+## 5: 2005-12-02 Chelsea     NA 1859.031          2005   NA 28006    1881.074
+## 6: 2005-09-13 Chelsea     NA 1865.629          2005   NA 27926    1878.789
+##    season_frame order_fill
+## 1:     2005.426          1
+## 2:     2005.443          1
+## 3:     2005.410          1
+## 4:     2005.459          1
+## 5:     2005.393          1
+## 6:     2005.131          1</code></pre>
+<pre class="r"><code>plotting_data &lt;- club_data %&gt;%
+  filter(team %in% football_data$team) %&gt;%
+  football_data[., on = &quot;team&quot;] %&gt;%
+  #only plot a cutdown here as it takes a while
+  filter(date &gt; &quot;2000-07-01&quot;) %&gt;%
+  #only want to plot the top 10
+  filter(order_fill &lt; 10.8)
+
+palette &lt;- plotting_data %&gt;%
+  filter(!duplicated(team)) 
+fills &lt;- palette %&gt;%
+  .$col1 %&gt;%
+  `names&lt;-`(palette$team)
+cols &lt;- palette %&gt;%
+  .$col2 %&gt;%
+  `names&lt;-`(palette$team)
+
+p_football &lt;- plotting_data %&gt;%
+  ggplot(aes(y = order_fill, x = roll_rating, fill = team, colour = team)) +
+  geom_tile(aes(x = roll_rating/2, width = roll_rating),
+            alpha = 0.8, height = 0.9, size = 1) +
+  geom_text(aes(x = 0, label = paste(short_name, &quot; &quot;)),
+            vjust = 0.2, hjust = 1, colour = &quot;black&quot;) +
+  geom_text(aes(label = sprintf(&quot;%1.2f&quot;,roll_rating)), hjust = 1.5, colour = &quot;black&quot;) +
+  scale_fill_manual(values = fills, guide = FALSE) +
+  scale_colour_manual(values = cols, guide = FALSE) +
+  labs(title=&#39;{floor(as.numeric(as.character(current_frame)))}&#39;,
+       x = &quot;ELO rating&quot;, y = &quot;&quot;) +
+  coord_cartesian(ylim = c(0,10.5), clip = &quot;off&quot;) +
+  scale_y_reverse(position = &quot;left&quot;) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0, size = 22),
+        axis.ticks.y = element_blank(),
+        axis.text.y  = element_blank(), 
+        plot.margin = margin(0,0,0,2.5, &quot;cm&quot;)) +
+  transition_manual(season_frame) +
+  view_follow(fixed_y = TRUE)
+
+football_gif &lt;- animate(p_football, nframes = length(unique(plotting_data$season_frame)), fps = 10)</code></pre>
+<pre class="r"><code>football_gif</code></pre>
+<p><img src="/post/2019-11-17-gnarly_data_table_bar_charts_files/figure-html/plot_football_gif-1.gif" /><!-- --></p>
 </div>
 
       </div>

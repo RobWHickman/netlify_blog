@@ -1,0 +1,212 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={Untitled},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\newcommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+
+  \title{Untitled}
+    \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+    \author{}
+    \preauthor{}\postauthor{}
+    \date{}
+    \predate{}\postdate{}
+  
+
+\begin{document}
+\maketitle
+
+load up tidyverse for some verbose data munging
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{library}\NormalTok{(tidyverse)}
+\end{Highlighting}
+\end{Shaded}
+
+load in the data (Vicer bundle choice data from March)
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{data <-}\StringTok{ }\KeywordTok{dir}\NormalTok{(}\StringTok{"."}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\CommentTok{#load in all .csvs}
+\StringTok{  }\CommentTok{#trial by trial results}
+\StringTok{  }\NormalTok{.[}\KeywordTok{grepl}\NormalTok{(}\StringTok{"}\CharTok{\textbackslash{}\textbackslash{}}\StringTok{.csv$"}\NormalTok{, .)] }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{file.path}\NormalTok{(}\StringTok{"."}\NormalTok{, .) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{lapply}\NormalTok{(., read.csv, }\DataTypeTok{stringsAsFactors =} \OtherTok{FALSE}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\CommentTok{#bind data together}
+\StringTok{  }\KeywordTok{map_df}\NormalTok{(I)}
+
+\KeywordTok{table}\NormalTok{(data}\OperatorTok{$}\NormalTok{date)}
+\end{Highlighting}
+\end{Shaded}
+
+We have data from 3 separate days, but I'm just going to pool them
+together for larger n
+
+Plot the data in the standard bundle choice logistic regression format
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{bcb_data <-}\StringTok{ }\NormalTok{data }\OperatorTok{%>%}
+\StringTok{  }\CommentTok{#only want data pertaining to bundle choice task}
+\StringTok{  }\KeywordTok{filter}\NormalTok{(subtask }\OperatorTok{==}\StringTok{ "bundle_choice"}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\CommentTok{#select only interesting variables}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{bundle_water_ml =}\NormalTok{ second_budget_value }\OperatorTok{*}\StringTok{ }\NormalTok{budget_magnitude,}
+         \DataTypeTok{non_bundle_water_ml =}\NormalTok{ budget_value }\OperatorTok{*}\StringTok{ }\NormalTok{budget_magnitude) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{select}\NormalTok{(bundle_water_ml, non_bundle_water_ml, }\DataTypeTok{juice_ml =}\NormalTok{ reward_magnitude, results) }\OperatorTok{%>%}
+\StringTok{  }\CommentTok{#binary yes/no for choosing the bundle or not}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{bundle_chosen =} \KeywordTok{case_when}\NormalTok{(}
+    \KeywordTok{grepl}\NormalTok{(}\StringTok{"fractal_chosen"}\NormalTok{, results) }\OperatorTok{~}\StringTok{ }\DecValTok{1}\NormalTok{,}
+    \KeywordTok{grepl}\NormalTok{(}\StringTok{"budget_chosen"}\NormalTok{, results) }\OperatorTok{~}\StringTok{ }\DecValTok{0}
+\NormalTok{  )) }\OperatorTok{%>%}
+\StringTok{  }\CommentTok{#remove trials where neither is chosen}
+\StringTok{  }\CommentTok{#i.e. errors}
+\StringTok{  }\KeywordTok{filter}\NormalTok{(}\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(bundle_chosen))}
+  
+\CommentTok{#nice quick function for plotting a logistic regression curve}
+\NormalTok{binomial_smooth <-}\StringTok{ }\ControlFlowTok{function}\NormalTok{(...) \{}
+  \KeywordTok{geom_smooth}\NormalTok{(}\DataTypeTok{method =} \StringTok{"glm"}\NormalTok{, }\DataTypeTok{method.args =} \KeywordTok{list}\NormalTok{(}\DataTypeTok{family =} \StringTok{"binomial"}\NormalTok{), ...)}
+\NormalTok{\}}
+
+\NormalTok{p <-}\StringTok{ }\NormalTok{bcb_data }\OperatorTok{%>%}
+\StringTok{  }\CommentTok{#group data by bundle combinations of reward and water}
+\StringTok{  }\KeywordTok{group_by}\NormalTok{(juice_ml, bundle_water_ml) }\OperatorTok{%>%}
+\StringTok{  }\CommentTok{#what fraction of the time is the bundle chosen}
+\StringTok{  }\KeywordTok{summarise}\NormalTok{(}\DataTypeTok{fraction_bundle_choice =} \KeywordTok{mean}\NormalTok{(bundle_chosen)) }\OperatorTok{%>%}
+\StringTok{  }\CommentTok{#pipe into a plot}
+\StringTok{  }\KeywordTok{ggplot}\NormalTok{(., }\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ bundle_water_ml, }\DataTypeTok{y =}\NormalTok{ fraction_bundle_choice, }\DataTypeTok{colour =} \KeywordTok{factor}\NormalTok{(juice_ml))) }\OperatorTok{+}
+\StringTok{  }\CommentTok{#plot the likelihood of choosing the bundle for each juice/water combination}
+\StringTok{  }\KeywordTok{geom_point}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\CommentTok{#add in the logistic fit line}
+\StringTok{  }\CommentTok{#n.b. se is calculated per point so is massive}
+\StringTok{  }\KeywordTok{binomial_smooth}\NormalTok{(}\DataTypeTok{se =} \OtherTok{FALSE}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\CommentTok{#add in the colour scale}
+\StringTok{  }\KeywordTok{scale_colour_manual}\NormalTok{(}\DataTypeTok{values =} \KeywordTok{c}\NormalTok{(}\StringTok{"red"}\NormalTok{, }\StringTok{"blue"}\NormalTok{, }\StringTok{"green"}\NormalTok{), }
+                      \DataTypeTok{name =} \StringTok{"reward juice (/ml)"}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\CommentTok{#add in some labels}
+\StringTok{  }\KeywordTok{labs}\NormalTok{(}\DataTypeTok{title =} \StringTok{"Bundle Choice Logistic Regression"}\NormalTok{,}
+       \DataTypeTok{subtitle =} \StringTok{"data from Vicer on bundle choice task in March"}\NormalTok{,}
+       \DataTypeTok{x =} \StringTok{"bundle water (/ml)"}\NormalTok{,}
+       \DataTypeTok{y =} \StringTok{"% chooses bundle"}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\CommentTok{#remove extra stuff}
+\StringTok{  }\KeywordTok{theme_minimal}\NormalTok{()}
+
+\CommentTok{#plot it}
+\NormalTok{p}
+\end{Highlighting}
+\end{Shaded}
+
+\[p(A)=\frac{1}{e^{-\phi(u(A) - u(B))}\]
+
+
+\end{document}
