@@ -435,12 +435,12 @@ scoring_run_matches <- scoring_runs %>%
 <blockquote class="twitter-tweet"><p lang="en" dir="ltr">Which team has had to travel the shortest combined distance in a cup run? (excluding regional competitions, just to make it interesting)</p>&mdash; Chris van Thomas (@chrisvanthomas) <a href="https://twitter.com/chrisvanthomas/status/1148879896430731266?ref_src=twsrc%5Etfw">July 10, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
 ```{r load_data, warning=FALSE,message=FALSE}
-team_locations <- readRDS("C:/Users/robwh/Documents/england_teams.rds") %>%
+team_locations <- readRDS("../../static/england_teams.rds") %>%
   st_set_crs(st_crs(st_crs("+init=epsg:4326")))
-ground_locations <- readRDS("C:/Users/robwh/Documents/neutral_ground_locations.rds") %>%
+ground_locations <- readRDS("../../static/neutral_ground_locations.rds") %>%
   st_set_crs(st_crs(st_crs("+init=epsg:4326"))) %>%
   mutate_at(c("lat", "lon"), as.numeric)
-matches <- readRDS("C:/Users/robwh/Documents/fa_cup_data.rds")
+matches <- readRDS("../../static/fa_cup_data.rds")
 ```
 
 ```{r find_distanaces, warning=FALSE,message=FALSE}
