@@ -1,0 +1,17 @@
+---
+title: Racing Bar Charts and Some Gnarly data.table Munging
+author: Robert Hickman
+date: '2019-11-17'
+slug: cambridge_pub_crawl
+output: pdf_document
+categories: []
+tags:
+  - R
+  - bar_charts
+  - data.table
+header:
+  caption: ''
+  image: ''
+---
+
+
