@@ -17,7 +17,7 @@
       
     
   
-  <meta name="description" content="library(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.">
+  <meta name="description" content="Reproducing Racing Bar Charts in Rlibrary(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.">
 
   
   <link rel="alternate" hreflang="en-us" href="/post/racing_bar_charts/">
@@ -78,7 +78,7 @@
   <meta property="og:site_name" content="Robert Hickman">
   <meta property="og:url" content="/post/racing_bar_charts/">
   <meta property="og:title" content="Racing Bar Charts and Some Gnarly data.table Munging | Robert Hickman">
-  <meta property="og:description" content="library(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.">
+  <meta property="og:description" content="Reproducing Racing Bar Charts in Rlibrary(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.">
   <meta property="og:locale" content="en-us">
   
   <meta property="article:published_time" content="2019-11-17T00:00:00&#43;00:00">
@@ -328,6 +328,8 @@ MathJax.Hub.Config({
         
 
 
+<div id="reproducing-racing-bar-charts-in-r" class="section level1">
+<h1>Reproducing Racing Bar Charts in R</h1>
 <pre class="r"><code>library(tidyverse)
 library(gganimate)
 library(tweenr)
@@ -502,6 +504,10 @@ city_gif &lt;- animate(p, frames, start_pause = 0.5, end_pause = 1)
 #anim_save(&quot;city_gif.gif&quot;, gif)</code></pre>
 <pre class="r"><code>city_gif</code></pre>
 <p><img src="/post/2019-11-17-gnarly_data_table_bar_charts_files/figure-html/plot_city_gif-1.gif" /><!-- --></p>
+</div>
+<div id="the-next-level" class="section level1">
+<h1>The Next Level</h1>
+</div>
 
       </div>
 

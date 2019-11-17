@@ -19,6 +19,8 @@
       <description>
 
 
+&lt;div id=&#34;reproducing-racing-bar-charts-in-r&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Reproducing Racing Bar Charts in R&lt;/h1&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
 library(gganimate)
 library(tweenr)
@@ -193,6 +195,10 @@ city_gif &amp;lt;- animate(p, frames, start_pause = 0.5, end_pause = 1)
 #anim_save(&amp;quot;city_gif.gif&amp;quot;, gif)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;city_gif&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;/post/2019-11-17-gnarly_data_table_bar_charts_files/figure-html/plot_city_gif-1.gif&#34; /&gt;&lt;!-- --&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-next-level&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;The Next Level&lt;/h1&gt;
+&lt;/div&gt;
 </description>
     </item>
     

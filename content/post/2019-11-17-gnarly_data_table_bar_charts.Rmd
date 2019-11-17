@@ -16,6 +16,8 @@ header:
 
 # Reproducing Racing Bar Charts in R
 
+text
+
 ```{r, warning=FALSE,message=FALSE}
 library(tidyverse)
 library(gganimate)
@@ -150,3 +152,15 @@ city_gif
 ```
 
 # The Next Level
+
+```{r extra_libraries, warning=FALSE,message=FALSE}
+#use James Curley's engsoccer data for the match data
+library(engsoccerdata)
+#
+
+#data.table and zoo for munging
+library(data.table)
+library(zoo)
+
+```
+
