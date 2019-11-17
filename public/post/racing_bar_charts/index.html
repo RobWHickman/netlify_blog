@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme" content="hugo-academic">
+  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="author" content="Robert Hickman">
+
+  
+  
+  
+  
+    
+      
+    
+  
+  <meta name="description" content="library(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.">
+
+  
+  <link rel="alternate" hreflang="en-us" href="/post/racing_bar_charts/">
+
+  
+
+
+  
+
+  
+  
+  <meta name="theme-color" content="#0095eb">
+  
+  
+  
+  
+    
+  
+  
+    
+    
+      
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+      
+    
+  
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha512-6MXa8B6uaO18Hid6blRMetEIoPqHf7Ux1tnyIQdpt9qI5OACx7C+O3IVTr98vwGnlcg0LOLa02i9Y1HpVhlfiw==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.1/css/academicons.min.css" integrity="sha512-NThgw3XKQ1absAahW6to7Ey42uycrVvfNfyjqcFNgCmOCQ5AR4AO0SiXrN+8ZtYeappp56lk1WtvjVmEa+VR6A==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous">
+  
+  
+  
+  
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Montserrat:400,700%7cRoboto:400,400italic,700%7cRoboto&#43;Mono">
+  
+  <link rel="stylesheet" href="/styles.css">
+  
+
+  
+
+  
+  <link rel="alternate" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="feed" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  
+
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" href="/img/icon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
+
+  <link rel="canonical" href="/post/racing_bar_charts/">
+
+  <meta property="twitter:card" content="summary_large_image">
+  
+  <meta property="twitter:site" content="@robert_squared">
+  <meta property="twitter:creator" content="@robert_squared">
+  
+  <meta property="og:site_name" content="Robert Hickman">
+  <meta property="og:url" content="/post/racing_bar_charts/">
+  <meta property="og:title" content="Racing Bar Charts and Some Gnarly data.table Munging | Robert Hickman">
+  <meta property="og:description" content="library(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.">
+  <meta property="og:locale" content="en-us">
+  
+  <meta property="article:published_time" content="2019-11-17T00:00:00&#43;00:00">
+  
+  <meta property="article:modified_time" content="2019-11-17T00:00:00&#43;00:00">
+  
+
+  <script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+</script>
+<script async type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <title>Racing Bar Charts and Some Gnarly data.table Munging | Robert Hickman</title>
+
+</head>
+<body id="top" data-spy="scroll" data-target="#toc" data-offset="71" >
+
+<nav class="navbar navbar-default navbar-fixed-top" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="navbar-header">
+      
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+              data-target=".navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      
+      <a class="navbar-brand" href="/">Robert Hickman</a>
+    </div>
+
+    
+    <div class="collapse navbar-collapse">
+
+      
+      
+      <ul class="nav navbar-nav navbar-right">
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#about">
+            
+            <span>Home</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#publications_selected">
+            
+            <span>Publications</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#posts">
+            
+            <span>Posts</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#projects">
+            
+            <span>Projects</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#writing">
+            
+            <span>Writing</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#contact">
+            
+            <span>Contact</span>
+            
+          </a>
+        </li>
+
+        
+        
+      
+
+      
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+
+<article class="article" itemscope itemtype="http://schema.org/Article">
+
+  
+
+
+  <div class="article-container">
+    <div class="article-inner">
+      <h1 itemprop="name">Racing Bar Charts and Some Gnarly data.table Munging</h1>
+
+      
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2019-11-17 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Nov 17, 2019
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    5 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+  
+<div class="share-box" aria-hidden="true">
+  <ul class="share">
+    <li>
+      <a class="twitter"
+         href="https://twitter.com/intent/tweet?text=Racing%20Bar%20Charts%20and%20Some%20Gnarly%20data.table%20Munging&amp;url=%2fpost%2fracing_bar_charts%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-twitter"></i>
+      </a>
+    </li>
+    <li>
+      <a class="facebook"
+         href="https://www.facebook.com/sharer.php?u=%2fpost%2fracing_bar_charts%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-facebook"></i>
+      </a>
+    </li>
+    <li>
+      <a class="linkedin"
+         href="https://www.linkedin.com/shareArticle?mini=true&amp;url=%2fpost%2fracing_bar_charts%2f&amp;title=Racing%20Bar%20Charts%20and%20Some%20Gnarly%20data.table%20Munging"
+         target="_blank" rel="noopener">
+        <i class="fa fa-linkedin"></i>
+      </a>
+    </li>
+    <li>
+      <a class="weibo"
+         href="http://service.weibo.com/share/share.php?url=%2fpost%2fracing_bar_charts%2f&amp;title=Racing%20Bar%20Charts%20and%20Some%20Gnarly%20data.table%20Munging"
+         target="_blank" rel="noopener">
+        <i class="fa fa-weibo"></i>
+      </a>
+    </li>
+    <li>
+      <a class="email"
+         href="mailto:?subject=Racing%20Bar%20Charts%20and%20Some%20Gnarly%20data.table%20Munging&amp;body=%2fpost%2fracing_bar_charts%2f">
+        <i class="fa fa-envelope"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+  
+
+</div>
+
+
+      <div class="article-style" itemprop="articleBody">
+        
+
+
+<pre class="r"><code>library(tidyverse)
+library(gganimate)
+library(tweenr)
+library(stringi)
+library(countrycode)</code></pre>
+<pre class="r"><code>#read in data from blog repo
+city_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, 
+                 encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)
+
+head(city_data)</code></pre>
+<pre><code>##   Country.Code Country.or.area City.Code               Urban.Agglomeration
+## 1          392           Japan     21671                             Tokyo
+## 2          356           India     21228                             Delhi
+## 3          156           China     20656                          Shanghai
+## 4           76          Brazil     20287                      S&lt;e3&gt;o Paulo
+## 5          356           India     21206                   Mumbai (Bombay)
+## 6          484          Mexico     21853 Ciudad de M&lt;e9&gt;xico (Mexico City)
+##   Note  Latitude Longitude  X1950  X1955  X1960  X1965  X1970  X1975
+## 1  325  35.68950 139.69171 11,275 13,713 16,679 20,284 23,298 26,615
+## 2  318  28.66667  77.21667  1,369  1,782  2,283  2,845  3,531  4,426
+## 3  202  31.22000 121.46000  4,301  5,846  6,820  6,428  6,036  5,627
+## 4   NA -23.55000 -46.64000  2,334  3,044  3,970  5,494  7,620  9,614
+## 5   NA  19.07398  72.88084  2,857  3,432  4,060  4,854  5,811  7,082
+## 6  330  19.42732 -99.14187  3,365  4,294  5,479  6,969  8,831 10,734
+##    X1980  X1985  X1990  X1995  X2000  X2005  X2010  X2015  X2020  X2025
+## 1 28,549 30,304 32,530 33,587 34,450 35,622 36,834 38,001 38,323 37,876
+## 2  5,558  7,325  9,726 12,407 15,732 18,670 21,935 25,703 29,348 32,727
+## 3  5,966  6,847  7,823 10,450 13,959 16,763 19,980 23,741 27,137 29,442
+## 4 12,089 13,395 14,776 15,913 17,014 18,288 19,660 21,066 22,119 22,899
+## 5  8,658 10,391 12,436 14,310 16,367 17,891 19,422 21,043 22,838 25,207
+## 6 13,028 14,278 15,642 17,017 18,457 19,276 20,132 20,999 21,868 22,916
+##    X2030
+## 1 37,190
+## 2 36,060
+## 3 30,751
+## 4 23,444
+## 5 27,797
+## 6 23,865</code></pre>
+<pre class="r"><code>city_data &lt;- city_data %&gt;%
+  #select out relevant columns
+  select(country_id = Country.Code, country = Country.or.area,
+         city_id = City.Code, city = Urban.Agglomeration,
+         X1950, X1955, X1960, X1965, X1970, X1975, X1980, X1985, X1990,
+         X1995, X2000, X2005, X2010, X2015, X2020, X2025, X2030) %&gt;%
+  #melt the data to long format
+  reshape2::melt(id.vars = c(&quot;country_id&quot;, &quot;country&quot;, &quot;city_id&quot;, &quot;city&quot;),
+                 variable.name = &quot;year&quot;, value.name = &quot;population&quot;) %&gt;%
+  #conver the data into usuable numbers
+  mutate(year = as.numeric(gsub(&quot;^X&quot;, &quot;&quot;, year)),
+         population = as.numeric(gsub(&quot;,&quot;, &quot;&quot;, population)),
+         #convert the text into utf-8 readable
+         city = stri_trans_general(city, &quot;latin-ascii&quot;)) %&gt;%
+  #extract the english names for cities
+  mutate(city_name = case_when(
+    grepl(&quot;\\(&quot;, city) ~ str_extract(city,  &quot;(?&lt;=\\().+?(?=\\))&quot;),
+    grepl(&quot;-&quot;, city) ~ gsub(&quot;-.*&quot;, &quot;&quot;, city),
+    TRUE ~ as.character(city)
+  ))
+
+head(city_data)</code></pre>
+<pre><code>##   country_id country city_id                                  city year
+## 1        392   Japan   21671                                 Tokyo 1950
+## 2        356   India   21228                                 Delhi 1950
+## 3        156   China   20656                              Shanghai 1950
+## 4         76  Brazil   20287                      S&lt;U+FFFD&gt;o Paulo 1950
+## 5        356   India   21206                       Mumbai (Bombay) 1950
+## 6        484  Mexico   21853 Ciudad de M&lt;U+FFFD&gt;xico (Mexico City) 1950
+##   population        city_name
+## 1      11275            Tokyo
+## 2       1369            Delhi
+## 3       4301         Shanghai
+## 4       2334 S&lt;U+FFFD&gt;o Paulo
+## 5       2857           Bombay
+## 6       3365      Mexico City</code></pre>
+<pre class="r"><code>city_data &lt;- city_data %&gt;%
+  #group by and find order at any point
+  group_by(year) %&gt;%
+  arrange(-population) %&gt;%
+  mutate(order = row_number()) %&gt;%
+  ungroup()
+
+head(city_data)</code></pre>
+<pre><code>## # A tibble: 6 x 8
+##   country_id country city_id city   year population city_name order
+##        &lt;int&gt; &lt;chr&gt;     &lt;int&gt; &lt;chr&gt; &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;     &lt;int&gt;
+## 1        392 Japan     21671 Tokyo  2020      38323 Tokyo         1
+## 2        392 Japan     21671 Tokyo  2015      38001 Tokyo         1
+## 3        392 Japan     21671 Tokyo  2025      37876 Tokyo         1
+## 4        392 Japan     21671 Tokyo  2030      37190 Tokyo         1
+## 5        392 Japan     21671 Tokyo  2010      36834 Tokyo         1
+## 6        356 India     21228 Delhi  2030      36060 Delhi         2</code></pre>
+<pre class="r"><code>#get the id data for each unique city
+id_data &lt;- city_data %&gt;%
+  select(city_id, city_name, country_id, country) %&gt;%
+  unique() %&gt;%
+  #find the continent of each city
+  mutate(continent = countrycode(.$country, origin = &quot;country.name&quot;, destination = &quot;continent&quot;))</code></pre>
+<pre class="r"><code>#the number of frames the output will contain
+frames &lt;- 500
+
+#use tweenr to manually make the naimation frame data
+frame_data &lt;- city_data %&gt;%
+  group_by(year) %&gt;%
+  arrange(-population) %&gt;%
+  mutate(order = row_number()) %&gt;%
+  #tweenr stuff here
+  select(city_id, year, population, order) %&gt;%
+  mutate(ease = &quot;linear&quot;) %&gt;%
+  tween_elements(., &quot;year&quot;, &quot;city_id&quot;, &quot;ease&quot;, nframes= frames) %&gt;%
+  #select out columns
+  select(population, order, year, .frame, city_id = .group) %&gt;%
+  #merge in id data
+  merge(., id_data, by = &#39;city_id&#39;) %&gt;%
+  #munge population numbers
+  mutate(pop = round(population/1000, 2))
+
+head(frame_data)</code></pre>
+<pre><code>##   city_id population    order     year .frame city_name country_id
+## 1   20001    82.0000  849.000 1950.000      0     Herat          4
+## 2   20001   565.0000 1213.000 2030.000    500     Herat          4
+## 3   20001   101.1290 1141.129 1969.516    122     Herat          4
+## 4   20001   245.2500 1510.250 2001.875    324     Herat          4
+## 5   20001   178.2581 1314.000 1988.871    243     Herat          4
+## 6   20001   335.7419 1516.419 2014.839    405     Herat          4
+##       country continent  pop
+## 1 Afghanistan      Asia 0.08
+## 2 Afghanistan      Asia 0.56
+## 3 Afghanistan      Asia 0.10
+## 4 Afghanistan      Asia 0.25
+## 5 Afghanistan      Asia 0.18
+## 6 Afghanistan      Asia 0.34</code></pre>
+<pre class="r"><code>p &lt;- frame_data %&gt;%
+  #only want to plot the top 10
+  filter(order &lt; 10.8) %&gt;%
+  ggplot(aes(y = order, x = pop)) +
+  #hack to plot the moving bars
+  #from v helpful answer at
+  #https://stackoverflow.com/questions/53162821/
+  #animated-sorted-bar-chart-with-bars-overtaking-each-other/53163549
+  geom_tile(aes(x = pop/2, width = pop, fill = continent),
+            alpha = 0.8, colour = &quot;black&quot;, height = 0.9) +
+  geom_text(aes(label = sprintf(&quot;%1.2f&quot;,pop)), hjust = 1) +
+  geom_text(aes(x = 0, label = paste(city_name, &quot; &quot;)),
+            vjust = 0.2, hjust = 1) +
+  #add labels to plot
+  labs(title=&#39;{round(as.numeric(closest_state))}&#39;,
+       x = &quot;Population (millions)&quot;, y = &quot;&quot;) +
+  #y limits at 0-10.5
+  #don&#39;t clip as will screw the labels outside the plot
+  coord_cartesian(ylim = c(0,10.5), clip = &quot;off&quot;) +
+  #flip the y axis
+  scale_y_reverse(position = &quot;left&quot;) +
+  #theme stuff
+  #taken from same stackoverflow answer
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0, size = 22),
+        axis.ticks.y = element_blank(),
+        axis.text.y  = element_blank(), 
+        #make sure labels will be visible
+        plot.margin = margin(0,0,0,2.5, &quot;cm&quot;)) +
+  #transition by our calculated year
+  transition_states(year, transition_length = 1, state_length = 0) +
+  #scale x axis as pop increases
+  view_follow(fixed_y = TRUE) +
+  #fade as bares enter and exit the plot
+  exit_fade() +
+  enter_fade()
+
+#save the gif
+city_gif &lt;- animate(p, frames, start_pause = 0.5, end_pause = 1)
+#e.g. if you want to save the output
+#anim_save(&quot;city_gif.gif&quot;, gif)</code></pre>
+<pre class="r"><code>city_gif</code></pre>
+<p><img src="/post/2019-11-17-gnarly_data_table_bar_charts_files/figure-html/plot_city_gif-1.gif" /><!-- --></p>
+
+      </div>
+
+      
+
+
+<div class="article-tags">
+  
+  <a class="btn btn-primary btn-outline" href="/tags/r">R</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/bar_charts">bar_charts</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/data.table">data.table</a>
+  
+</div>
+
+
+
+    </div>
+  </div>
+
+</article>
+
+
+
+
+
+
+<div class="article-container">
+  
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="powered-by">
+
+      &copy; 2018 &middot; 
+
+      Powered by the
+      <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+      <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+      <span class="pull-right" aria-hidden="true">
+        <a href="#" id="back_to_top">
+          <span class="button_icon">
+            <i class="fa fa-chevron-up fa-2x"></i>
+          </span>
+        </a>
+      </span>
+
+    </p>
+  </div>
+</footer>
+
+
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close btn-large" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Cite</h4>
+      </div>
+      <div>
+        <pre><code class="modal-body tex"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-primary btn-outline js-copy-cite" href="#" target="_blank">
+          <i class="fa fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-primary btn-outline js-download-cite" href="#" target="_blank">
+          <i class="fa fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+    
+
+    
+
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.3/imagesloaded.pkgd.min.js" integrity="sha512-umsR78NN0D23AzgoZ11K7raBD+R6hqKojyBZs1w8WvYlsI+QuKRGBx3LFCwhatzBunCjDuJpDHwxD13sLMbpRA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha512-iztkobsvnjKfAtTNdHkGVjAYTrrtlC7mGp/54c40wowO7LhURYl3gVzzcEqGl/qKXQltJ2HwMrdLcNUdo+N/RQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.4/isotope.pkgd.min.js" integrity="sha512-VDBOIlDbuC4VWxGJNmuFRQ0Li0SKkDpmGyuhAG5LTDLd/dJ/S0WMVxriR2Y+CyPL5gzjpN4f/6iqWVBJlht0tQ==" crossorigin="anonymous"></script>
+    
+    
+    <script src="/js/hugo-academic.js"></script>
+    
+
+    
+    
+      
+      
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+      
+
+      
+
+      
+
+      <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    
+    
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_CHTML" integrity="sha512-tOav5w1OjvsSJzePRtt2uQPFwBoHt1VZcUq8l8nm5284LEKE9FSJBQryzMBzHxY5P0zRdNqEcpLIRVYFNgu1jw==" crossorigin="anonymous"></script>
+    
+    
+
+  </body>
+</html>
+

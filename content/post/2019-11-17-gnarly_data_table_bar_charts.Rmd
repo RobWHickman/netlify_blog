@@ -2,7 +2,7 @@
 title: Racing Bar Charts and Some Gnarly data.table Munging
 author: Robert Hickman
 date: '2019-11-17'
-slug: cambridge_pub_crawl
+slug: racing_bar_charts
 output: pdf_document
 categories: []
 tags:
@@ -14,6 +14,7 @@ header:
   image: ''
 ---
 
+# Reproducing Racing Bar Charts in R
 
 ```{r, warning=FALSE,message=FALSE}
 library(tidyverse)
@@ -139,7 +140,7 @@ p <- frame_data %>%
   enter_fade()
 
 #save the gif
-city_gif <- animate(p, frames)
+city_gif <- animate(p, frames, start_pause = 0.5, end_pause = 1)
 #e.g. if you want to save the output
 #anim_save("city_gif.gif", gif)
 ```
@@ -148,3 +149,4 @@ city_gif <- animate(p, frames)
 city_gif
 ```
 
+# The Next Level

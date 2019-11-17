@@ -244,6 +244,61 @@ MathJax.Hub.Config({
   
   
   <h3 class="article-title" itemprop="headline">
+    <a href="/post/racing_bar_charts/" itemprop="url">Racing Bar Charts and Some Gnarly data.table Munging</a>
+  </h3>
+  
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2019-11-17 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Nov 17, 2019
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    5 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+
+</div>
+
+  <div class="article-style" itemprop="articleBody">
+    
+    library(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.
+    
+  </div>
+  <p class="read-more" itemprop="mainEntityOfPage">
+    <a href="/post/racing_bar_charts/" class="btn btn-primary btn-outline">
+      CONTINUE READING
+    </a>
+  </p>
+</div>
+
+  
+    
+    
+
+<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
+  
+  
+  <h3 class="article-title" itemprop="headline">
     <a href="/post/dynamic_web_scraping/" itemprop="url">Scraping Dynamic Websites with PhantomJS</a>
   </h3>
   
@@ -737,61 +792,6 @@ This week, the data comes in the form of a massive corpus of every tweet using t
   </div>
   <p class="read-more" itemprop="mainEntityOfPage">
     <a href="/post/tidytuesday-2019-1/" class="btn btn-primary btn-outline">
-      CONTINUE READING
-    </a>
-  </p>
-</div>
-
-  
-    
-    
-
-<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
-  
-  
-  <h3 class="article-title" itemprop="headline">
-    <a href="/post/cambridge_pub_crawl/" itemprop="url">Planning a Pub Crawl Using R</a>
-  </h3>
-  
-
-<div class="article-metadata">
-
-  <span class="article-date">
-    
-    <time datetime="2018-11-22 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
-      Nov 22, 2018
-    </time>
-  </span>
-  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
-    <meta itemprop="name" content="Robert Hickman">
-  </span>
-
-  
-  <span class="middot-divider"></span>
-  <span class="article-reading-time">
-    16 min read
-  </span>
-  
-
-  
-  
-
-  
-  
-  
-  
-
-  
-
-</div>
-
-  <div class="article-style" itemprop="articleBody">
-    
-    A few weeks ago I went on the first pub crawl I’d been on in years around my city of Cambridge. Around the same time I had also been visiting 4 very good pubs within ~200m of each other tucked away in a quiet neighbourhood of the town. Together, I wondered if it was possible with freely avaiable data to plan an optimal pub crawl around any town/area of the UK, and also, if it would be feasbile to visit every pub within the city in a single day if travelling optimally.
-    
-  </div>
-  <p class="read-more" itemprop="mainEntityOfPage">
-    <a href="/post/cambridge_pub_crawl/" class="btn btn-primary btn-outline">
       CONTINUE READING
     </a>
   </p>

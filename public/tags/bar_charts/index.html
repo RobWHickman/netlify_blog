@@ -18,7 +18,7 @@
   <meta name="description" content="PhD student in Physiology, Development, and Neuroscience">
 
   
-  <link rel="alternate" hreflang="en-us" href="/tags/">
+  <link rel="alternate" hreflang="en-us" href="/tags/bar_charts/">
 
   
 
@@ -58,15 +58,15 @@
   
 
   
-  <link rel="alternate" href="/tags/index.xml" type="application/rss+xml" title="Robert Hickman">
-  <link rel="feed" href="/tags/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="alternate" href="/tags/bar_charts/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="feed" href="/tags/bar_charts/index.xml" type="application/rss+xml" title="Robert Hickman">
   
 
   <link rel="manifest" href="/site.webmanifest">
   <link rel="icon" type="image/png" href="/img/icon.png">
   <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
 
-  <link rel="canonical" href="/tags/">
+  <link rel="canonical" href="/tags/bar_charts/">
 
   <meta property="twitter:card" content="summary_large_image">
   
@@ -74,12 +74,12 @@
   <meta property="twitter:creator" content="@robert_squared">
   
   <meta property="og:site_name" content="Robert Hickman">
-  <meta property="og:url" content="/tags/">
-  <meta property="og:title" content="Tags | Robert Hickman">
+  <meta property="og:url" content="/tags/bar_charts/">
+  <meta property="og:title" content="bar_charts | Robert Hickman">
   <meta property="og:description" content="PhD student in Physiology, Development, and Neuroscience">
   <meta property="og:locale" content="en-us">
   
-  <meta property="og:updated_time" content="2019-02-07T00:00:00&#43;00:00">
+  <meta property="og:updated_time" content="2019-11-17T00:00:00&#43;00:00">
   
 
   <script type="text/x-mathjax-config">
@@ -94,7 +94,7 @@ MathJax.Hub.Config({
 </script>
 
 
-  <title>Tags | Robert Hickman</title>
+  <title>bar_charts | Robert Hickman</title>
 
 </head>
 <body id="top" data-spy="scroll" data-target="#toc" data-offset="71" >
@@ -240,86 +240,49 @@ MathJax.Hub.Config({
 
 <div class="universal-wrapper">
 
-  <h1>Tags</h1>
+  <h1>bar_charts</h1>
 
   
 
   
   
   <div>
-    <h2><a href="/tags/rstas/">rstas</a></h2>
+    <h2><a href="/post/racing_bar_charts/">Racing Bar Charts and Some Gnarly data.table Munging</a></h2>
     <div class="article-style">
       
-    </div>
-  </div>
-  
-  <div>
-    <h2><a href="/tags/rstats/">rstats</a></h2>
-    <div class="article-style">
-      
-    </div>
-  </div>
-  
-  <div>
-    <h2><a href="/tags/scraping/">scraping</a></h2>
-    <div class="article-style">
-      
-    </div>
-  </div>
-  
-  <div>
-    <h2><a href="/tags/sf/">sf</a></h2>
-    <div class="article-style">
-      
-    </div>
-  </div>
-  
-  <div>
-    <h2><a href="/tags/the_knowledge/">the_knowledge</a></h2>
-    <div class="article-style">
-      
-    </div>
-  </div>
-  
-  <div>
-    <h2><a href="/tags/tidytuesday/">tidytuesday</a></h2>
-    <div class="article-style">
-      
-    </div>
-  </div>
-  
-  <div>
-    <h2><a href="/tags/twitter/">twitter</a></h2>
-    <div class="article-style">
-      
-    </div>
-  </div>
-  
-  <div>
-    <h2><a href="/tags/world-cup/">world cup</a></h2>
-    <div class="article-style">
-      
-    </div>
-  </div>
-  
-  <div>
-    <h2><a href="/tags/xg/">xG</a></h2>
-    <div class="article-style">
+      library(tidyverse)
+library(gganimate)
+library(tweenr)
+library(stringi)
+library(countrycode)
+#read in data from blog repo
+city_data &lt;- read.csv(&quot;<a href="https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;" target="_blank">https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;</a>, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)
+head(city_data)</p>
+
+<h2 id="country-code-country-or-area-city-code-urban-agglomeration">Country.Code Country.or.area City.Code Urban.Agglomeration</h2>
+
+<h2 id="1-392-japan-21671-tokyo">1 392 Japan 21671 Tokyo</h2>
+
+<h2 id="2-356-india-21228-delhi">2 356 India 21228 Delhi</h2>
+
+<h2 id="3-156-china-20656-shanghai">3 156 China 20656 Shanghai</h2>
+
+<h2 id="4-76-brazil-20287-s-lt-e3-gt-o-paulo">4 76 Brazil 20287 S&lt;e3&gt;o Paulo</h2>
+
+<h2 id="5-356-india-21206-mumbai-bombay">5 356 India 21206 Mumbai (Bombay)</h2>
+
+<h2 id="6-484-mexico-21853-ciudad-de-m-lt-e9-gt-xico-mexico-city">6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)</h2>
+
+<h2 id="note-latitude-longitude-x1950-x1955-x1960-x1965-x1970-x1975">Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975</h2>
+
+<h2 id="1-325-35">1 325 35.</h2>
+
       
     </div>
   </div>
   
 
   
-<nav>
-  <ul class="pager">
-    
-    <li><a href="/tags/page/2/">&lt;</a></li>
-    
-    
-  </ul>
-</nav>
-
 
 
 </div>

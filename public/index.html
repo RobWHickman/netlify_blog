@@ -402,6 +402,80 @@ MathJax.Hub.Config({
       
           
       
+
+      
+      
+        
+        
+
+<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
+  
+  
+  <h3 class="article-title" itemprop="headline">
+    <a href="/post/racing_bar_charts/" itemprop="url">Racing Bar Charts and Some Gnarly data.table Munging</a>
+  </h3>
+  
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2019-11-17 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Nov 17, 2019
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    5 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+
+</div>
+
+  <div class="article-style" itemprop="articleBody">
+    
+    library(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.
+    
+  </div>
+  <p class="read-more" itemprop="mainEntityOfPage">
+    <a href="/post/racing_bar_charts/" class="btn btn-primary btn-outline">
+      CONTINUE READING
+    </a>
+  </p>
+</div>
+
+      
+
+      
+
+        
+
+        
+        
+
+        
+        
+          
+      
+          
+      
+          
+      
           
       
 
@@ -682,82 +756,6 @@ The first step of prediction is some form of quantification of ability.
   </div>
   <p class="read-more" itemprop="mainEntityOfPage">
     <a href="/post/dca_1/" class="btn btn-primary btn-outline">
-      CONTINUE READING
-    </a>
-  </p>
-</div>
-
-      
-
-      
-
-        
-
-        
-        
-
-        
-        
-          
-      
-          
-      
-          
-      
-
-      
-      
-        
-        
-
-<div class="article-list-item" itemscope itemprop="blogPost" itemtype="http://schema.org/BlogPosting">
-  
-  
-  <h3 class="article-title" itemprop="headline">
-    <a href="/post/the-knowledge-7th-february-2019/" itemprop="url">The Knowledge 7th February 2019</a>
-  </h3>
-  
-
-<div class="article-metadata">
-
-  <span class="article-date">
-    
-    <time datetime="2019-02-07 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
-      Feb 7, 2019
-    </time>
-  </span>
-  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
-    <meta itemprop="name" content="Robert Hickman">
-  </span>
-
-  
-  <span class="middot-divider"></span>
-  <span class="article-reading-time">
-    23 min read
-  </span>
-  
-
-  
-  
-
-  
-  
-  
-  
-
-  
-
-</div>
-
-  <div class="article-style" itemprop="articleBody">
-    
-    In what is becoming a repeated series, I enjoy answering trivia questions from The Guardian’s The Knowledge football trivia column.
-There’s a few questions that built up that seemed amenable to coding answers so I’ve taken a stab at them here
-#munginglibrary(tidyverse)library(data.table)library(zoo)#english football datalibrary(engsoccerdata)#web data scrapinglibrary(rvest)#plottinglibrary(openair)Calendar BoysThe first question this week concerns players scoring on (or nearest to) every day of the year
-    
-  </div>
-  <p class="read-more" itemprop="mainEntityOfPage">
-    <a href="/post/the-knowledge-7th-february-2019/" class="btn btn-primary btn-outline">
       CONTINUE READING
     </a>
   </p>
@@ -1152,6 +1150,20 @@ There’s a few questions that built up that seemed amenable to coding answers s
           
           
           
+          <a href="/tags/r" style="font-size:0.8rem">R</a>
+        
+          
+          
+          
+          
+          
+          <a href="/tags/bar_charts" style="font-size:0.8rem">bar_charts</a>
+        
+          
+          
+          
+          
+          
           <a href="/tags/behaviour" style="font-size:0.8rem">behaviour</a>
         
           
@@ -1181,6 +1193,13 @@ There’s a few questions that built up that seemed amenable to coding answers s
           
           
           <a href="/tags/clustering" style="font-size:0.8rem">clustering</a>
+        
+          
+          
+          
+          
+          
+          <a href="/tags/data.table" style="font-size:0.8rem">data.table</a>
         
           
           
