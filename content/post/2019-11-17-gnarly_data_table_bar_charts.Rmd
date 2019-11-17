@@ -23,10 +23,16 @@ library(stringi)
 library(countrycode)
 ```
 
-```{r}
+```{r get_city_data, warning=FALSE,message=FALSE}
 #read in data from blog repo
-data <- read.csv("./city_populations.csv", 
-                 encoding = "UTF-8", stringsAsFactors = FALSE) %>%
+city_data <- read.csv("https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv", 
+                 encoding = "UTF-8", stringsAsFactors = FALSE)
+
+head(city_data)
+```
+
+```{r munge_city_data1, warning=FALSE,message=FALSE}
+city_data <- city_data %>%
   #select out relevant columns
   select(country_id = Country.Code, country = Country.or.area,
          city_id = City.Code, city = Urban.Agglomeration,
@@ -45,22 +51,38 @@ data <- read.csv("./city_populations.csv",
     grepl("\\(", city) ~ str_extract(city,  "(?<=\\().+?(?=\\))"),
     grepl("-", city) ~ gsub("-.*", "", city),
     TRUE ~ as.character(city)
-  )) %>%
+  ))
+
+head(city_data)
+```
+
+```{r order_cities_by_year, warning=FALSE,message=FALSE}
+city_data <- city_data %>%
   #group by and find order at any point
   group_by(year) %>%
   arrange(-population) %>%
   mutate(order = row_number()) %>%
   ungroup()
+
+head(city_data)
+```
+
+```{r get_continent, warning=FALSE,message=FALSE}
 #get the id data for each unique city
-id_data <- data %>%
+id_data <- city_data %>%
   select(city_id, city_name, country_id, country) %>%
   unique() %>%
   #find the continent of each city
   mutate(continent = countrycode(.$country, origin = "country.name", destination = "continent"))
+
+```
+
+```{r tween_data, warning=FALSE,message=FALSE}
 #the number of frames the output will contain
 frames <- 500
+
 #use tweenr to manually make the naimation frame data
-frame_data <- data %>%
+frame_data <- city_data %>%
   group_by(year) %>%
   arrange(-population) %>%
   mutate(order = row_number()) %>%
@@ -72,8 +94,13 @@ frame_data <- data %>%
   select(population, order, year, .frame, city_id = .group) %>%
   #merge in id data
   merge(., id_data, by = 'city_id') %>%
-  #munger population numbers
+  #munge population numbers
   mutate(pop = round(population/1000, 2))
+
+head(frame_data)
+```
+
+```{r plot_and_gif_city_data, warning=FALSE,message=FALSE}
 p <- frame_data %>%
   #only want to plot the top 10
   filter(order < 10.8) %>%
@@ -110,7 +137,14 @@ p <- frame_data %>%
   #fade as bares enter and exit the plot
   exit_fade() +
   enter_fade()
+
 #save the gif
-gif <- animate(p, frames)
+city_gif <- animate(p, frames)
+#e.g. if you want to save the output
 #anim_save("city_gif.gif", gif)
 ```
+
+```{r plot_city_gif, warning=FALSE,message=FALSE}
+city_gif
+```
+
