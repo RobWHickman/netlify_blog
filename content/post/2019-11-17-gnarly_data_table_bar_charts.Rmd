@@ -14,15 +14,28 @@ header:
   image: ''
 ---
 
+A while ago (and also still a bit) [racing bar charts]() were all the rage on data visualisation forums/twitter. Perhaps one of the real breakout examples is this tweet from the, always excellent, John Burn-Murdochat the Financial Times, looking at the most populous cities in the world since the middle ages:
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">New project:<br> <br>A “Bar Chart Race” animation showing the changing ranks of the 10 biggest cities in the world since 1500.<br><br>Fascinating to watch giant cities vanish after falling in conquests, and amazing that three UK cities were in the top 8 in the late 1800s. <a href="https://t.co/KglMZbYobr">pic.twitter.com/KglMZbYobr</a></p>&mdash; John Burn-Murdoch (@jburnmurdoch) <a href="https://twitter.com/jburnmurdoch/status/1107552367795412992?ref_src=twsrc%5Etfw">March 18, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script> 
+
+As with most things I blog about here I wondered if I could make them in R, and how easy that would be. The first half of this post is basically recreating the aforementioned gif pretty simply using [gganimate](). However, I also wanted to see if I could use the format to look at the strongest English football teams across history in [link to second half of blogpost]() which gave me an unexpected lesson in using [data.table]() and especially some lesser used facets of it- ones that to my mind do not have analogues in the Tidyverse, and so represent a good reason to be proficient _both_ the Tidyverse *and* data.table.
+
+As a brief aside before I get to the code, the munging with data.table also made me think about why I code in my free time. I spend quite a substantial portion of my free time doing analysis using techniques/datasets that interest me, even though they provide no real tangible benefit (when I do code for my current job, it's mostly in MATLAB with a small remained in Python and on fairly tidy datasets).
+
+One thing that _is_ related to my PhD however, is watching lots of videos of Macaques and other primates. Almost all young primates engage in wrestling behaviour for fun, but also so that when they are older and actually do have to fight, they have some experience in low-stakes play. It struck me as a nice parallel to my small/weird coding projects which mean I have to end up doing odd bits of munging to data in various states of tidyness, instead of the work on much more curated data I do for my day job. It's also a good excuse to insert a related video of very cute baby Snow Macaques wrestling.
+
+<iframe width="560" height="315" src="https://www.youtube.com/watch?v=xyaRubgMyks" frameborder="0" allowfullscreen></iframe>
+
 # Reproducing Racing Bar Charts in R
 
-text
+Anyway, getting on with actually producing racing bar charts, first we want to load up the libraries we'll need.
 
 ```{r, warning=FALSE,message=FALSE}
 library(tidyverse)
 library(gganimate)
 library(tweenr)
 library(stringi)
+#for getting the continents of various cities
 library(countrycode)
 ```
 
@@ -144,7 +157,7 @@ p_cities <- frame_data %>%
 #animate the gif
 city_gif <- animate(p_cities, frames, start_pause = 0.5, end_pause = 1)
 #e.g. if you want to save the output
-#anim_save("city_gif.gif", gif)
+#anim_save("city_gif.gif", city_gif)
 ```
 
 ```{r plot_city_gif, warning=FALSE,message=FALSE}
@@ -338,7 +351,7 @@ plotting_data <- club_data %>%
   filter(team %in% football_data$team) %>%
   football_data[., on = "team"] %>%
   #only plot a cutdown here as it takes a while
-  filter(date > "2000-07-01") %>%
+  filter(date > "1974-07-01") %>%
   #only want to plot the top 10
   filter(order_fill < 10.8)
 
@@ -372,9 +385,10 @@ p_football <- plotting_data %>%
   transition_manual(season_frame) +
   view_follow(fixed_y = TRUE)
 
-football_gif <- animate(p_football, nframes = length(unique(plotting_data$season_frame)), fps = 10)
+football_gif <- animate(p_football, nframes = length(unique(plotting_data$season_frame)) * 0.8, fps = 10)
 ```
+
 ```{r plot_football_gif, warning=FALSE,message=FALSE}
-football_gif
+anim_save("fooball_gif1.gif", football_gif)
 ```
 
