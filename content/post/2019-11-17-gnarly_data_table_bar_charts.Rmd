@@ -18,7 +18,7 @@ A while ago (and also still a bit) [racing bar charts]() were all the rage on da
 
 <blockquote class="twitter-tweet"><p lang="en" dir="ltr">New project:<br> <br>A “Bar Chart Race” animation showing the changing ranks of the 10 biggest cities in the world since 1500.<br><br>Fascinating to watch giant cities vanish after falling in conquests, and amazing that three UK cities were in the top 8 in the late 1800s. <a href="https://t.co/KglMZbYobr">pic.twitter.com/KglMZbYobr</a></p>&mdash; John Burn-Murdoch (@jburnmurdoch) <a href="https://twitter.com/jburnmurdoch/status/1107552367795412992?ref_src=twsrc%5Etfw">March 18, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script> 
 
-As with most things I blog about here I wondered if I could make them in R, and how easy that would be. The first half of this post is basically recreating the aforementioned gif pretty simply using [gganimate](). However, I also wanted to see if I could use the format to look at the strongest English football teams across history in [link to second half of blogpost]() which gave me an unexpected lesson in using [data.table]() and especially some lesser used facets of it- ones that to my mind do not have analogues in the Tidyverse, and so represent a good reason to be proficient _both_ the Tidyverse *and* data.table.
+As with most things I blog about here I wondered if I could make them in R, and how easy that would be. The first half of this post is basically recreating the aforementioned gif pretty simply using [gganimate](). However, I also wanted to see if I could use the format to look at the strongest English football teams across history in [link to second half of blogpost]() which gave me an unexpected lesson in using [data.table]() and especially some lesser used facets of it- ones that might require more complex multiline solutions in the tidyverse
 
 As a brief aside before I get to the code, the munging with data.table also made me think about why I code in my free time. I spend quite a substantial portion of my free time doing analysis using techniques/datasets that interest me, even though they provide no real tangible benefit (when I do code for my current job, it's mostly in MATLAB with a small remained in Python and on fairly tidy datasets).
 
@@ -39,6 +39,8 @@ library(stringi)
 library(countrycode)
 ```
 
+Then also grab the data. This isn't exactly all the data used by John in his tweet but it's close enough. I can't remember where I got the data from but similar datasets can be found by googling "world cities populations csv" e.g. [here](https://datahub.io/core/population-city).
+
 ```{r get_city_data, warning=FALSE,message=FALSE}
 #read in data from blog repo
 city_data <- read.csv("https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv", 
@@ -46,6 +48,8 @@ city_data <- read.csv("https://raw.githubusercontent.com/RobWHickman/netlify_blo
 
 head(city_data)
 ```
+
+Then we want to pull out the relevant data and do some melting to get a nice long format data frame of our data.
 
 ```{r munge_city_data1, warning=FALSE,message=FALSE}
 city_data <- city_data %>%
@@ -71,6 +75,7 @@ city_data <- city_data %>%
 
 head(city_data)
 ```
+As the y axis of our racing bar chart is going to be the cities rank in terms of population for any given observation year, we need to list cities in order. Using the Tidyverse a simple group_by() and mutating an order column will do the trick
 
 ```{r order_cities_by_year, warning=FALSE,message=FALSE}
 city_data <- city_data %>%
@@ -82,6 +87,7 @@ city_data <- city_data %>%
 
 head(city_data)
 ```
+I also wanted to colour the bars by the continent of the city for a little extra aesthetic. Easy to do by joining with the data from countrycode.
 
 ```{r get_continent, warning=FALSE,message=FALSE}
 #get the id data for each unique city
@@ -92,6 +98,12 @@ id_data <- city_data %>%
   mutate(continent = countrycode(.$country, origin = "country.name", destination = "continent"))
 
 ```
+
+Then we just need to do a final bit of munging on our data. I think in theory it's possible to do this purely within the gganimate plotting machinery, but I prefer to munge the data outside.
+
+First we want to select the columns that will be 'animated'- i.e. the population and the order, and then also the time information (year), and group (city_id). We pre-specify a linear ease (i.e that between time points the numbers increase/decrease linearly per frame). 
+
+Finally I merge in our id data we prepared above and also round off the population numbers to leave a data frame ready for plotting!
 
 ```{r tween_data, warning=FALSE,message=FALSE}
 #the number of frames the output will contain
@@ -115,6 +127,10 @@ frame_data <- city_data %>%
 
 head(frame_data)
 ```
+
+Then we just want to filter out only the information we want to plot (the top 10 cities per year, I use 10.8 so you see cities as they enter the top 10) and use the lesser-spotted geom_tile() geom from ggplot2 which I found is the easiest to manually move about. After some extra aesthetics we then specify the transition_states()- in our case transition based on the year- and some cool little extras like dynamically adjusting the y axis, and also fading bars as they enter and exit the plot. 
+
+At the bottom we then turn this plot into a gif using animate and add a little pause at the start and end.
 
 ```{r plot_and_gif_city_data, warning=FALSE,message=FALSE}
 p_cities <- frame_data %>%
@@ -160,11 +176,17 @@ city_gif <- animate(p_cities, frames, start_pause = 0.5, end_pause = 1)
 #anim_save("city_gif.gif", city_gif)
 ```
 
+And voilà! here is our gif
+
 ```{r plot_city_gif, warning=FALSE,message=FALSE}
 city_gif
 ```
 
 # The Next Level
+
+So as I mentioned, I wanted the example to be a plot of how English football teams have risen and fallen in strength over the ~150 years the league has been playing. This turned out to be more difficult than I anticipated so also gives a nice little intro to data.table beyond the basic i,j,k syntax.
+
+For this we need James Curley's engsoccerdata package and then also data.table and zoo for munging our data
 
 ```{r extra_libraries, warning=FALSE,message=FALSE}
 #use James Curley's engsoccer data for the match data
@@ -178,6 +200,8 @@ library(data.table)
 library(zoo)
 
 ```
+
+Then we want to select only the relevant bits of the data for calculating the [ELO]() ratings of teams on a match-by-match basis. For this I use the formula used by the folks who calculate the national football ELO ratings at [eloratings.net](https://www.eloratings.net/about) so if you're confused by what K and G mean look there.
 
 ```{r get_match_data}
 match_data <- engsoccerdata::england %>%
@@ -198,6 +222,9 @@ match_data <- engsoccerdata::england %>%
 
 head(match_data)
 ```
+
+We can then define a quick function to update ELO ratings based on the match results and push out the updated ratings to a data frame holding the current rating over time. This will take a few minutes given how many matches we have so it's worth going to make a cup of tea while it runs.
+
 ```{r set_up_ELO, warning=FALSE,message=FALSE,eval=FALSE}
 #start all teams with an ELO of 1000
 team_ratings <- data.frame(team = unique(match_data$home),
@@ -246,112 +273,60 @@ head(melted_elo_data)
 
 ```{r load_elo_data, warning=FALSE,message=FALSE,echo=FALSE}
 melted_elo_data <- readRDS("../../static/files/racing_bar_charts/melted_elo_data.rds")
+
 ```
 
+Now we have our ELO ratings for each team updated after every match, we can start munging the data to plot the racing bar chart. There's a few steps here that I'm going to separate out but keep the same name for the data.table we are working on. It's worth just working through step by step and seeing how the dt has been altered by the functions applied.
+
+First, I want to initialise a data table that will eventually hold the rating of each team over every day. We'll tween() the ratings later, for now we need a column which has every combination of date and team
 
 ```{r munge_football_data, warning=FALSE,message=FALSE}
-#init the days we want to run the race over
-days <- data.table(date = seq.Date(
-  min(melted_elo_data$date), 
-  max(melted_elo_data$date),
-  by = "day")
-  )
+days <- map2(melted_elo_data[melted_elo_data[, .I[which.min(date)], by = "season"]$V1, date], 
+             melted_elo_data[melted_elo_data[, .I[which.max(date)], by = "season"]$V1, date],
+             seq.Date, by = "day") %>%
+  do.call("c", .) %>%
+  data.table(date = .)
 
-munged_football_data <- melted_elo_data %>%
-  #start by merging in all the "missing" days
-  #ie. days where matches were not played
-  merge.data.frame(., days, all.y = TRUE) %>%
-  #complete by team in dataset
-  complete(date, nesting(team)) %>%
-  #delete the completion of NA data
-  filter(!is.na(team)) %>%
-  #set as DT for munging
-  setDT()
-
-munged_football_dt <- munged_football_data %>%
-  #order by date
-  .[order(date)] %>%
-  #find the first game in any league for each season
-  .[.[!is.na(season), .I[which.min(date)], by = c("season")]$V1, actual_season := season] %>%
-  #fill down
-  .[order(date, actual_season), actual_season := na.locf(actual_season, na.rm = FALSE)]
-```
-
-```{r remove_season_breaks, warning=FALSE,message=FALSE}
-#subset season breaks out
-munged_football_dt <- munged_football_dt %>%
-  #label each game a team players in a season
-  .[!is.na(rating), game := 1:.N, by = c("team", "actual_season")] %>%
-  #find the first game each team plays in a season
-  .[.[, .I[which.min(game)], by = c("team", "actual_season")]$V1, first_game := 1] %>%
-  #find the earliest game which is labelled as the first game in a season
-  #this is the 'start' of that season
-  .[.[first_game == 1, .I[which.min(date)], by = c("actual_season")]$V1, first_date := 1] %>%
-  #we'll use a binary 'keep' variable when we delete days in between seasons
-  #wil lfill this down later
-  .[date %in% unique(date[which(!is.na(.$first_date))]), keep := 1] %>%
-  #do the same with the last game played in any division in a season
-  .[.[, .I[which.max(game) + 7], by = c("team", "actual_season")]$V1, last_game := 1] %>%
-  .[.[last_game == 1, .I[which.max(date)], by = c("actual_season")]$V1, last_date := 1] %>%
-  .[date %in% unique(date[which(!is.na(.$last_date))]), keep := 0] %>%
-  #fill down the keep value and keep only those with a 1
-  .[, keep := na.locf(keep, na.rm = TRUE), by = team] %>%
-  .[keep == 1]
-```
-
-```{r tweening_ratings, warning=FALSE,message=FALSE}
-#tween the ratings between matches
-munged_football_dt <- munged_football_dt %>%
-  #make sure in date order
+munged_football_data <- melted_elo_data[days, on = "date"] %>%
+  .[CJ(date = date, team = team, unique=TRUE), 
+    on=.(date, team)] %>%
+  .[!is.na(team)] %>%
+  .[days[, year := as.numeric(gsub("-.*", "", date))], on = "date"] %>%
   .[order(date)] %>%
   #use tween fill for each team to get intermediate ratings
   .[, rating := tween_fill(rating, ease = "linear"), by = team] %>%
-  #for each teams last season in the data frame will be some days overhanging
-  #fill these down as rating obviously won't change
-  .[actual_season == max(actual_season), rating := na.locf(rating, na.rm = FALSE), by = team] %>%
-  #label each unique date as another frame grouped by season
   .[, frame := .GRP, by = date] %>%
   .[frame %% 5 == 1] %>%
   #take the rolling mean over 10 days to smooth out jumps
   .[order(date), roll_rating := frollmean(rating, n = 10, algo = "exact", align = "left"), by = "team"] %>%
   #remove unrated rows
-  .[!is.na(roll_rating)]
-
-```
-
-```{r label_frames, warning=FALSE,message=FALSE}
-#use decimal labelling for days in each season
-munged_football_dt <- munged_football_dt %>%
-  .[frame != lag(frame, default = 0), season_frame := 1:.N, by = actual_season] %>%
-  #fill down
-  .[, season_frame := na.locf(season_frame)] %>%
-  #frame is the season plus the amount through that season
-  #could probably do something fancy and label as unique days but this suffices
-  .[, season_frame := actual_season + season_frame/(max(season_frame) + 1)]
-
-#y axis ordering
-football_data <- munged_football_dt %>%
-  #order by rolling rating
+  .[!is.na(roll_rating)] %>%
+    #order by rolling rating
   .[order(-roll_rating)] %>%
-  #only going to take every 10th day
+  #rating stransition over a 10 day window
   #order by rating (as with the cities when rating by size)
-  .[frame %% 10 == 1, team_order := 1:.N, by = date] %>%
+  .[frame %% 30 == 1, team_order := 1:.N, by = date] %>%
   #use tweenr to make transitions smooth
   .[order(date), order_fill := tween_fill(team_order, ease = "cubic-in-out"), by = team] %>%
-  #delete superfluous data
-  .[, c("team_order", "keep", "last_game", "last_date", "first_game", "first_date") := NULL] %>%
-  .[!is.na(order_fill)]
+  .[!is.na(order_fill)] %>%
+  .[order(date)] %>%
+  .[frame != lag(frame, default = 0), year_frame := 1:.N, by = year] %>%
+  #fill down
+  .[, year_frame := na.locf(year_frame)] %>%
+  #frame is the season plus the amount through that season
+  #could probably do something fancy and label as unique days but this suffices
+  .[, year_frame := year + year_frame/(max(year_frame) + 1)] %>%
+  .[, c("date", "team", "roll_rating", "order_fill", "year_frame")]
 
-head(football_data)
 ```
 
-```{r plotting_football_data, warning=FALSE,message=FALSE}
 
+```{r plotting_football_data, warning=FALSE,message=FALSE}
 plotting_data <- club_data %>%
-  filter(team %in% football_data$team) %>%
-  football_data[., on = "team"] %>%
+  filter(team %in% munged_football_data$team) %>%
+  munged_football_data[., on = "team"] %>%
   #only plot a cutdown here as it takes a while
-  filter(date > "1974-07-01") %>%
+  filter(date > "2014-07-01") %>%
   #only want to plot the top 10
   filter(order_fill < 10.8)
 
@@ -373,7 +348,7 @@ p_football <- plotting_data %>%
   geom_text(aes(label = sprintf("%1.2f",roll_rating)), hjust = 1.5, colour = "black") +
   scale_fill_manual(values = fills, guide = FALSE) +
   scale_colour_manual(values = cols, guide = FALSE) +
-  labs(title='{floor(as.numeric(as.character(current_frame)))}',
+  labs(title='{as.character(current_frame)}',
        x = "ELO rating", y = "") +
   coord_cartesian(ylim = c(0,10.5), clip = "off") +
   scale_y_reverse(position = "left") +
@@ -382,10 +357,10 @@ p_football <- plotting_data %>%
         axis.ticks.y = element_blank(),
         axis.text.y  = element_blank(), 
         plot.margin = margin(0,0,0,2.5, "cm")) +
-  transition_manual(season_frame) +
+  transition_manual(date) +
   view_follow(fixed_y = TRUE)
 
-football_gif <- animate(p_football, nframes = length(unique(plotting_data$season_frame)) * 0.8, fps = 10)
+football_gif <- animate(p_football, nframes = length(unique(plotting_data$year_frame)) * 0.8, fps = 10)
 ```
 
 ```{r plot_football_gif, warning=FALSE,message=FALSE}
