@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme" content="hugo-academic">
+  <meta name="generator" content="Hugo 0.55.6" />
+  <meta name="author" content="Robert Hickman">
+
+  
+  
+  
+  
+    
+      
+    
+  
+  <meta name="description" content="A while ago (and also still a bit) racing bar charts were all the rage on data visualisation forums/twitter. Perhaps one of the real breakout examples is this tweet from the, always excellent, John Burn-Murdochat the Financial Times, looking at the most populous cities in the world since the middle ages:
+New project:
+A “Bar Chart Race” animation showing the changing ranks of the 10 biggest cities in the world since 1500.">
+
+  
+  <link rel="alternate" hreflang="en-us" href="/post/racing_bar_charts/">
+
+  
+
+
+  
+
+  
+  
+  <meta name="theme-color" content="#0095eb">
+  
+  
+  
+  
+    
+  
+  
+    
+    
+      
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+      
+    
+  
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha512-6MXa8B6uaO18Hid6blRMetEIoPqHf7Ux1tnyIQdpt9qI5OACx7C+O3IVTr98vwGnlcg0LOLa02i9Y1HpVhlfiw==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.1/css/academicons.min.css" integrity="sha512-NThgw3XKQ1absAahW6to7Ey42uycrVvfNfyjqcFNgCmOCQ5AR4AO0SiXrN+8ZtYeappp56lk1WtvjVmEa+VR6A==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous">
+  
+  
+  
+  
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Montserrat:400,700%7cRoboto:400,400italic,700%7cRoboto&#43;Mono">
+  
+  <link rel="stylesheet" href="/styles.css">
+  
+
+  
+
+  
+  <link rel="alternate" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="feed" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  
+
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" href="/img/icon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
+
+  <link rel="canonical" href="/post/racing_bar_charts/">
+
+  <meta property="twitter:card" content="summary_large_image">
+  
+  <meta property="twitter:site" content="@robert_squared">
+  <meta property="twitter:creator" content="@robert_squared">
+  
+  <meta property="og:site_name" content="Robert Hickman">
+  <meta property="og:url" content="/post/racing_bar_charts/">
+  <meta property="og:title" content="Racing Bar Charts and Some data.table Munging | Robert Hickman">
+  <meta property="og:description" content="A while ago (and also still a bit) racing bar charts were all the rage on data visualisation forums/twitter. Perhaps one of the real breakout examples is this tweet from the, always excellent, John Burn-Murdochat the Financial Times, looking at the most populous cities in the world since the middle ages:
+New project:
+A “Bar Chart Race” animation showing the changing ranks of the 10 biggest cities in the world since 1500.">
+  <meta property="og:locale" content="en-us">
+  
+  <meta property="article:published_time" content="2019-11-17T00:00:00&#43;00:00">
+  
+  <meta property="article:modified_time" content="2019-11-17T00:00:00&#43;00:00">
+  
+
+  <script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+</script>
+<script async type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <title>Racing Bar Charts and Some data.table Munging | Robert Hickman</title>
+
+</head>
+<body id="top" data-spy="scroll" data-target="#toc" data-offset="71" >
+
+<nav class="navbar navbar-default navbar-fixed-top" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="navbar-header">
+      
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+              data-target=".navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      
+      <a class="navbar-brand" href="/">Robert Hickman</a>
+    </div>
+
+    
+    <div class="collapse navbar-collapse">
+
+      
+      
+      <ul class="nav navbar-nav navbar-right">
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#about">
+            
+            <span>Home</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#publications_selected">
+            
+            <span>Publications</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#posts">
+            
+            <span>Posts</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#projects">
+            
+            <span>Projects</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#writing">
+            
+            <span>Writing</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#contact">
+            
+            <span>Contact</span>
+            
+          </a>
+        </li>
+
+        
+        
+      
+
+      
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+
+<article class="article" itemscope itemtype="http://schema.org/Article">
+
+  
+
+
+  <div class="article-container">
+    <div class="article-inner">
+      <h1 itemprop="name">Racing Bar Charts and Some data.table Munging</h1>
+
+      
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2019-11-17 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Nov 17, 2019
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    16 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+  
+<div class="share-box" aria-hidden="true">
+  <ul class="share">
+    <li>
+      <a class="twitter"
+         href="https://twitter.com/intent/tweet?text=Racing%20Bar%20Charts%20and%20Some%20data.table%20Munging&amp;url=%2fpost%2fracing_bar_charts%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-twitter"></i>
+      </a>
+    </li>
+    <li>
+      <a class="facebook"
+         href="https://www.facebook.com/sharer.php?u=%2fpost%2fracing_bar_charts%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-facebook"></i>
+      </a>
+    </li>
+    <li>
+      <a class="linkedin"
+         href="https://www.linkedin.com/shareArticle?mini=true&amp;url=%2fpost%2fracing_bar_charts%2f&amp;title=Racing%20Bar%20Charts%20and%20Some%20data.table%20Munging"
+         target="_blank" rel="noopener">
+        <i class="fa fa-linkedin"></i>
+      </a>
+    </li>
+    <li>
+      <a class="weibo"
+         href="http://service.weibo.com/share/share.php?url=%2fpost%2fracing_bar_charts%2f&amp;title=Racing%20Bar%20Charts%20and%20Some%20data.table%20Munging"
+         target="_blank" rel="noopener">
+        <i class="fa fa-weibo"></i>
+      </a>
+    </li>
+    <li>
+      <a class="email"
+         href="mailto:?subject=Racing%20Bar%20Charts%20and%20Some%20data.table%20Munging&amp;body=%2fpost%2fracing_bar_charts%2f">
+        <i class="fa fa-envelope"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+  
+
+</div>
+
+
+      <div class="article-style" itemprop="articleBody">
+        
+
+
+<p>A while ago (and also still a bit) <a href="https://app.flourish.studio/@flourish/bar-chart-race">racing bar charts</a> were all the rage on data visualisation forums/twitter. Perhaps one of the real breakout examples is this tweet from the, always excellent, John Burn-Murdochat the Financial Times, looking at the most populous cities in the world since the middle ages:</p>
+<blockquote class="twitter-tweet">
+<p lang="en" dir="ltr">
+New project:<br> <br>A “Bar Chart Race” animation showing the changing ranks of the 10 biggest cities in the world since 1500.<br><br>Fascinating to watch giant cities vanish after falling in conquests, and amazing that three UK cities were in the top 8 in the late 1800s. <a href="https://t.co/KglMZbYobr">pic.twitter.com/KglMZbYobr</a>
+</p>
+— John Burn-Murdoch (<span class="citation">@jburnmurdoch</span>) <a href="https://twitter.com/jburnmurdoch/status/1107552367795412992?ref_src=twsrc%5Etfw">March 18, 2019</a>
+</blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<p>As with most things I blog about here I wondered if I could make them in R, and how easy that would be. The first half of this post is basically recreating the aforementioned gif pretty simply using <a href="https://github.com/thomasp85/gganimate">gganimate</a>. However, I also wanted to see if I could use the format to look at the strongest English football teams across history in <a href="">link to second half of blogpost</a> which gave me an unexpected lesson in using <a href="https://cran.r-project.org/web/packages/data.table/vignettes/datatable-intro.html">data.table</a> and especially some lesser used facets of it- ones that might require more complex multiline solutions in the tidyverse.</p>
+<div id="reproducing-racing-bar-charts-in-r" class="section level1">
+<h1>Reproducing Racing Bar Charts in R</h1>
+<p>Getting on with actually producing racing bar charts, first we want to load up the libraries we’ll need.</p>
+<pre class="r"><code>library(tidyverse)
+library(gganimate)
+library(tweenr)
+library(stringi)
+#for getting the continents of various cities
+library(countrycode)</code></pre>
+<p>Then also grab the data. This isn’t exactly all the data used by John in his tweet but it’s close enough. I can’t remember where I got the data from but similar datasets can be found by googling “world cities populations csv” e.g. <a href="https://datahub.io/core/population-city">here</a>.</p>
+<pre class="r"><code>#read in data from blog repo
+city_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, 
+                 encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)
+
+head(city_data)</code></pre>
+<pre><code>##   Country.Code Country.or.area City.Code               Urban.Agglomeration
+## 1          392           Japan     21671                             Tokyo
+## 2          356           India     21228                             Delhi
+## 3          156           China     20656                          Shanghai
+## 4           76          Brazil     20287                      S&lt;e3&gt;o Paulo
+## 5          356           India     21206                   Mumbai (Bombay)
+## 6          484          Mexico     21853 Ciudad de M&lt;e9&gt;xico (Mexico City)
+##   Note  Latitude Longitude  X1950  X1955  X1960  X1965  X1970  X1975
+## 1  325  35.68950 139.69171 11,275 13,713 16,679 20,284 23,298 26,615
+## 2  318  28.66667  77.21667  1,369  1,782  2,283  2,845  3,531  4,426
+## 3  202  31.22000 121.46000  4,301  5,846  6,820  6,428  6,036  5,627
+## 4   NA -23.55000 -46.64000  2,334  3,044  3,970  5,494  7,620  9,614
+## 5   NA  19.07398  72.88084  2,857  3,432  4,060  4,854  5,811  7,082
+## 6  330  19.42732 -99.14187  3,365  4,294  5,479  6,969  8,831 10,734
+##    X1980  X1985  X1990  X1995  X2000  X2005  X2010  X2015  X2020  X2025
+## 1 28,549 30,304 32,530 33,587 34,450 35,622 36,834 38,001 38,323 37,876
+## 2  5,558  7,325  9,726 12,407 15,732 18,670 21,935 25,703 29,348 32,727
+## 3  5,966  6,847  7,823 10,450 13,959 16,763 19,980 23,741 27,137 29,442
+## 4 12,089 13,395 14,776 15,913 17,014 18,288 19,660 21,066 22,119 22,899
+## 5  8,658 10,391 12,436 14,310 16,367 17,891 19,422 21,043 22,838 25,207
+## 6 13,028 14,278 15,642 17,017 18,457 19,276 20,132 20,999 21,868 22,916
+##    X2030
+## 1 37,190
+## 2 36,060
+## 3 30,751
+## 4 23,444
+## 5 27,797
+## 6 23,865</code></pre>
+<p>Then we want to pull out the relevant data and do some melting to get a nice long format data frame of our data.</p>
+<pre class="r"><code>city_data &lt;- city_data %&gt;%
+  #select out relevant columns
+  select(country_id = Country.Code, country = Country.or.area,
+         city_id = City.Code, city = Urban.Agglomeration,
+         X1950, X1955, X1960, X1965, X1970, X1975, X1980, X1985, X1990,
+         X1995, X2000, X2005, X2010, X2015, X2020, X2025, X2030) %&gt;%
+  #melt the data to long format
+  reshape2::melt(id.vars = c(&quot;country_id&quot;, &quot;country&quot;, &quot;city_id&quot;, &quot;city&quot;),
+                 variable.name = &quot;year&quot;, value.name = &quot;population&quot;) %&gt;%
+  #conver the data into usuable numbers
+  mutate(year = as.numeric(gsub(&quot;^X&quot;, &quot;&quot;, year)),
+         population = as.numeric(gsub(&quot;,&quot;, &quot;&quot;, population)),
+         #convert the text into utf-8 readable
+         city = stri_trans_general(city, &quot;latin-ascii&quot;)) %&gt;%
+  #extract the english names for cities
+  mutate(city_name = case_when(
+    grepl(&quot;\\(&quot;, city) ~ str_extract(city,  &quot;(?&lt;=\\().+?(?=\\))&quot;),
+    grepl(&quot;-&quot;, city) ~ gsub(&quot;-.*&quot;, &quot;&quot;, city),
+    TRUE ~ as.character(city)
+  ))
+
+head(city_data)</code></pre>
+<pre><code>##   country_id country city_id                                  city year
+## 1        392   Japan   21671                                 Tokyo 1950
+## 2        356   India   21228                                 Delhi 1950
+## 3        156   China   20656                              Shanghai 1950
+## 4         76  Brazil   20287                      S&lt;U+FFFD&gt;o Paulo 1950
+## 5        356   India   21206                       Mumbai (Bombay) 1950
+## 6        484  Mexico   21853 Ciudad de M&lt;U+FFFD&gt;xico (Mexico City) 1950
+##   population        city_name
+## 1      11275            Tokyo
+## 2       1369            Delhi
+## 3       4301         Shanghai
+## 4       2334 S&lt;U+FFFD&gt;o Paulo
+## 5       2857           Bombay
+## 6       3365      Mexico City</code></pre>
+<p>As the y axis of our racing bar chart is going to be the cities rank in terms of population for any given observation year, we need to list cities in order. Using the Tidyverse a simple group_by() and mutating an order column will do the trick</p>
+<pre class="r"><code>city_data &lt;- city_data %&gt;%
+  #group by and find order at any point
+  group_by(year) %&gt;%
+  arrange(-population) %&gt;%
+  mutate(order = row_number()) %&gt;%
+  ungroup()
+
+head(city_data)</code></pre>
+<pre><code>## # A tibble: 6 x 8
+##   country_id country city_id city   year population city_name order
+##        &lt;int&gt; &lt;chr&gt;     &lt;int&gt; &lt;chr&gt; &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;     &lt;int&gt;
+## 1        392 Japan     21671 Tokyo  2020      38323 Tokyo         1
+## 2        392 Japan     21671 Tokyo  2015      38001 Tokyo         1
+## 3        392 Japan     21671 Tokyo  2025      37876 Tokyo         1
+## 4        392 Japan     21671 Tokyo  2030      37190 Tokyo         1
+## 5        392 Japan     21671 Tokyo  2010      36834 Tokyo         1
+## 6        356 India     21228 Delhi  2030      36060 Delhi         2</code></pre>
+<p>I also wanted to colour the bars by the continent of the city for a little extra aesthetic. Easy to do by joining with the data from countrycode.</p>
+<pre class="r"><code>#get the id data for each unique city
+id_data &lt;- city_data %&gt;%
+  select(city_id, city_name, country_id, country) %&gt;%
+  unique() %&gt;%
+  #find the continent of each city
+  mutate(continent = countrycode(.$country, origin = &quot;country.name&quot;, destination = &quot;continent&quot;))</code></pre>
+<p>Then we just need to do a final bit of munging on our data. I think in theory it’s possible to do this purely within the gganimate plotting machinery, but I prefer to munge the data outside.</p>
+<p>First we want to select the columns that will be ‘animated’- i.e. the population and the order, and then also the time information (year), and group (city_id). We pre-specify a linear ease (i.e that between time points the numbers increase/decrease linearly per frame).</p>
+<p>Finally I merge in our id data we prepared above and also round off the population numbers to leave a data frame ready for plotting!</p>
+<pre class="r"><code>#the number of frames the output will contain
+frames &lt;- 500
+
+#use tweenr to manually make the naimation frame data
+frame_data &lt;- city_data %&gt;%
+  group_by(year) %&gt;%
+  arrange(-population) %&gt;%
+  mutate(order = row_number()) %&gt;%
+  #tweenr stuff here
+  select(city_id, year, population, order) %&gt;%
+  mutate(ease = &quot;linear&quot;) %&gt;%
+  tween_elements(., &quot;year&quot;, &quot;city_id&quot;, &quot;ease&quot;, nframes= frames) %&gt;%
+  #select out columns
+  select(population, order, year, .frame, city_id = .group) %&gt;%
+  #merge in id data
+  merge(., id_data, by = &#39;city_id&#39;) %&gt;%
+  #munge population numbers
+  mutate(pop = round(population/1000, 2))
+
+head(frame_data)</code></pre>
+<pre><code>##   city_id population    order     year .frame city_name country_id
+## 1   20001    82.0000  849.000 1950.000      0     Herat          4
+## 2   20001   565.0000 1213.000 2030.000    500     Herat          4
+## 3   20001   101.1290 1141.129 1969.516    122     Herat          4
+## 4   20001   245.2500 1510.250 2001.875    324     Herat          4
+## 5   20001   178.2581 1314.000 1988.871    243     Herat          4
+## 6   20001   335.7419 1516.419 2014.839    405     Herat          4
+##       country continent  pop
+## 1 Afghanistan      Asia 0.08
+## 2 Afghanistan      Asia 0.56
+## 3 Afghanistan      Asia 0.10
+## 4 Afghanistan      Asia 0.25
+## 5 Afghanistan      Asia 0.18
+## 6 Afghanistan      Asia 0.34</code></pre>
+<p>Then we just want to filter out only the information we want to plot (the top 10 cities per year, I use 10.8 so you see cities as they enter the top 10) and use the lesser-spotted geom_tile() geom from ggplot2 which I found is the easiest to manually move about. After some extra aesthetics we then specify the transition_states()- in our case transition based on the year- and some cool little extras like dynamically adjusting the y axis, and also fading bars as they enter and exit the plot.</p>
+<p>At the bottom we then turn this plot into a gif using animate and add a little pause at the start and end.</p>
+<pre class="r"><code>p_cities &lt;- frame_data %&gt;%
+  #only want to plot the top 10
+  filter(order &lt; 10.8) %&gt;%
+  ggplot(aes(y = order, x = pop)) +
+  #hack to plot the moving bars
+  #from v helpful answer at
+  #https://stackoverflow.com/questions/53162821/
+  #animated-sorted-bar-chart-with-bars-overtaking-each-other/53163549
+  geom_tile(aes(x = pop/2, width = pop, fill = continent),
+            alpha = 0.8, colour = &quot;black&quot;, height = 0.9) +
+  geom_text(aes(label = sprintf(&quot;%1.2f&quot;,pop)), hjust = 1) +
+  geom_text(aes(x = 0, label = paste(city_name, &quot; &quot;)),
+            vjust = 0.2, hjust = 1) +
+  #add labels to plot
+  labs(title=&#39;{round(as.numeric(closest_state))}&#39;,
+       x = &quot;Population (millions)&quot;, y = &quot;&quot;) +
+  #y limits at 0-10.5
+  #don&#39;t clip as will screw the labels outside the plot
+  coord_cartesian(ylim = c(0,10.5), clip = &quot;off&quot;) +
+  #flip the y axis
+  scale_y_reverse(position = &quot;left&quot;) +
+  #theme stuff
+  #taken from same stackoverflow answer
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0, size = 22),
+        axis.ticks.y = element_blank(),
+        axis.text.y  = element_blank(), 
+        #make sure labels will be visible
+        plot.margin = margin(0,0,0,2.5, &quot;cm&quot;)) +
+  #transition by our calculated year
+  transition_states(year, transition_length = 1, state_length = 0) +
+  #scale x axis as pop increases
+  view_follow(fixed_y = TRUE) +
+  #fade as bares enter and exit the plot
+  exit_fade() +
+  enter_fade()
+
+#animate the gif
+city_gif &lt;- animate(p_cities, frames, start_pause = 10, end_pause = 20)
+#e.g. if you want to save the output
+#anim_save(&quot;city_gif.gif&quot;, city_gif)</code></pre>
+<p>And voilà! here is our gif</p>
+<pre class="r"><code>city_gif</code></pre>
+<p><img src="/post/2019-11-17-gnarly_data_table_bar_charts_files/figure-html/plot_city_gif-1.gif" /><!-- --></p>
+</div>
+<div id="soccer-through-the-ages" class="section level1">
+<h1>Soccer Through the Ages</h1>
+<p>So as I mentioned, I wanted the example to be a plot of how English football teams have risen and fallen in strength over the ~150 years the league has been playing. This turned out to be more difficult than I anticipated so also gives a nice little extension to using data.table beyond the basic i,j,k syntax.</p>
+<p>For this we need James Curley’s engsoccerdata package and then also data.table and zoo for munging our data</p>
+<pre class="r"><code>#use James Curley&#39;s engsoccer data for the match data
+#club data and updated english football dat ain latest release
+#November 2019
+library(engsoccerdata)
+
+#data.table and zoo for munging
+library(data.table)
+library(zoo)</code></pre>
+<p>Then we want to select only the relevant bits of the data for calculating the <a href="https://en.wikipedia.org/wiki/Elo_rating_system">ELO</a> ratings of teams on a match-by-match basis. For this I use the formula used by the folks who calculate the national football ELO ratings at <a href="https://www.eloratings.net/about">eloratings.net</a> so if you’re confused by what K and G mean look there.</p>
+<pre class="r"><code>#some dates in the engsoccerdata::england data are off
+#original should work by time of reading
+#match_data &lt;- engsoccerdata:;england %&gt;%
+match_data &lt;- readRDS(&quot;../../static/files/racing_bar_charts/england_data.rds&quot;) %&gt;%
+  mutate(date = as.Date(Date)) %&gt;%
+  select(date, season = Season, home, visitor, tier, hgoal, vgoal, result) %&gt;%
+  mutate(K = (5-tier) * 10) %&gt;%
+  mutate(G = case_when(
+    abs(hgoal-vgoal) &lt; 2 ~ 1,
+    abs(hgoal-vgoal) &lt; 3 ~ 1.5,
+    abs(hgoal-vgoal) &gt;= 3 ~ (11 + abs(hgoal-vgoal)) / 8
+  )) %&gt;%
+  mutate(result = case_when(
+    result == &quot;H&quot; ~ 1,
+    result == &quot;A&quot; ~ 0,
+    result == &quot;D&quot; ~ 0.5
+  )) %&gt;%
+  arrange(date)
+
+head(match_data)</code></pre>
+<pre><code>##         date season                    home              visitor tier
+## 1 1888-09-08   1888        Bolton Wanderers         Derby County    1
+## 2 1888-09-08   1888                 Everton      Accrington F.C.    1
+## 3 1888-09-08   1888       Preston North End              Burnley    1
+## 4 1888-09-08   1888              Stoke City West Bromwich Albion    1
+## 5 1888-09-08   1888 Wolverhampton Wanderers          Aston Villa    1
+## 6 1888-09-15   1888             Aston Villa           Stoke City    1
+##   hgoal vgoal result  K     G
+## 1     3     6    0.0 40 1.750
+## 2     2     1    1.0 40 1.000
+## 3     5     2    1.0 40 1.750
+## 4     0     2    0.0 40 1.500
+## 5     1     1    0.5 40 1.000
+## 6     5     1    1.0 40 1.875</code></pre>
+<p>We can then define a quick function to update ELO ratings based on the match results and push out the updated ratings to a data frame holding the current rating over time. This will take a few minutes given how many matches we have so it’s worth going to make a cup of tea while it runs.</p>
+<pre class="r"><code>#start all teams with an ELO of 1000
+team_ratings &lt;- data.frame(team = unique(match_data$home),
+                           rating = 1000)
+
+#function to calculate team ELO and update back to the ratings df
+calc_ELO &lt;- function(row) {
+  #get the difference in ratings
+  hr &lt;- team_ratings$rating[which(team_ratings$team == row$home)]
+  vr &lt;- team_ratings$rating[which(team_ratings$team == row$visitor)]
+  dr &lt;- (hr + 100) - vr
+  
+  e_result &lt;- 1/ (10^(-dr/400)+1)
+  new_hr &lt;- hr + ((row$K*row$G) * (row$result - e_result))
+  new_vr &lt;- vr + ((row$K*row$G) * ((1-row$result) - (1-e_result)))
+  
+  team_ratings$rating[which(team_ratings$team == row$home)] &lt;&lt;- new_hr
+  team_ratings$rating[which(team_ratings$team == row$visitor)] &lt;&lt;- new_vr
+  
+  output_row &lt;- row %&gt;%
+    mutate(h_rating = new_hr, v_rating = new_vr)
+  
+  return(output_row)
+}
+
+#split and lapply function
+elo_data &lt;- match_data %&gt;%
+  split(f = seq(nrow(.))) %&gt;%
+  lapply(., calc_ELO) %&gt;%
+  do.call(rbind, .)
+
+#melt the elo data
+melted_elo_data &lt;- elo_data %&gt;%
+  select(date, season, home, visitor, h_rating, v_rating) %&gt;%
+  reshape2::melt(id.vars = c(&quot;date&quot;, &quot;season&quot;, &quot;h_rating&quot;, &quot;v_rating&quot;),
+                 variable.name = &quot;location&quot;, value.name = &quot;team&quot;) %&gt;%
+  mutate(rating = case_when(
+    location == &quot;home&quot; ~ h_rating,
+    location == &quot;visitor&quot; ~ v_rating
+  )) %&gt;%
+  select(date, season, team, rating)
+
+#df of each teams rating after each game day
+head(melted_elo_data)</code></pre>
+<p>Now we have our ELO ratings for each team updated after every match, we can start munging the data to plot the racing bar chart. Most of this is fairly standard data.table munging but there’s an operation up top that I was pretty pleased with.</p>
+<p>The English football season typically runs from mid August until mid May. Given that teams do not play competitive matches in this time, it gives 3 months of dead space where team ratings shouldn’t change which is going to be pretty boring in our final gif.</p>
+<p>Therefore, I wanted to find out the total time within each season- i.e. the first match in any division in English football to the last match in any division (as different leagues may start and end on different dates). Therefore we need to find the minimum and maximum date value for each season and seq between them.</p>
+<p>You could in theory do this using ddply- see <a href="https://stackoverflow.com/questions/16573995/subset-by-group-with-data-table">a question asked by Hadley Wickham on Stack Overflow</a> but it’s a) quicker in data.table and also I think the one line aspect to do everything is super pleasing.</p>
+<p>We know once we have the row numbers for the min date we can easily subset based using them in data.table such as</p>
+<pre class="r"><code>dt_data[subset_condition, values_needed]</code></pre>
+<p>but we need to actually find the row numbers for the subset condition to use in i. We can do this in a 3.5 step process as follows:</p>
+<ol style="list-style-type: decimal">
+<li>re supply the data (melted_elo_data)</li>
+<li>add a column of the condition of the minimum data using .I[which.min(date)]
+(2.5) do this by season as we need it for every season</li>
+<li>keep only this new minimum date information by selecting the newly initialised V1 column</li>
+</ol>
+<p><img src="/img/datatableI.png" />
+We then also do this for the max date in each sequence and use map2 to sequence between each min and max date (could also use mapply but I just prefer map2s syntax).</p>
+<p>We then have to make sure that every team is listed for every date so after joining the data.table of team rating information with the data.table of dates, we want to cross-join (CJ) by date and team. I;d never actually used cross-join before, but it’s essentially the equivalent of tidyr::complete().</p>
+<pre class="r"><code>setDT(melted_elo_data)
+
+#get the min and max date for each season and seq between them
+days &lt;- map2(melted_elo_data[melted_elo_data[, .I[which.min(date)], by = &quot;season&quot;]$V1, date], 
+             melted_elo_data[melted_elo_data[, .I[which.max(date)], by = &quot;season&quot;]$V1, date],
+             seq.Date, by = &quot;day&quot;) %&gt;%
+  #unlist screws up dates
+  do.call(&quot;c&quot;, .) %&gt;%
+  #convert to dt for joining
+  data.table(date = .)
+
+#expand the dt by dates
+#join each date first
+munged_football_data &lt;- melted_elo_data[days, on = &quot;date&quot;] %&gt;%
+  #cross-join so that every team is represented on every date
+  #equivelant of tidyr::complete
+  .[CJ(date = date, team = team, unique=TRUE), 
+    on=.(date, team)] %&gt;%
+  #filter out the completion of NA team for dates
+  .[!is.na(team)] %&gt;%
+  #also a a column for the calendar year by rejoining based on date
+  .[days[, year := as.numeric(gsub(&quot;-.*&quot;, &quot;&quot;, date))], 
+    on = &quot;date&quot;, allow.cartesian = TRUE]</code></pre>
+<p>Finally, we need to use gganimate::tween() again to fill in the missing ratings in the days where teams aren’t playing. Luckily, gganimate contains tween_fill which is perfect for this and plays nicely with data.table. I tween the ratings linearly between matches (and also take a rolling mean), and tween the positions using a cubic function so teams spend a little more time roughly in a nice plotting order.</p>
+<p>After that, all that’s left is to order the frames properly and we’re almost read for plotting!</p>
+<pre class="r"><code>munged_football_data &lt;- munged_football_data %&gt;%
+  .[order(date)] %&gt;%
+  #use tween fill for each team to get intermediate ratings
+  .[, rating := tween_fill(rating, ease = &quot;linear&quot;), by = team] %&gt;%
+  .[, rating := na.locf(rating, na.rm = FALSE), by = &quot;team&quot;] %&gt;%
+  .[, frame := .GRP, by = date] %&gt;%
+  #take every 5th frame to cut down on final gif size
+  #not strictly necessary
+  .[frame %% 5 == 1] %&gt;%
+  #take the rolling mean over 30 days to smooth out jumps
+  .[order(date), 
+    roll_rating := frollmean(rating, n = 6, algo = &quot;exact&quot;, align = &quot;left&quot;),
+    by = &quot;team&quot;] %&gt;%
+  #remove unrated rows
+  .[!is.na(roll_rating)] %&gt;%
+    #order by rolling rating
+  .[order(-roll_rating)] %&gt;%
+  #rating stransition over a 10 day window
+  #order by rating (as with the cities when rating by size)
+  .[frame %% 30 == 1, team_order := 1:.N, by = date] %&gt;%
+  #use tweenr to make transitions smooth
+  .[order(date), 
+    order_fill := tween_fill(team_order, ease = &quot;cubic-in-out&quot;),
+    by = team] %&gt;%
+  .[!is.na(order_fill)] %&gt;%
+  .[order(date)] %&gt;%
+  .[frame != lag(frame, default = 0), year_frame := 1:.N, by = year] %&gt;%
+  #fill down
+  .[, year_frame := na.locf(year_frame)] %&gt;%
+  #frame is the season plus the amount through that season
+  #could probably do something fancy and label as unique days but this suffices
+  .[, year_frame := year + year_frame/(max(year_frame) + 1)] %&gt;%
+  .[, c(&quot;date&quot;, &quot;team&quot;, &quot;roll_rating&quot;, &quot;order_fill&quot;, &quot;year_frame&quot;)]</code></pre>
+<p>To plot, first I join in data from engosccerdata::club_data which is a new dataset of some basic information for English football clubs that’s new to the package. It contains a primary and secondary colour for each club so adds a little bit of extra aesthetic to the final gif. Then I basically plot as before using geom_tile() from ggplot()</p>
+<pre class="r"><code>#use the newly added club data from engsoccerdata
+plotting_data &lt;- engsoccerdata::england_club_data %&gt;%
+  #filter only teams we have in our dataset
+  filter(team %in% munged_football_data$team) %&gt;%
+  #join
+  munged_football_data[., on = &quot;team&quot;] %&gt;%
+  #only plot a cutdown here as gifs are large
+  filter(date &gt; &quot;2015-07-01&quot;) %&gt;%
+  #only want to plot the top 10
+  filter(order_fill &lt; 10.8)
+
+#get the colour and fill palettes from the plotting data
+palette &lt;- plotting_data %&gt;%
+  filter(!duplicated(team)) 
+fills &lt;- palette %&gt;%
+  .$col1 %&gt;%
+  as.character() %&gt;%
+  `names&lt;-`(palette$team)
+cols &lt;- palette %&gt;%
+  .$col2 %&gt;%
+  as.character() %&gt;%
+  `names&lt;-`(palette$team)
+
+#plot roughly as before
+p_football &lt;- plotting_data %&gt;%
+  ggplot(aes(y = order_fill, x = roll_rating, fill = team, colour = team)) +
+  geom_tile(aes(x = roll_rating/2, width = roll_rating),
+            alpha = 0.8, height = 0.9, size = 1) +
+  geom_text(aes(x = 0, label = paste(short_name, &quot; &quot;)),
+            vjust = 0.2, hjust = 1, colour = &quot;black&quot;) +
+  geom_text(aes(label = sprintf(&quot;%1.2f&quot;,roll_rating)), 
+            hjust = 1.5, colour = &quot;black&quot;) +
+  scale_fill_manual(values = fills, guide = FALSE) +
+  scale_colour_manual(values = cols, guide = FALSE) +
+  labs(title=&#39;{as.character(current_frame)}&#39;,
+       x = &quot;ELO rating&quot;, y = &quot;&quot;) +
+  coord_cartesian(ylim = c(0,10.5), clip = &quot;off&quot;) +
+  scale_y_reverse(position = &quot;left&quot;) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0, size = 22),
+        axis.ticks.y = element_blank(),
+        axis.text.y  = element_blank(), 
+        plot.margin = margin(0,0,0,2.5, &quot;cm&quot;)) +
+  transition_manual(date) +
+  view_follow(fixed_y = TRUE)
+
+#animate the gif
+football_gif &lt;- animate(p_football, 
+                        nframes = length(unique(plotting_data$year_frame)),
+                        fps = 10,
+                        end_pause = 10)</code></pre>
+<pre class="r"><code>football_gif</code></pre>
+<p><img src="/post/2019-11-17-gnarly_data_table_bar_charts_files/figure-html/football_gif-1.gif" /><!-- --></p>
+<p>Anyway, cheers. It was a fun one to play around with. I’ll put the full gifs of 1880-2019 online at some point!</p>
+<p>Best,</p>
+</div>
+
+      </div>
+
+      
+
+
+<div class="article-tags">
+  
+  <a class="btn btn-primary btn-outline" href="/tags/r">R</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/bar_charts">bar_charts</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/data.table">data.table</a>
+  
+</div>
+
+
+
+    </div>
+  </div>
+
+</article>
+
+
+
+
+
+
+<div class="article-container">
+  
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="powered-by">
+
+      &copy; 2018 &middot; 
+
+      Powered by the
+      <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+      <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+      <span class="pull-right" aria-hidden="true">
+        <a href="#" id="back_to_top">
+          <span class="button_icon">
+            <i class="fa fa-chevron-up fa-2x"></i>
+          </span>
+        </a>
+      </span>
+
+    </p>
+  </div>
+</footer>
+
+
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close btn-large" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Cite</h4>
+      </div>
+      <div>
+        <pre><code class="modal-body tex"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-primary btn-outline js-copy-cite" href="#" target="_blank">
+          <i class="fa fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-primary btn-outline js-download-cite" href="#" target="_blank">
+          <i class="fa fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+    
+
+    
+
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.3/imagesloaded.pkgd.min.js" integrity="sha512-umsR78NN0D23AzgoZ11K7raBD+R6hqKojyBZs1w8WvYlsI+QuKRGBx3LFCwhatzBunCjDuJpDHwxD13sLMbpRA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha512-iztkobsvnjKfAtTNdHkGVjAYTrrtlC7mGp/54c40wowO7LhURYl3gVzzcEqGl/qKXQltJ2HwMrdLcNUdo+N/RQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.4/isotope.pkgd.min.js" integrity="sha512-VDBOIlDbuC4VWxGJNmuFRQ0Li0SKkDpmGyuhAG5LTDLd/dJ/S0WMVxriR2Y+CyPL5gzjpN4f/6iqWVBJlht0tQ==" crossorigin="anonymous"></script>
+    
+    
+    <script src="/js/hugo-academic.js"></script>
+    
+
+    
+    
+      
+      
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+      
+
+      
+
+      
+
+      <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    
+    
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_CHTML" integrity="sha512-tOav5w1OjvsSJzePRtt2uQPFwBoHt1VZcUq8l8nm5284LEKE9FSJBQryzMBzHxY5P0zRdNqEcpLIRVYFNgu1jw==" crossorigin="anonymous"></script>
+    
+    
+
+  </body>
+</html>
+
