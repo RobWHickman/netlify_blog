@@ -1,5 +1,5 @@
 ---
-title: Racing Bar Charts and Some Gnarly data.table Munging
+title: Racing Bar Charts and Some data.table Munging
 author: Robert Hickman
 date: '2019-11-17'
 slug: racing_bar_charts
@@ -165,7 +165,7 @@ p_cities <- frame_data %>%
   enter_fade()
 
 #animate the gif
-city_gif <- animate(p_cities, frames, start_pause = 0.5, end_pause = 1)
+city_gif <- animate(p_cities, frames, start_pause = 10, end_pause = 20)
 #e.g. if you want to save the output
 #anim_save("city_gif.gif", city_gif)
 ```
@@ -197,7 +197,10 @@ library(zoo)
 Then we want to select only the relevant bits of the data for calculating the [ELO](https://en.wikipedia.org/wiki/Elo_rating_system) ratings of teams on a match-by-match basis. For this I use the formula used by the folks who calculate the national football ELO ratings at [eloratings.net](https://www.eloratings.net/about) so if you're confused by what K and G mean look there.
 
 ```{r get_match_data}
-match_data <- engsoccerdata::england %>%
+#some dates in the engsoccerdata::england data are off
+#original should work by time of reading
+#match_data <- engsoccerdata:;england %>%
+match_data <- readRDS("../../static/files/racing_bar_charts/england_data.rds") %>%
   mutate(date = as.Date(Date)) %>%
   select(date, season = Season, home, visitor, tier, hgoal, vgoal, result) %>%
   mutate(K = (5-tier) * 10) %>%
@@ -250,7 +253,7 @@ elo_data <- match_data %>%
   do.call(rbind, .)
 
 #melt the elo data
-melt <- elo_data %>%
+melted_elo_data <- elo_data %>%
   select(date, season, home, visitor, h_rating, v_rating) %>%
   reshape2::melt(id.vars = c("date", "season", "h_rating", "v_rating"),
                  variable.name = "location", value.name = "team") %>%
@@ -273,7 +276,7 @@ Now we have our ELO ratings for each team updated after every match, we can star
 
 The English football season typically runs from mid August until mid May. Given that teams do not play competitive matches in this time, it gives 3 months of dead space where team ratings shouldn't change which is going to be pretty boring in our final gif. 
 
-Therefore, I wanted to find out the total time within each season- i.e. the first match in any division in English football to the last match in any division (as different leagues may start and end on different dates)*. Therefore we need to find the minimum and maximum date value for each season and seq between them.
+Therefore, I wanted to find out the total time within each season- i.e. the first match in any division in English football to the last match in any division (as different leagues may start and end on different dates). Therefore we need to find the minimum and maximum date value for each season and seq between them.
 
 You could in theory do this using ddply- see [a question asked by Hadley Wickham on Stack Overflow](https://stackoverflow.com/questions/16573995/subset-by-group-with-data-table) but it's a) quicker in data.table and also I think the one line aspect to do everything is super pleasing.
 
@@ -317,7 +320,8 @@ munged_football_data <- melted_elo_data[days, on = "date"] %>%
   #filter out the completion of NA team for dates
   .[!is.na(team)] %>%
   #also a a column for the calendar year by rejoining based on date
-  .[days[, year := as.numeric(gsub("-.*", "", date))], on = "date"]
+  .[days[, year := as.numeric(gsub("-.*", "", date))], 
+    on = "date", allow.cartesian = TRUE]
 
 ```
 
@@ -330,12 +334,15 @@ munged_football_data <- munged_football_data %>%
   .[order(date)] %>%
   #use tween fill for each team to get intermediate ratings
   .[, rating := tween_fill(rating, ease = "linear"), by = team] %>%
+  .[, rating := na.locf(rating, na.rm = FALSE), by = "team"] %>%
   .[, frame := .GRP, by = date] %>%
   #take every 5th frame to cut down on final gif size
   #not strictly necessary
   .[frame %% 5 == 1] %>%
   #take the rolling mean over 30 days to smooth out jumps
-  .[order(date), roll_rating := frollmean(rating, n = 6, algo = "exact", align = "left"), by = "team"] %>%
+  .[order(date), 
+    roll_rating := frollmean(rating, n = 6, algo = "exact", align = "left"),
+    by = "team"] %>%
   #remove unrated rows
   .[!is.na(roll_rating)] %>%
     #order by rolling rating
@@ -344,7 +351,9 @@ munged_football_data <- munged_football_data %>%
   #order by rating (as with the cities when rating by size)
   .[frame %% 30 == 1, team_order := 1:.N, by = date] %>%
   #use tweenr to make transitions smooth
-  .[order(date), order_fill := tween_fill(team_order, ease = "cubic-in-out"), by = team] %>%
+  .[order(date), 
+    order_fill := tween_fill(team_order, ease = "cubic-in-out"),
+    by = team] %>%
   .[!is.na(order_fill)] %>%
   .[order(date)] %>%
   .[frame != lag(frame, default = 0), year_frame := 1:.N, by = year] %>%
@@ -361,13 +370,13 @@ To plot, first I join in data from engosccerdata::club_data which is a new datas
 
 ```{r plotting_football_data, warning=FALSE,message=FALSE}
 #use the newly added club data from engsoccerdata
-plotting_data <- engosccerdata::club_data %>%
+plotting_data <- engsoccerdata::england_club_data %>%
   #filter only teams we have in our dataset
   filter(team %in% munged_football_data$team) %>%
   #join
   munged_football_data[., on = "team"] %>%
   #only plot a cutdown here as gifs are large
-  filter(date > "2010-07-01") %>%
+  filter(date > "2015-07-01") %>%
   #only want to plot the top 10
   filter(order_fill < 10.8)
 
@@ -376,9 +385,11 @@ palette <- plotting_data %>%
   filter(!duplicated(team)) 
 fills <- palette %>%
   .$col1 %>%
+  as.character() %>%
   `names<-`(palette$team)
 cols <- palette %>%
   .$col2 %>%
+  as.character() %>%
   `names<-`(palette$team)
 
 #plot roughly as before
@@ -406,11 +417,15 @@ p_football <- plotting_data %>%
 
 #animate the gif
 football_gif <- animate(p_football, 
-                        nframes = length(unique(plotting_data$year_frame)) * 0.75,
-                        fps = 10)
+                        nframes = length(unique(plotting_data$year_frame)),
+                        fps = 10,
+                        end_pause = 10)
 ```
 
-```{r plot_football_gif, warning=FALSE,message=FALSE}
-anim_save("fooball_gif1.gif", football_gif)
+```{r football_gif, warning=FALSE,message=FALSE}
+football_gif
 ```
 
+Anyway, cheers. It was a fun one to play around with. I'll put the full gifs of 1880-2019 online at some point!
+
+Best,

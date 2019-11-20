@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="theme" content="hugo-academic">
-  <meta name="generator" content="Hugo 0.32.2" />
+  <meta name="generator" content="Hugo 0.55.6" />
   <meta name="author" content="Robert Hickman">
 
   
@@ -327,7 +327,10 @@ MathJax.Hub.Config({
 
 
       <div class="article-style" itemprop="articleBody">
-        <p>For anyone watching football, being able to predict matches is a key aspect of the hobby. Whether explicitly (e.g. when betting on matches, or deciding on recruitment for an upcoming season), or more implicitly when discussing favourites to win the league in the pub, almost all discussion of the sport on some level require predictions about some set of upcoming games.</p>
+        
+
+
+<p>For anyone watching football, being able to predict matches is a key aspect of the hobby. Whether explicitly (e.g. when betting on matches, or deciding on recruitment for an upcoming season), or more implicitly when discussing favourites to win the league in the pub, almost all discussion of the sport on some level require predictions about some set of upcoming games.</p>
 <p>The first step of prediction is some form of quantification of ability. We’d expect a better team to have a better chance of winning than a worse team. For an example of a more sophisticated set of rankings, see <a href="https://projects.fivethirtyeight.com/soccer-predictions/">fivethirtyeight’s Soccer Power Index</a> which is explicitly used to predict the results of various football competitions.</p>
 <p>The accuracy of our predictions therefore relies on the accuracy of our judgement on team’s ability. When discussing football with friends, we might use half-remembered match highlights to form some impression of how strong a team is. When programming however, we have free access to the results of teams thus far in a campaign and should be able to produce a model more grounded in truth.</p>
 <p>Two seminal papers for using recent football results to assess the abilities of football teams (and then use this assessment to predict matches) are <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1467-9574.1982.tb00782.x">Maher’s 1982 paper</a> on modelling football scores, which is complimented by <a href="https://www.jstor.org/stable/pdf/2986290.pdf?casa_token=9deLgF7xOaEAAAAA:fGGfUQKOsezrWBvbmphK56HddtiaohxaUNPdkDBoTApL_beghKXFlru5USztLt7dDVEMSdhAfkg8yzubZsAs7eeyZvp307iAGwqAtVSMMhwk6xhUleM">Mark Dixon and Stuart Coles’ 1997 paper</a>. For R various packages to use the methods outlined in these papers exist including <a href="https://github.com/Torvaney/regista">Ben Torvaney’s regista</a>, <a href="https://github.com/opisthokonta/goalmodel">opisthokonta’s goalmodel</a><sup>1</sup>, and <a href="https://cran.r-project.org/web/packages/fbRanks/index.html">Eli Holmes’ fbRanks</a>.</p>

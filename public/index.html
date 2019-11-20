@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="theme" content="hugo-academic">
-  <meta name="generator" content="Hugo 0.32.2" />
+  <meta name="generator" content="Hugo 0.55.6" />
   <meta name="author" content="Robert Hickman">
 
   
@@ -77,7 +77,7 @@
   <meta property="og:description" content="PhD student in Physiology, Development, and Neuroscience">
   <meta property="og:locale" content="en-us">
   
-  <meta property="og:updated_time" content="2018-01-05T00:00:00&#43;00:00">
+  <meta property="og:updated_time" content="2019-11-17T00:00:00&#43;00:00">
   
 
   <script type="text/x-mathjax-config">
@@ -412,7 +412,7 @@ MathJax.Hub.Config({
   
   
   <h3 class="article-title" itemprop="headline">
-    <a href="/post/racing_bar_charts/" itemprop="url">Racing Bar Charts and Some Gnarly data.table Munging</a>
+    <a href="/post/racing_bar_charts/" itemprop="url">Racing Bar Charts and Some data.table Munging</a>
   </h3>
   
 
@@ -431,7 +431,7 @@ MathJax.Hub.Config({
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    11 min read
+    16 min read
   </span>
   
 
@@ -449,8 +449,9 @@ MathJax.Hub.Config({
 
   <div class="article-style" itemprop="articleBody">
     
-    Reproducing Racing Bar Charts in Rtext
-library(tidyverse)library(gganimate)library(tweenr)library(stringi)library(countrycode)#read in data from blog repocity_data &lt;- read.csv(&quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&quot;, encoding = &quot;UTF-8&quot;, stringsAsFactors = FALSE)head(city_data)## Country.Code Country.or.area City.Code Urban.Agglomeration## 1 392 Japan 21671 Tokyo## 2 356 India 21228 Delhi## 3 156 China 20656 Shanghai## 4 76 Brazil 20287 S&lt;e3&gt;o Paulo## 5 356 India 21206 Mumbai (Bombay)## 6 484 Mexico 21853 Ciudad de M&lt;e9&gt;xico (Mexico City)## Note Latitude Longitude X1950 X1955 X1960 X1965 X1970 X1975## 1 325 35.
+    A while ago (and also still a bit) racing bar charts were all the rage on data visualisation forums/twitter. Perhaps one of the real breakout examples is this tweet from the, always excellent, John Burn-Murdochat the Financial Times, looking at the most populous cities in the world since the middle ages:
+New project:
+A “Bar Chart Race” animation showing the changing ranks of the 10 biggest cities in the world since 1500.
     
   </div>
   <p class="read-more" itemprop="mainEntityOfPage">
@@ -1144,20 +1145,6 @@ The first step of prediction is some form of quantification of ability.
           
           
           
-          <a href="/tags/dixon-coles" style="font-size:0.8rem">Dixon-Coles</a>
-        
-          
-          
-          
-          
-          
-          <a href="/tags/r" style="font-size:0.8rem">R</a>
-        
-          
-          
-          
-          
-          
           <a href="/tags/bar_charts" style="font-size:0.8rem">bar_charts</a>
         
           
@@ -1208,6 +1195,13 @@ The first step of prediction is some form of quantification of ability.
           
           
           <a href="/tags/demo" style="font-size:0.8rem">demo</a>
+        
+          
+          
+          
+          
+          
+          <a href="/tags/dixon-coles" style="font-size:0.8rem">dixon-coles</a>
         
           
           
@@ -1270,6 +1264,13 @@ The first step of prediction is some form of quantification of ability.
           
           
           
+          <a href="/tags/r" style="font-size:0.8rem">r</a>
+        
+          
+          
+          
+          
+          
           <a href="/tags/riddler" style="font-size:0.8rem">riddler</a>
         
           
@@ -1326,14 +1327,14 @@ The first step of prediction is some form of quantification of ability.
           
           
           
-          <a href="/tags/world-cup" style="font-size:1.9541966381350877rem">world cup</a>
+          <a href="/tags/world-cup" style="font-size:1.9541966381350877rem">world-cup</a>
         
           
           
           
           
           
-          <a href="/tags/xg" style="font-size:0.8rem">xG</a>
+          <a href="/tags/xg" style="font-size:0.8rem">xg</a>
         
       </div>
     
