@@ -647,7 +647,10 @@ p &amp;lt;- elo_data %&amp;gt;%
 # save the gif
 gif &amp;lt;- animate(p, nframes = 20)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Which if we render gives us&lt;/p&gt;
-&lt;p&gt;!()[&lt;a href=&#34;https://i.imgur.com/4cgBX48.gif&#34; class=&#34;uri&#34;&gt;https://i.imgur.com/4cgBX48.gif&lt;/a&gt;]&lt;/p&gt;
+&lt;div class=&#34;figure&#34;&gt;
+&lt;img src=&#34;/img/nation_elo_gif.gif&#34; alt=&#34;nation elo&#34; /&gt;
+&lt;p class=&#34;caption&#34;&gt;nation elo&lt;/p&gt;
+&lt;/div&gt;
 &lt;p&gt;And the data looks good! The &lt;a href=&#34;https://en.wikipedia.org/wiki/Golden_Team&#34;&gt;Mighty Magyar&lt;/a&gt; Hungary team of the 1950s can be seen to peak before the nations long decline, whereas the opposite is true for Japan. Overall, I’m pretty happy with the result. It could surely be cleaned up using rolling means and more careful plotting, but for a small example to plot the output from the scraping (the real point for this post) it serves a purpose.&lt;/p&gt;
 </description>
     </item>

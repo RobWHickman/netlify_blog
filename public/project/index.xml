@@ -127,6 +127,8 @@
       <guid>/project/r_packages/</guid>
       <description>
 
+&lt;p&gt;Some R packages I have authored. Most/all can be found at my &lt;a href=&#34;https://github.com/RobWHickman&#34; target=&#34;_blank&#34;&gt;Github page&lt;/a&gt;&lt;/p&gt;
+
 &lt;h1 id=&#34;karpov&#34;&gt;KaRpov&lt;/h1&gt;
 
 &lt;p&gt;&lt;img src=&#34;/img/packages/immortal_game.gif&#34; alt=&#34;Immortal Game GIF&#39;d using kaRpov&#34; /&gt;&lt;/p&gt;
@@ -141,15 +143,19 @@
 
 &lt;h1 id=&#34;jeb&#34;&gt;Jeb!&lt;/h1&gt;
 
-&lt;h1 id=&#34;intosccerdata&#34;&gt;intosccerdata&lt;/h1&gt;
+&lt;p&gt;&lt;img src=&#34;https://raw.githubusercontent.com/RobWHickman/Jeb/master/man/figure/HexSticker.png&#34; alt=&#34;Jeb!&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;A small joke package written to quickly generate maps akin to the &lt;a href=&#34;https://knowyourmeme.com/memes/jeb-wins&#34; target=&#34;_blank&#34;&gt;Jeb wins meme&lt;/a&gt; using sf and ggplot2.&lt;/p&gt;
 
 &lt;h1 id=&#34;epv&#34;&gt;EPV&lt;/h1&gt;
 
 &lt;p&gt;&lt;img src=&#34;https://raw.githubusercontent.com/RobWHickman/EPV/master/hex_sticker/HexSticker2.png&#34; alt=&#34;EPV&#34; /&gt;&lt;/p&gt;
 
-&lt;p&gt;A small package to include code from the my work for the 2019 Statsbomb Conference on Expected Threat Models. To be extended into other Expected Posession Value models when time allows&lt;/p&gt;
+&lt;p&gt;A small package to include code from the my work for the 2019 Statsbomb Conference on Expected Threat Models. To be extended into other Expected Posession Value models when time allows.&lt;/p&gt;
 
 &lt;h1 id=&#34;camstroke&#34;&gt;CamStroke&lt;/h1&gt;
+
+&lt;p&gt;A package to download data related to Cambridge collegiate rowing. Contains cleaned results files for various races and data on the various college boat clubs.&lt;/p&gt;
 </description>
     </item>
     
