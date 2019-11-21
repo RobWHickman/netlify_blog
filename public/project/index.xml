@@ -15,7 +15,24 @@
       <pubDate>Thu, 21 Nov 2019 00:00:00 +0000</pubDate>
       
       <guid>/project/guardian_knowledge/</guid>
-      <description></description>
+      <description>
+
+&lt;p&gt;When I have a free afternoon, I enjoy answering the questions listed on The Guardian&amp;rsquo;s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34; target=&#34;_blank&#34;&gt;The Knowledge&lt;/a&gt; blog. This munging generally ends up as &lt;a href=&#34;http://www.robert-hickman.eu/post/&#34; target=&#34;_blank&#34;&gt;blogposts&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Here are the current examples I have published:&lt;/p&gt;
+
+&lt;h1 id=&#34;august-2018-http-www-robert-hickman-eu-post-the-knowledge-4th-august-2018&#34;&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34; target=&#34;_blank&#34;&gt;August 2018&lt;/a&gt;&lt;/h1&gt;
+
+&lt;p&gt;Looked at successive runs of fixtures for English clubs against identical suffix/prefixes. Also scraped FIFA World Cup squads and looked at players who played in a lower shirt number than their age.&lt;/p&gt;
+
+&lt;h1 id=&#34;january-2019-http-www-robert-hickman-eu-post-counties-league-points&#34;&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/counties_league_points/&#34; target=&#34;_blank&#34;&gt;January 2019&lt;/a&gt;&lt;/h1&gt;
+
+&lt;h1 id=&#34;febuary-2019-http-www-robert-hickman-eu-post-the-knowledge-7th-february-2019&#34;&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-7th-february-2019/&#34; target=&#34;_blank&#34;&gt;Febuary 2019&lt;/a&gt;&lt;/h1&gt;
+
+&lt;h1 id=&#34;june-2019-http-www-robert-hickman-eu-post-guardian-knowledge-june&#34;&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/guardian_knowledge_june/&#34; target=&#34;_blank&#34;&gt;June 2019&lt;/a&gt;&lt;/h1&gt;
+
+&lt;p&gt;For these questions I tend to rely on the &lt;a href=&#34;https://github.com/jalapic/engsoccerdata&#34; target=&#34;_blank&#34;&gt;engsoccerdata&lt;/a&gt; package in R, to which I am a frequent contributor. I also tend to do a fair bit of web scraping using simple (and sometimes &lt;a href=&#34;http://www.robert-hickman.eu/post/dynamic_web_scraping/&#34; target=&#34;_blank&#34;&gt;not so simple&lt;/a&gt;) methods.&lt;/p&gt;
+</description>
     </item>
     
     <item>

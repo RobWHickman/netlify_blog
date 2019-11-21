@@ -263,6 +263,11 @@ defaultContentLanguageInSubdir = false
   url = "#projects"
   weight = 4
 
+[[menu.main]]
+  name = "CV"
+  url = "files/cv/placeholder.pdf"
+  weight = 5
+  
 # Taxonomies.
 [taxonomies]
   tag = "tags"
