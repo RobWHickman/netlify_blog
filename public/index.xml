@@ -6,8 +6,192 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
-    <lastBuildDate>Sun, 17 Nov 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 21 Nov 2019 00:00:00 +0000</lastBuildDate>
     <atom:link href="/" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Could Yorkshire Win the World Cup</title>
+      <link>/project/yorkshire_world_cup/</link>
+      <pubDate>Thu, 21 Nov 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/project/yorkshire_world_cup/</guid>
+      <description>
+
+&lt;p&gt;In 2018, after watching the &lt;a href=&#34;https://en.wikipedia.org/wiki/2018_CONIFA_World_Football_Cup&#34; target=&#34;_blank&#34;&gt;CONIFA World Cup&lt;/a&gt; final live, I wondered if an Independent Yorkshire could win the FIFA World Cup. This resulted in a few blogposts that were turned into an article in &lt;a href=&#34;https://www.citymetric.com/horizons/football-could-independent-yorkshire-win-world-cup-3961&#34; target=&#34;_blank&#34;&gt;Citymetric magazine&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;This page lists the blog posts and a one line description of techniques therein. The copies the article text below.&lt;/p&gt;
+
+&lt;h1 id=&#34;blog-posts&#34;&gt;Blog Posts&lt;/h1&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/yorkshire_world_cup_1/&#34; target=&#34;_blank&#34;&gt;Data and Scraping&lt;/a&gt; - Grabbing the FIFA video game player data and UK maps&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/yorkshire_world_cup_2/&#34; target=&#34;_blank&#34;&gt;Player Position LASSO&lt;/a&gt; - Using LASSO regression to calculate player abilities in various positions&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/yorkshire_world_cup_3/&#34; target=&#34;_blank&#34;&gt;Finding Birthplaces&lt;/a&gt; - Scraping the birthplaces of British players and binning by county&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/yorkshire_world_cup_4/&#34; target=&#34;_blank&#34;&gt;Picking Teams&lt;/a&gt; - Simulating various lineups to find the best team each nation/county can put out on the field&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/yorkshire_world_cup_5/&#34; target=&#34;_blank&#34;&gt;Simulating World Cup&lt;/a&gt; - Calculate implied county ELO and simulate World Cups to get a sense of the chance of a county winning it&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/yorkshire_world_cup_6/&#34; target=&#34;_blank&#34;&gt;&lt;em&gt;Bonus&lt;/em&gt; UK/Rest of the World teams&lt;/a&gt; - Doing the same but for an all UK team/ players from Nations who did not qualify for the World Cup&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&#34;article-text&#34;&gt;Article Text&lt;/h1&gt;
+
+&lt;p&gt;With less than a week until the start of the 2018 World Cup in Russia, it’s worth remembering, that another World Cup – the 2018 ConIFA World Cup for stateless people, minorities, and regions unaffiliated with FIFA - is also taking place in London.&lt;/p&gt;
+
+&lt;p&gt;Though happening in the UK, neither of the local ConIFA members will be competing. The Ellan Vannin team from the Isle of Man withdrew midway; and the latest ConIFA member, Yorkshire, only gained membership earlier this year.&lt;/p&gt;
+
+&lt;p&gt;One of Yorkshire’s most obvious characteristics, is that it’s absolutely huge compared to most other UK counties. It also – probably – has the highest contemporary population of any of the historic British counties. Indeed, as recently as this February the region resisted attempts to split control of the region up, demanding a “One Yorkshire” devolution deal instead of the proposed control to regions surrounding four of it’s major cities – and in May, a vocal proponent of such a “One Yorkshire” devolution, Dan Jarvis, the Labour MP for Barnsley, was elected as mayor of one of the Sheffield City region.&lt;/p&gt;
+
+&lt;p&gt;Given its size, ConIFA membership, and pushes for further devolution, I was wondering how Yorkshire would do as an independent full FIFA member. If it seceded as a whole from the rest of the UK could it field a team that could challenge internationally? Could any of the historic British counties?&lt;/p&gt;
+
+&lt;p&gt;Overall, there are 88 historic counties in Great Britain, plus the 6 counties of Northern Ireland (I couldn’t find shapefiles for the older subdivisions) which could be potential independent FIFA members.&lt;/p&gt;
+
+&lt;p&gt;Once I had these, I needed some way to rate potential players, and therefore teams. Luckily, the popular video game FIFA18 maintains up to date ratings of thousands of players across 36 different stats (e.g. dribbling, heading, pace etc.). After scraping an online database of players, I’m left with 18,058 players of various nationalities and abilities.&lt;/p&gt;
+
+&lt;p&gt;Using a simple regression model, I can use these abilities and the player’s listed preferred positions to predict what each players rating for each position, and use these position ratings to train a computer to pick optimal teams across a variety of formations. If we do this do for every nation that has at least 11 players in the database (10 outfield + 1 goalkeeper), the best 4 national teams that can be fielded are from Brazil, Germany, Spain, and Belgium.&lt;/p&gt;
+
+&lt;p&gt;To pick the teams for each county, though, I first had to find the birthplace of player. To simplify things a bit I only check players listed as English, Scottish, Welsh, Northern Irish, or Irish (due to the weirdness of the Irish FA) in my database of FIFA players. For each of these I ran a script to look the player up on wikipedia and scrape their birthplace. Once this was geocoded, I had a map of each British player and their birthplace, and therefore, the county of their birth.&lt;/p&gt;
+
+&lt;p&gt;Unsurprisingly, it basically shows a population density map of the UK, with more players born in the urban centres of London, Birmingham, the Lancashire cities and the West Yorkshire urban centres. After binning the players by county of birth, twenty historic counties have enough players to field a team.&lt;/p&gt;
+
+&lt;p&gt;On this chart, ‘FIFA_ability’ is the perceived ability of the optimal 11 players in a starting line up for that county, as judged by FIFA stats.&lt;/p&gt;
+
+&lt;p&gt;Perhaps a little surprisingly, the Lancashire team is rated slightly higher than the Yorkshire team – though looking at the sheer number of players they can select from it makes sense. Elsewhere, the home counties do well, as do Glasgow and Warwickshire (which contains much of contemporary Birmingham).&lt;/p&gt;
+
+&lt;p&gt;Looking at the selections the alogirthm chooses, it’s pretty clear some of these teams tend to be a bit flawed but overall make sense. The Yorkshire/Lancashire teams in particular are full of England international players and are lacking only an experienced top level goalkeeper.&lt;/p&gt;
+
+&lt;p&gt;In order to predict how these teams would do at a World Cup, I needed some form of quantifiable rating of a team;s ability. Luckily, ELO ratings in chess can do exactly that: the likelihood of any team A beating a team B is a direct function in the difference in their ELO rating.&lt;/p&gt;
+
+&lt;p&gt;Plotting the ELO ratings of each actual national team (an up to date calculation is maintained at ELOrating.net) against the ability of each national team as judged by FIFA18 shows a pretty clear linear trend. Using a regression model of this relationship, we can predict the ability of each hypothetical county national team.&lt;/p&gt;
+
+&lt;p&gt;When plotted, these ELO ratings show that some of the counties are definitely in the ball park of established world cup qualifiers – and so we might expected a post-super-devolution Britain to be sending multiple teams to the World Cup.&lt;/p&gt;
+
+&lt;p&gt;In fact, Yorkshire and Lancashire are predicted to be about as good as the national teams of Serbia and Sweden. Lagging a bit behind, Essex and Surrey – both of which take in large chunks of what is now London – could expect to be competititve with teams like Turkey and Morocco.&lt;/p&gt;
+
+&lt;p&gt;However, just finding out how good these teams would be wasn’t what I wanted to know. I wanted to see if an independent British county could win the World Cup.&lt;/p&gt;
+
+&lt;p&gt;To do this, I swapped each of these counties in for the national English team and ran 10000 simulations of the post-devolution 2018 World Cup, uusing the same draws and fixtures as the real tournament uses.&lt;/p&gt;
+
+&lt;p&gt;The bad news is, the real-life favourites tend to dominate the simulations. Brazil or Germany were predicted to win the tournament in almost half of all the simulations. On the graph, it;s just possible to make out the red bars of Yorkshire and Lancashire, both of which won 41 out of 10000 simulations (a 0.41 per cent chance of winning any random World Cup).&lt;/p&gt;
+
+&lt;p&gt;This seems pretty low – but is comparable to pretty respectable teams like Denmark (0.775 per cent), Senegal (0.217 per cent), and even higher than the Iceland team which knocked england out of Euro2016 (0.339 per cent). It’s way higher than the chances the simulation gives the Russian hosts (0.07 per cent).&lt;/p&gt;
+
+&lt;p&gt;Scaling down to just these pretty hopeless nations/counties really shows how little hope the independent British counties would have at an international tournament. However, the best four counties (Lancashire, Yorkshire, Essex, and Surrey) all have about a 0.2 per cent or higher chance, or 500-1 odds, at winning the 2018 World Cup were they to replace England at the last minute. This is an order of magnitude greater than the 5000-1 odds given to Leicester City at the start of 2015-2016 Premier League season, so there’s always a chance.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Guardian: The Knowledge</title>
+      <link>/project/guardian_knowledge/</link>
+      <pubDate>Thu, 21 Nov 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/project/guardian_knowledge/</guid>
+      <description>
+
+&lt;p&gt;When I have a free afternoon, I enjoy answering the questions listed on The Guardian&amp;rsquo;s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34; target=&#34;_blank&#34;&gt;The Knowledge&lt;/a&gt; blog. This munging generally ends up as &lt;a href=&#34;http://www.robert-hickman.eu/post/&#34; target=&#34;_blank&#34;&gt;blogposts&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Here are the current examples I have published:&lt;/p&gt;
+
+&lt;h1 id=&#34;august-2018-http-www-robert-hickman-eu-post-the-knowledge-4th-august-2018&#34;&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34; target=&#34;_blank&#34;&gt;August 2018&lt;/a&gt;&lt;/h1&gt;
+
+&lt;p&gt;Looked at successive runs of fixtures for English clubs against identical suffix/prefixes. Also scraped FIFA World Cup squads and looked at players who played in a lower shirt number than their age.&lt;/p&gt;
+
+&lt;h1 id=&#34;january-2019-http-www-robert-hickman-eu-post-counties-league-points&#34;&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/counties_league_points/&#34; target=&#34;_blank&#34;&gt;January 2019&lt;/a&gt;&lt;/h1&gt;
+
+&lt;p&gt;Grouped football teams by their county and looked at which counties had won the most points over the past 140 years of league football&lt;/p&gt;
+
+&lt;h1 id=&#34;febuary-2019-http-www-robert-hickman-eu-post-the-knowledge-7th-february-2019&#34;&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-7th-february-2019/&#34; target=&#34;_blank&#34;&gt;Febuary 2019&lt;/a&gt;&lt;/h1&gt;
+
+&lt;p&gt;Answered 4 questions:
+- which football players have scored on the most unique days of the year (Cristiano Ronaldo)
+- which football teams had finished 2nd in a league the most times (Manchester United in the 1st Division - 14times)
+- what is the earliest a team has been relegated from a league the earliest (Rochdale, with 8 games to go in &lt;sup&gt;1973&lt;/sup&gt;&amp;frasl;&lt;sub&gt;1974&lt;/sub&gt;)
+- what is the longest run of games without a draw in the English leagues (Aston Villa with 50 games in &lt;sup&gt;1891&lt;/sup&gt;&amp;frasl;&lt;sub&gt;1892&lt;/sub&gt;)&lt;/p&gt;
+
+&lt;h1 id=&#34;june-2019-http-www-robert-hickman-eu-post-guardian-knowledge-june&#34;&gt;&lt;a href=&#34;http://www.robert-hickman.eu/post/guardian_knowledge_june/&#34; target=&#34;_blank&#34;&gt;June 2019&lt;/a&gt;&lt;/h1&gt;
+
+&lt;p&gt;A pretty fun post trying to work out the players who had played in the Premier League while representing low ranked countries. It turns out it&amp;rsquo;s pretty difficult to answer conclusively, but it seems that Zesh Rehman (Fulham/Pakistan) in 2005 is the lowest ranked, whereas Christpher Wreh seems to be the player with the lowest ranked nationality to actually win the league&lt;/p&gt;
+
+&lt;p&gt;For these questions I tend to rely on the &lt;a href=&#34;https://github.com/jalapic/engsoccerdata&#34; target=&#34;_blank&#34;&gt;engsoccerdata&lt;/a&gt; package in R, to which I am a frequent contributor. I also tend to do a fair bit of web scraping using simple (and sometimes &lt;a href=&#34;http://www.robert-hickman.eu/post/dynamic_web_scraping/&#34; target=&#34;_blank&#34;&gt;not so simple&lt;/a&gt;) methods.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>R Packages</title>
+      <link>/project/r_packages/</link>
+      <pubDate>Thu, 21 Nov 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/project/r_packages/</guid>
+      <description>
+
+&lt;p&gt;Some R packages I have authored. Most/all can be found at my &lt;a href=&#34;https://github.com/RobWHickman&#34; target=&#34;_blank&#34;&gt;Github page&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;karpov&#34;&gt;KaRpov&lt;/h1&gt;
+
+&lt;p&gt;&lt;img src=&#34;/img/packages/immortal_game.gif&#34; alt=&#34;Immortal Game GIF&#39;d using kaRpov&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;A small package in base R to read pgn files of chess matches and turn them into animations of the game using ggplot2. &lt;a href=&#34;https://github.com/RobWHickman/kaRpov&#34; target=&#34;_blank&#34;&gt;https://github.com/RobWHickman/kaRpov&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;ggparliament&#34;&gt;ggparliament&lt;/h1&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://raw.githubusercontent.com/RobWHickman/ggparliament/master/man/figures/HexSticker.png&#34; alt=&#34;ggparliament&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;An extension to ggplot2 written with Thomas Leeper and Zoe Meers to plot the layour of various parliamentary chambers and their composition by party. Resulted in a &lt;a href=&#34;https://www.theoj.org/joss-papers/joss.01313/10.21105.joss.01313.pdf&#34; target=&#34;_blank&#34;&gt;JOSS paper&lt;/a&gt;. Over 4000 downloads from CRAN and 115 Github stars as of November 2019.&lt;/p&gt;
+
+&lt;h1 id=&#34;jeb&#34;&gt;Jeb!&lt;/h1&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://raw.githubusercontent.com/RobWHickman/Jeb/master/man/figure/HexSticker.png&#34; alt=&#34;Jeb!&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;A small joke package written to quickly generate maps akin to the &lt;a href=&#34;https://knowyourmeme.com/memes/jeb-wins&#34; target=&#34;_blank&#34;&gt;Jeb wins meme&lt;/a&gt; using sf and ggplot2.&lt;/p&gt;
+
+&lt;h1 id=&#34;epv&#34;&gt;EPV&lt;/h1&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://raw.githubusercontent.com/RobWHickman/EPV/master/hex_sticker/HexSticker2.png&#34; alt=&#34;EPV&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;A small package to include code from the my work for the 2019 Statsbomb Conference on Expected Threat Models. To be extended into other Expected Posession Value models when time allows.&lt;/p&gt;
+
+&lt;h1 id=&#34;camstroke&#34;&gt;CamStroke&lt;/h1&gt;
+
+&lt;p&gt;A package to download data related to Cambridge collegiate rowing. Contains cleaned results files for various races and data on the various college boat clubs.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Statsbomb Conference</title>
+      <link>/project/statsbomb_conference/</link>
+      <pubDate>Thu, 21 Nov 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/project/statsbomb_conference/</guid>
+      <description>
+
+&lt;p&gt;In August 2019, I won the oppurtunity to present a research talk at the inagural &lt;a href=&#34;https://statsbomb.com/conference/&#34; target=&#34;_blank&#34;&gt;Statsbomb football analytics conference&lt;/a&gt;. My proposal focused on &lt;a href=&#34;https://karun.in/blog/expected-threat.html&#34; target=&#34;_blank&#34;&gt;Markov models&lt;/a&gt; of possession value when playing football, and incorporating a risk factor into these models.&lt;/p&gt;
+
+&lt;p&gt;I presented a 25 minute talk on my work at the conference in October 2019. Below is a list of resources related to the project.&lt;/p&gt;
+
+&lt;h1 id=&#34;original-application&#34;&gt;Original Application&lt;/h1&gt;
+
+&lt;p&gt;&amp;lt; to be added &amp;gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;the-talk&#34;&gt;The Talk&lt;/h1&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://www.youtube.com/watch?v=nzaHaWEa9BA&#34; title=&#34;my talk&#34; target=&#34;_blank&#34;&gt;&lt;img src=&#34;/img/statsbomb_talk.png&#34; alt=&#34;My Statsbomb Talk Video&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;talk-slides&#34;&gt;Talk Slides&lt;/h1&gt;
+
+&lt;p&gt;&amp;lt; to be added &amp;gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;white-paper&#34;&gt;White Paper&lt;/h1&gt;
+
+&lt;p&gt;currently in the process of writing up a white paper based on the research. Will upload here when completed.&lt;/p&gt;
+
+&lt;h1 id=&#34;r-package&#34;&gt;R Package&lt;/h1&gt;
+
+&lt;p&gt;alongside the white paper, I am putting together an R package to easily reproduce the findings, and also extend into other similar models of possession value. The code can be found &lt;a href=&#34;https://github.com/RobWHickman/EPV&#34; target=&#34;_blank&#34;&gt;on Github&lt;/a&gt;&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Racing Bar Charts and Some data.table Munging</title>
@@ -442,6 +626,15 @@ football_gif &amp;lt;- animate(p_football,
     </item>
     
     <item>
+      <title>Considering Defensive Risk in Expected Threat Models</title>
+      <link>/talk/statsbomb_conference_talk/</link>
+      <pubDate>Fri, 11 Oct 2019 00:00:00 +0100</pubDate>
+      
+      <guid>/talk/statsbomb_conference_talk/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Scraping Dynamic Websites with PhantomJS</title>
       <link>/post/dynamic_web_scraping/</link>
       <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
@@ -647,7 +840,10 @@ p &amp;lt;- elo_data %&amp;gt;%
 # save the gif
 gif &amp;lt;- animate(p, nframes = 20)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Which if we render gives us&lt;/p&gt;
-&lt;p&gt;!()[&lt;a href=&#34;https://i.imgur.com/4cgBX48.gif&#34; class=&#34;uri&#34;&gt;https://i.imgur.com/4cgBX48.gif&lt;/a&gt;]&lt;/p&gt;
+&lt;div class=&#34;figure&#34;&gt;
+&lt;img src=&#34;/img/nation_elo_gif.gif&#34; alt=&#34;nation elo&#34; /&gt;
+&lt;p class=&#34;caption&#34;&gt;nation elo&lt;/p&gt;
+&lt;/div&gt;
 &lt;p&gt;And the data looks good! The &lt;a href=&#34;https://en.wikipedia.org/wiki/Golden_Team&#34;&gt;Mighty Magyar&lt;/a&gt; Hungary team of the 1950s can be seen to peak before the nations long decline, whereas the opposite is true for Japan. Overall, I’m pretty happy with the result. It could surely be cleaned up using rolling means and more careful plotting, but for a small example to plot the output from the scraping (the real point for this post) it serves a purpose.&lt;/p&gt;
 </description>
     </item>
@@ -1472,8 +1668,7 @@ library(tidyverse)
 
 # seed for reproducibility
 set.seed(3459)&lt;/code&gt;&lt;/pre&gt;
-&lt;div id=&#34;set-up&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Set up&lt;/h2&gt;
+&lt;p&gt;##Set up&lt;/p&gt;
 &lt;p&gt;In reality, we’d probably want to model a whole league or cup. However, these can generally contain 20+ teams, many of which will have similar abilities. For simplicity here, lets instead imagine a summer league between 6 English football clubs where each team plays each other twice (once at home and once away)&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;teams &amp;lt;- c(&amp;quot;Arsenal&amp;quot;, # 5th in the 1st tier
            &amp;quot;Blackburn_Rovers&amp;quot;, # 15th in 2nd tier
@@ -1581,9 +1776,7 @@ league_table &amp;lt;- results  %&amp;gt;%
 ## 5 Enfield_Town                8     6    22   -16      3
 ## 6 Frimley_Green               8     2    37   -35      0&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Where teams positions are nicely rank ordered (the data for this example is fairly curated so it’s not that surprising).&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;predictions&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Predictions&lt;/h2&gt;
+&lt;p&gt;##Predictions&lt;/p&gt;
 &lt;p&gt;With two rounds to go, there’s still 6 fixtures we might want to predict (to try and judge which team will end up where, or just to bet on the remaining games).&lt;/p&gt;
 &lt;p&gt;This are:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# get the yet to be played matches
@@ -1611,13 +1804,13 @@ real_data &amp;lt;- engsoccerdata::england %&amp;gt;%
   mutate(data = &amp;quot;real&amp;quot;)
 
 head(real_data)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##   location    team g_for g_ag data
-## 1     home Arsenal     0    1 real
-## 2     home Arsenal     0    1 real
-## 3     home Arsenal     2    1 real
-## 4     home Arsenal     3    0 real
-## 5     home Arsenal     3    0 real
-## 6     home Arsenal     2    0 real&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##   location           team g_for g_ag data
+## 1     home        Arsenal     2    4 real
+## 2     home        Chelsea     1    1 real
+## 3     home  Coventry City     2    1 real
+## 4     home Crystal Palace     3    3 real
+## 5     home        Everton     1    1 real
+## 6     home   Ipswich Town     1    1 real&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Here every row shows a team that played a match (as it’s sorted by league then alphabetically, the first 6 records are all for Arsenal). It also shows if the team played home or away. The data also shows the goals scored by (e.g.) Arsenal in g_for, and the goals they conceded in g_ag.&lt;/p&gt;
 &lt;p&gt;If we plot the goals scored for each game, we get a nice humped distribution with slightly offset peaks for home and away. That is to say, in most games teams will score 0, 1, or 2 goals, and that scoring more than 6 goals in a match is incredibly rare. The difference between the home and away distributions mean that teams are slightly more likely to score more if playing at home, compared to play away from home.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# plot goals scored home/away for real english football matches
@@ -1645,8 +1838,8 @@ real_data_means &amp;lt;- real_data %&amp;gt;%
 &lt;pre&gt;&lt;code&gt;## # A tibble: 2 x 2
 ##   location mean_scored
 ##   &amp;lt;chr&amp;gt;          &amp;lt;dbl&amp;gt;
-## 1 away            1.11
-## 2 home            1.48&lt;/code&gt;&lt;/pre&gt;
+## 1 away            1.12
+## 2 home            1.47&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Goals in games are both relatively sparse, and relatively stochastic; football is a low scoring game where goals are evenly distributed throughout the game. In theory any attack made by a team i has a probability of being scored dependent upon the strength of team i’s attack (α&lt;sub&gt;i&lt;/sub&gt;) which is independent of all the other attacks that team has made.&lt;/p&gt;
 &lt;p&gt;(there is some reason to doubt this may be the case&lt;sup&gt;3&lt;/sup&gt;, but for now this is a fine generalisation)&lt;/p&gt;
 &lt;p&gt;By grouping all teams together into “home” and “away” categories (in a league setting each team will play each other home and away so this should average out) and taking the average number of goals scored per match as the Poisson mean (λ) we can see how well our above graph fits a simulated Poisson process.&lt;/p&gt;
@@ -1665,44 +1858,7 @@ p2 + geom_density(data = simulated_poisson, aes(x = dist),
   scale_fill_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;), guide = FALSE) +
   facet_wrap(~location)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/simulated_poisson-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;It’s not perfect, but it’s not a bad fit either. We can quantify how well the Poisson distribution fits the data using a &lt;a href=&#34;https://stats.stackexchange.com/questions/92627/how-to-use-the-chi-squared-test-to-determine-if-data-follow-the-poisson-distribu&#34;&gt;Chi Squared test&lt;/a&gt;.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# calc chi squared for home and away goals following Poisson distribution
-calc_chi_squared &amp;lt;- function(game_location) {
-  goals_scored &amp;lt;- filter(real_data, location == game_location)$g_for
-  
-  observed_goal_counts &amp;lt;- table(goals_scored)
-
-  mean_goals &amp;lt;- mean(goals_scored)
-  
-  probs = dpois(sort(unique(goals_scored)), lambda = mean_goals) %&amp;gt;%
-    append(., 1-sum(.))
-  
-  # the chi squared test
-  test &amp;lt;- chisq.test(x = c(observed_goal_counts,0), p = probs, simulate.p.value = TRUE)
-  test$data.name &amp;lt;- game_location
-  
-  return(test)
-}
-
-# run test for both home and away goals
-lapply(c(&amp;quot;home&amp;quot;, &amp;quot;away&amp;quot;), calc_chi_squared)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## [[1]]
-## 
-##  Chi-squared test for given probabilities with simulated p-value
-##  (based on 2000 replicates)
-## 
-## data:  home
-## X-squared = 53.752, df = NA, p-value = 0.001499
-## 
-## 
-## [[2]]
-## 
-##  Chi-squared test for given probabilities with simulated p-value
-##  (based on 2000 replicates)
-## 
-## data:  away
-## X-squared = 38.599, df = NA, p-value = 0.01599&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;It’s actually perhaps not as significant as might be expected given the sheer amount of observations we have (see above reservations about modelling goals as a Poisson process) but it’s clearly not the worst approximation either. The p-values &amp;lt; 0.05 for both home and away match data show we have a good reason to reject the null hypothesis that the data is not a Poisson distribution.&lt;/p&gt;
+&lt;p&gt;It’s not perfect, but it’s not a bad fit either. In actuality, a Chi-squared test will show that goals scored &lt;em&gt;does not&lt;/em&gt; follow a Poisson distribution given the number of matches we have as data. But for the sake of this post, put that out of mind.&lt;/p&gt;
 &lt;p&gt;If we think that goals scored represents some Poisson process, it can be modeled using the equation which underlies the Poisson distribution. For a given interval (one match), the probability of x events (goals scored) in that interval will be:&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;The simplest model we can produce is to estimate λ as each team’s attack rating (henceforth α&lt;sub&gt;i&lt;/sub&gt;) which is equal to observed mean rate of goals for that team.&lt;/p&gt;
@@ -1774,8 +1930,8 @@ real_data_means&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## # A tibble: 2 x 2
 ##   location mean_scored
 ##   &amp;lt;chr&amp;gt;          &amp;lt;dbl&amp;gt;
-## 1 away            1.11
-## 2 home            1.48&lt;/code&gt;&lt;/pre&gt;
+## 1 away            1.12
+## 2 home            1.47&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;It’s pretty common knowledge that football teams do better at home, so we’ll want to factor that in. A simple estimate is to divide the mean home goals/game by the mean away goals/game.&lt;/p&gt;
 &lt;p&gt;We’ll call this parameter γ and can be formalised as the sum of home goals (which we’ll refer to as x from now on) divided by the sum of away goals (y)&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\gamma = \frac{\sum{x}}{\sum{y}}\]&lt;/span&gt;&lt;/p&gt;
@@ -1943,7 +2099,7 @@ likelihoods &amp;lt;- data.frame(lik_hgoal = dpois(results$hgoal,
 
 log_likehood&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## [1] 105.995&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;(n.b. there will be some rounding errors- especially on the pre-log probabilities, but this will suffice for now)&lt;/p&gt;
+&lt;p&gt;(n.b. there will be some rounding errors- especially on the pre-log probabilities, but this will suffice for now)&lt;/p&gt;
 &lt;p&gt;To get an idea of whether or not this is good, let’s quickly run the model with all the parameters set to zero. Given that we’re pretty sure that at least Arsenal will be a lot better than Frimley Green, this model should do worse than our basic model above.&lt;/p&gt;
 &lt;p&gt;If it indeed does fit the results worse we will get a greater error term- the log likelihood sum&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# do the same but set each teams attack and defence to 1
@@ -1968,7 +2124,6 @@ worse_log_likelihood &amp;lt;- map2_df(results$home, results$away,
 worse_log_likelihood&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## [1] 112.618&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;The worse log likelihood (112.6) is worse (only a bit though) than the 106.0 we previously. This suggests that either the teams are actually quite equal, or that our basic model wasn’t all that good.&lt;/p&gt;
-&lt;/div&gt;
 &lt;div id=&#34;parameter-optimisation&#34; class=&#34;section level2&#34;&gt;
 &lt;h2&gt;Parameter Optimisation&lt;/h2&gt;
 &lt;p&gt;There will exist some parameters (α and β for each team, and γ for the home field advantage) that will minimise this negative log likelihood. That is to say, they will predict the results of the already played games most accurately.&lt;/p&gt;
@@ -2012,7 +2167,8 @@ worse_log_likelihood&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Hopefully this is at least bearable to follow. Formalised, this can be written for teams i and matches k as:&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\mathcal L(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{K}{\frac{\lambda_{k}^{x_{k}}e^{-\lambda_{k}}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^{-\mu_{k}}}{y_{k}!}}\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;where for match k and teams i and j, home goals, x is defined by&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{k} \sim Poisson(\lambda_{k} = \alpha_{i(k)}\beta_{j(k)}\gamma)\]&lt;/span&gt; and away goals, y&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{k} \sim Poisson(\lambda_{k} = \alpha_{i(k)}\beta_{j(k)}\gamma)\]&lt;/span&gt;
+and away goals, y&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[y_{k} \sim Poisson(\mu_{k} = \alpha_{j(k)}\beta_{i(k)})\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;which seems daunting when you write it down, but we’ve already covered everything we need to do solve it. It’s just saying we want to minimise the result of the multiplication (the sum of logs in our case above) of the probability of scoring x and y goals in a game. The probability of goals scored assumed to be Poisson distributed, controlled by parameters α, β, and γ for home and away teams.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# optim requires parameters to be supplied as a vector
@@ -2103,9 +2259,11 @@ optimised_parameters$par&lt;/code&gt;&lt;/pre&gt;
 &lt;h2&gt;Tinkering&lt;/h2&gt;
 &lt;p&gt;This is all very well but there’s still some small improvements we can make.&lt;/p&gt;
 &lt;p&gt;For starters, I always think it’s simpler to have both scales of α and β to increase as a teams becomes more skillful in attack or defence. In our original equation the expected home and away goals follow the formula&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(α_{i}β_{j}γ)\]&lt;/span&gt; &lt;span class=&#34;math display&#34;&gt;\[y_{ij} \sim Poisson(α_{j}β_{i})\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(α_{i}β_{j}γ)\]&lt;/span&gt;
+&lt;span class=&#34;math display&#34;&gt;\[y_{ij} \sim Poisson(α_{j}β_{i})\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;if instead of multiplying by β, we divide instead, a stronger defence will reduce the value of x&lt;sub&gt;ij&lt;/sub&gt;/y&lt;sub&gt;ij&lt;/sub&gt; (reducing the number of expected goals for the opposing team).&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]&lt;/span&gt; &lt;span class=&#34;math display&#34;&gt;\[y_{ij} \sim Poisson(\frac{α_{j}}{β_{i}})\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]&lt;/span&gt;
+&lt;span class=&#34;math display&#34;&gt;\[y_{ij} \sim Poisson(\frac{α_{j}}{β_{i}})\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;To achieve this we just have to flip two lines of the predict_results function. Instead of multiplying α and β, we divide them instead.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# change prediction to inverse defence parameters
 predict_results &amp;lt;- function(home, away, param_list) {
@@ -2128,14 +2286,18 @@ optimised_parameters2 &amp;lt;- optim(
 
 # check this does what we want
 optimised_parameters2$par&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;(n.b. I won’t print out the results of all these steps as this post is long enough, but you can run and see the gradual improvements for yourself)&lt;/p&gt;
+&lt;p&gt;(n.b. I won’t print out the results of all these steps as this post is long enough, but you can run and see the gradual improvements for yourself)&lt;/p&gt;
 &lt;p&gt;Next we want to subtly change how the expected goals are calculated.&lt;/p&gt;
 &lt;p&gt;Given that&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ A = \frac{B \cdot C}{D}\]&lt;/span&gt; is exactly the same as&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ A = e ^{log(B) + log(C) - log(D)}\]&lt;/span&gt; we can convert the parameters we are looking for into log(parameters) and take the exponent of their sum as the predicted goals. This might seem like a minor change, but prevents an important exception. Using home goals as an example, remember that&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]&lt;/span&gt; if any of the three parameters become negative then we’re left with a Poisson distribution with a negative mean, which is is absurd: events cannot unhappen. For instance, imagine a football game where one team scores negative goals.&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ A = \frac{B \cdot C}{D}\]&lt;/span&gt;
+is exactly the same as&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ A = e ^{log(B) + log(C) - log(D)}\]&lt;/span&gt;
+we can convert the parameters we are looking for into log(parameters) and take the exponent of their sum as the predicted goals. This might seem like a minor change, but prevents an important exception. Using home goals as an example, remember that&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]&lt;/span&gt;
+if any of the three parameters become negative then we’re left with a Poisson distribution with a negative mean, which is is absurd: events cannot unhappen. For instance, imagine a football game where one team scores negative goals.&lt;/p&gt;
 &lt;p&gt;If we take the log parameters instead we have&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(e ^ {α_{i} - β_{j} + γ})\]&lt;/span&gt; where no matter what values α, β, or γ take, the exponent of their sum will never be negative. When playing a very strong away teams, the mean goals will tend towards 0 (though will never actually reach it).&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(e ^ {α_{i} - β_{j} + γ})\]&lt;/span&gt;
+where no matter what values α, β, or γ take, the exponent of their sum will never be negative. When playing a very strong away teams, the mean goals will tend towards 0 (though will never actually reach it).&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# change prediction to use log parameters
 # exp(log(x) + log(y)) = x * y
 predict_results &amp;lt;- function(home, away, param_list) {
@@ -2168,8 +2330,10 @@ optimised_parameters3 &amp;lt;- optim(
 &lt;p&gt;We’ve also switched optimisation algorithm from Nelder-Mead to BFGS. BFGS is &lt;a href=&#34;https://docs.mantidproject.org/v3.7.1/concepts/FittingMinimizersComparisonDetailed.html#minimizers-unweighted-comparison-in-terms-of-accuracy&#34;&gt;quicker&lt;/a&gt; than Nelder-Mead but requires the minimisation function (i.e. the negative log likelihood we calculate) to be finite. Before, we could get infinite negative log likelihoods, as it was possible to calculate a negative mean (expected goals for a team). Running dpois() for a negative lambda will return NaN so it becomes impossible to calculate the final negative log likelihood.&lt;/p&gt;
 &lt;p&gt;Finally, we want to constrain the final optimised parameters by fixing the sum of all attack parameters, and the sum of all defence parameters, to equal 0. In practice, this basically means that above average attacking/defending teams will have parameters above 0, and below average teams will have parameters below 0. This is handy, but also the main advantage is this prevents &lt;a href=&#34;https://en.wikipedia.org/wiki/Overfitting&#34;&gt;overfitting&lt;/a&gt; of the parameters by the optimisation algorithm.&lt;/p&gt;
 &lt;p&gt;To do this, we can simply drop the first (or last, or any, it doesn’t matter) parameter from attack or defence (the parameters for Arsenal) and then calculate Arsenal’s parameters as the sum of the remaining parameters multiplied by minus 1.&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\alpha_{n} = -\sum_{i = 1}^{n-1} \alpha_{i} \]&lt;/span&gt; and also&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\beta_{n} = -\sum_{i = 1}^{n-1} \beta_{i} \]&lt;/span&gt; In terms of code this just requires adding one line to the relist_params() function to append the value back. We also then need to remove this parameter that we will add back in from the initial parameters which is done below.&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\alpha_{n} = -\sum_{i = 1}^{n-1} \alpha_{i} \]&lt;/span&gt;
+and also&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\beta_{n} = -\sum_{i = 1}^{n-1} \beta_{i} \]&lt;/span&gt;
+In terms of code this just requires adding one line to the relist_params() function to append the value back. We also then need to remove this parameter that we will add back in from the initial parameters which is done below.&lt;/p&gt;
 &lt;p&gt;Our output will now be missing the parameters for Arsenal (as they will only exist within the function), but we can easily calculate it from the parameters we do get out.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# introduce sum to zero constraint by calculating
 # first teams parameters as minus sum of the rest
@@ -2248,7 +2412,8 @@ p3&lt;/code&gt;&lt;/pre&gt;
   theme_minimal()
 
 p4&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_parameters-1.png&#34; width=&#34;672&#34; /&gt; Notice how the teams monotonically increase in both attack and defensive ability. This is by design on how the results were created (see the bottom of this post). With only 8 games per team however, there is quite a lot of noise in the signal. Hitting the crossbar instead of scoring in one game could make a fairly large difference in how the function rates a team.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_parameters-1.png&#34; width=&#34;672&#34; /&gt;
+Notice how the teams monotonically increase in both attack and defensive ability. This is by design on how the results were created (see the bottom of this post). With only 8 games per team however, there is quite a lot of noise in the signal. Hitting the crossbar instead of scoring in one game could make a fairly large difference in how the function rates a team.&lt;/p&gt;
 &lt;p&gt;Also note how the regression line passes through the origin- this is a result of us constraining the parameters to sum to zero.&lt;/p&gt;
 &lt;p&gt;If we want to see how optim() selects these, we can plot how they change over iterations. You can see how it jumps around then settles on incremental improvements to the model.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p5 &amp;lt;- current_parameters %&amp;gt;%
@@ -2277,6 +2442,7 @@ p4&lt;/code&gt;&lt;/pre&gt;
 
 # animate the plot
 gganimate::animate(p5, nframes = i)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_optimisation_animation-1.gif&#34; /&gt;&lt;!-- --&gt;&lt;/p&gt;
 &lt;/div&gt;
 &lt;div id=&#34;predict-remaining-matches&#34; class=&#34;section level2&#34;&gt;
 &lt;h2&gt;Predict Remaining Matches&lt;/h2&gt;
@@ -2451,31 +2617,41 @@ results &amp;lt;- predict_expg(model, fixtures$home, fixtures$away, return_df = 
 # print results
 results&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;##                home             away hgoal agoal gameweek
-## 1    Dover_Athletic    Coventry_City     2     3        1
-## 2      Enfield_Town Blackburn_Rovers     0     3        1
-## 3     Frimley_Green          Arsenal     0     8        1
-## 4           Arsenal     Enfield_Town     7     0        2
-## 5  Blackburn_Rovers    Coventry_City     2     1        2
-## 6     Frimley_Green   Dover_Athletic     1     3        2
-## 7  Blackburn_Rovers    Frimley_Green     6     1        3
-## 8     Coventry_City     Enfield_Town     3     0        3
-## 9    Dover_Athletic          Arsenal     0     3        3
+## 1    Dover_Athletic    Coventry_City     0     2        1
+## 2      Enfield_Town Blackburn_Rovers     1     3        1
+## 3     Frimley_Green          Arsenal     0     6        1
+## 4           Arsenal     Enfield_Town     6     0        2
+## 5  Blackburn_Rovers    Coventry_City     2     0        2
+## 6     Frimley_Green   Dover_Athletic     0     3        2
+## 7  Blackburn_Rovers    Frimley_Green     8     0        3
+## 8     Coventry_City     Enfield_Town     3     1        3
+## 9    Dover_Athletic          Arsenal     1     3        3
 ## 10          Arsenal    Coventry_City     3     0        4
-## 11   Dover_Athletic Blackburn_Rovers     0     3        4
-## 12     Enfield_Town    Frimley_Green     1     0        4
-## 13 Blackburn_Rovers          Arsenal     1     1        5
-## 14     Enfield_Town   Dover_Athletic     1     1        5
-## 15    Frimley_Green    Coventry_City     1     4        5
-## 16          Arsenal    Frimley_Green    10     1        6
+## 11   Dover_Athletic Blackburn_Rovers     1     2        4
+## 12     Enfield_Town    Frimley_Green     2     1        4
+## 13 Blackburn_Rovers          Arsenal     2     2        5
+## 14     Enfield_Town   Dover_Athletic     0     2        5
+## 15    Frimley_Green    Coventry_City     1     3        5
+## 16          Arsenal    Frimley_Green     9     0        6
 ## 17 Blackburn_Rovers     Enfield_Town     5     0        6
-## 18    Coventry_City   Dover_Athletic     2     0        6
-## 19    Coventry_City Blackburn_Rovers     1     2        7
+## 18    Coventry_City   Dover_Athletic     1     2        6
+## 19    Coventry_City Blackburn_Rovers     0     2        7
 ## 20   Dover_Athletic    Frimley_Green     3     1        7
 ## 21     Enfield_Town          Arsenal     0     5        7
 ## 22          Arsenal   Dover_Athletic     4     1        8
 ## 23     Enfield_Town    Coventry_City     1     2        8
-## 24    Frimley_Green Blackburn_Rovers     0     4        8&lt;/code&gt;&lt;/pre&gt;
+## 24    Frimley_Green Blackburn_Rovers     1     4        8&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>ggparliament: A ggplot2 extension for parliament plots in R</title>
+      <link>/publication/ggparliament_paper/</link>
+      <pubDate>Sat, 27 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/publication/ggparliament_paper/</guid>
+      <description>&lt;p&gt;More detail can easily be written here using &lt;em&gt;Markdown&lt;/em&gt; and $\rm \LaTeX$ math code.&lt;/p&gt;
 </description>
     </item>
     
@@ -4399,1532 +4575,6 @@ simulated_tables %&amp;gt;%
 ## 4 Manchester City expected goals     0.099&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Chelsea only sneak into the mix for the expected goals model but it doesn’t look likely they’ll win the league. In the accomplished goals model there may be a slight title race (3/4 that Arsenal win, 1/4 that Man City overtake them), but using expected goals, Arsenal should be pretty confident of winning the league this season.&lt;/p&gt;
 &lt;p&gt;That’s all for now. Will hopefully do a lot more football analysis in the coming year(s) first to expand on this post then look at other stuff.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>TidyTuesday Week One</title>
-      <link>/post/tidytuesday-2019-1/</link>
-      <pubDate>Wed, 02 Jan 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/tidytuesday-2019-1/</guid>
-      <description>
-
-
-&lt;p&gt;Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).&lt;/p&gt;
-&lt;p&gt;A quick way to get something to work with that can be published unpolished is &lt;a href=&#34;https://github.com/rfordatascience/tidytuesday&#34;&gt;#TidyTuesday&lt;/a&gt; on twitter which (as far as I know/can tell) is organised by &lt;a href=&#34;https://twitter.com/thomas_mock&#34;&gt;Thomas Mock&lt;/a&gt; from RStudio.&lt;/p&gt;
-&lt;p&gt;This week, the data comes in the form of a massive corpus of every tweet using the #rstats hashtag, curated by rtweet package creator Mike Kearney.&lt;/p&gt;
-&lt;p&gt;I’m only going to leave sparse notes as this is just a post from some lunchtime work cleaned up and published after. I probably won’t fully spellcheck it either.&lt;/p&gt;
-&lt;p&gt;First, libraries:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#for data #tidytuesday data manipulation
-library(tidyverse)
-#used for clustering later
-library(lsa)
-library(e1071)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;When loading the data, the first thing I decided to look at was the evolution of the hashtags use over time. As far as I can tell, first used in spring 2009 by &lt;a href=&#34;https://twitter.com/gappy3000&#34;&gt;Giuseppe Paleologo&lt;/a&gt;. Since then, it’s grown pretty exponentially.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#data at https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-01-01
-#rstats_data &amp;lt;- readRDS(&amp;quot;../../Downloads/rstats_tweets.rds&amp;quot;)
-
-#quickly plot tweets over time
-p &amp;lt;- rstats_data %&amp;gt;%
-  select(created_at) %&amp;gt;%
-  arrange(created_at) %&amp;gt;%
-  mutate(total_tweets = row_number()) %&amp;gt;%
-  ggplot(., aes(x = created_at, y = total_tweets)) +
-  geom_line() +
-  xlab(&amp;quot;Date&amp;quot;) +
-  ylab(&amp;quot;Total #rstats Tweets&amp;quot;) +
-  ggtitle(&amp;quot;#rstats Tweets Over Time&amp;quot;) +
-  theme_minimal()
-
-p&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-01-02-tidytuesday1_files/figure-html/peek_data-1.png&#34; width=&#34;672&#34; /&gt; I decided only to work with the most prolific #rstats tweeters, mostly to save space in plots as the corpus contains over 26k unique persons and 430k tweets&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#filter out people who tweet about rstats &amp;gt;=500 times
-rstats_data %&amp;lt;&amp;gt;% 
-  group_by(user_id) %&amp;gt;%
-  mutate(tweet_count = n()) %&amp;gt;%
-  filter(tweet_count &amp;gt; 499) %&amp;gt;%
-  ungroup() %&amp;gt;%
-  arrange(-tweet_count) %&amp;gt;%
-  #also filter out feeds
-  filter(!screen_name %in% c(&amp;quot;CRANberriesFeed&amp;quot;, &amp;quot;Rbloggers&amp;quot;, &amp;quot;rweekly_live&amp;quot;, &amp;quot;tidyversetweets&amp;quot;))
-
-#plot the number of tweets per person
-p2 &amp;lt;- rstats_data %&amp;gt;%
-  ggplot(., aes(x = reorder(user_id, tweet_count))) +
-  geom_bar(stat = &amp;quot;count&amp;quot;) +
-  ggtitle(&amp;quot;Rstats Tweets By Person&amp;quot;) +
-  xlab(&amp;quot;User&amp;quot;) +
-  ylab(&amp;quot;Tweets&amp;quot;) +
-  theme_minimal() +
-  theme(axis.text.x = element_blank())
-
-p2&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-1-1.png&#34; width=&#34;672&#34; /&gt; Lets see the most prolific tweeters&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#show the most prolific retweeters
-rstats_users &amp;lt;- rstats_data %&amp;gt;%
-  select(screen_name, tweet_count) %&amp;gt;%
-  unique()
-
-head(rstats_users)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 2
-##   screen_name tweet_count
-##   &amp;lt;chr&amp;gt;             &amp;lt;int&amp;gt;
-## 1 AndySugs           8216
-## 2 dataandme          4113
-## 3 gp_pulipaka        3237
-## 4 DerFredo           3091
-## 5 revodavid          2640
-## 6 MangoTheCat        2523&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I had been interested in recreating some analyses from &lt;a href=&#34;https://www.jtimm.net/2018/11/03/twitter-political-ideology-and-the-115-us-senate/&#34; class=&#34;uri&#34;&gt;https://www.jtimm.net/2018/11/03/twitter-political-ideology-and-the-115-us-senate/&lt;/a&gt; recently, and thought this gave a good oppurtunity.&lt;/p&gt;
-&lt;p&gt;First I needed the top levels domains of links in #rstats tweets&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#try to find only top level domains for grouping
-domain_patterns &amp;lt;- &amp;quot;\\.com.*|\\.org.*|\\.me.*|\\.gl.*|\\.li.*|\\..appspot|\\.blogspot|\\.io.*&amp;quot;
-links &amp;lt;- data.frame(url = unlist(rstats_data$urls_url)) %&amp;gt;%
-  mutate(domain = gsub(domain_patterns, &amp;quot;&amp;quot;, url)) %&amp;gt;%
-  filter(!is.na(domain)) %&amp;gt;%
-  group_by(domain) %&amp;gt;%
-  mutate(share_count = n()) %&amp;gt;%
-  ungroup()
-
-#which are the most tweeted links by the top tweeters
-head(links %&amp;gt;% select(-url) %&amp;gt;% unique() %&amp;gt;% arrange(-share_count))&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 2
-##   domain         share_count
-##   &amp;lt;chr&amp;gt;                &amp;lt;int&amp;gt;
-## 1 goo                   4724
-## 2 wp                    4110
-## 3 github                3430
-## 4 twitter               3201
-## 5 cran.r-project        2878
-## 6 r-bloggers            2708&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;some of these (e.g. the google/wp/fb/bit.ly) ones seem a bit more to be quick links to pictures and so were removed. I also cut out links to amazon, google, facebook, and youtube, which I was less certain about doing and would probably analyse in a deeper cut.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#remove non-data sciencey links
-links %&amp;gt;%
-  filter(!grepl(&amp;quot;goo|wp|tweetedtimes|fb|htl|facebook|youtube|amazon|google&amp;quot;, domain)) %&amp;gt;%
-  filter(!grepl(&amp;quot;activevoice.us|ift.tt|rviv.ly|bit.ly&amp;quot;, domain)) %&amp;gt;%
-  select(-url) %&amp;gt;%
-  unique() %&amp;gt;%
-  arrange(-share_count) %&amp;gt;%
-  head()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 2
-##   domain                   share_count
-##   &amp;lt;chr&amp;gt;                          &amp;lt;int&amp;gt;
-## 1 github                          3430
-## 2 twitter                         3201
-## 3 cran.r-project                  2878
-## 4 r-bloggers                      2708
-## 5 link.rweekly                    2415
-## 6 blog.revolutionanalytics        1225&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then we need to create a matrix of each domain vs. each user with a value of how many tweets from that user link to that domain.&lt;/p&gt;
-&lt;p&gt;I selected 3 users to illustrate the finished matrix (from here on out I’m freely stealing code from the blogpost &lt;a href=&#34;https://www.jtimm.net/2018/11/03/twitter-political-ideology-and-the-115-us-senate/&#34;&gt;linked above&lt;/a&gt;)&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find which domains each tweeted link belong to
-rstats_domains_shared &amp;lt;- rstats_data %&amp;gt;%
-  select(user_id, screen_name, url = urls_url, date = created_at) %&amp;gt;%
-  #remove tweets without links
-  filter(!is.na(url)) %&amp;gt;%
-  #unlist the links
-  #can be multiple per tweet
-  splitstackshape::listCol_l(., listcol = &amp;quot;url&amp;quot;) %&amp;gt;%
-  #merge with domain information
-  merge(., unique(select(links, domain, url_ul = url, domain_shares = share_count)), by = &amp;quot;url_ul&amp;quot;) %&amp;gt;%
-  #select only domains shared 100 or more times
-  filter(domain_shares &amp;gt; 99) %&amp;gt;%
-  #remove uninteresting domains
-  filter(!grepl(&amp;quot;goo|wp|tweetedtimes|fb|htl|facebook|youtube|amazon|google&amp;quot;, domain)) %&amp;gt;%
-  filter(!grepl(&amp;quot;activevoice.us|ift.tt|rviv.ly|bit.ly&amp;quot;, domain)) %&amp;gt;%
-  #limit to only frequent tweeters
-  filter(screen_name %in% rstats_users$screen_name)
-
-#get a matrix of domains shared vs. users
-rstats_shares_by_user &amp;lt;- rstats_domains_shared %&amp;gt;%
-  #find the number of times each user tweets a link to a domain
-  group_by(screen_name, domain) %&amp;gt;%
-  summarize(share_count = n()) %&amp;gt;%
-  #filter out those that are untweets
-  filter(share_count &amp;gt; 0) %&amp;gt;%
-  spread(screen_name, share_count) %&amp;gt;%
-  replace(is.na(.), 0)  %&amp;gt;%
-  ungroup()
-
-#quickly glance at this
-#has many columns so selecting only a few users
-users &amp;lt;- c(&amp;quot;hadleywickham&amp;quot;, &amp;quot;drob&amp;quot;, &amp;quot;JennyBryan&amp;quot;)
-rstats_shares_by_user %&amp;gt;%
-  .[c(1, which(names(rstats_shares_by_user) %in% users))] %&amp;gt;%
-  .[1:10,]&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 10 x 4
-##    domain                    drob hadleywickham JennyBryan
-##    &amp;lt;chr&amp;gt;                    &amp;lt;dbl&amp;gt;         &amp;lt;dbl&amp;gt;      &amp;lt;dbl&amp;gt;
-##  1 analyticsvidhya              0             0          0
-##  2 andrewgelman                 0             0          0
-##  3 arilamstein                  0             0          0
-##  4 asbcllc                      0             0          0
-##  5 bl.ocks                      0             0          0
-##  6 blog.revolutionanalytics     0             5          0
-##  7 blog.rstudio                 1           115          6
-##  8 cran.r-project               6            12         21
-##  9 cran.rstudio                 0             1          1
-## 10 datasciencecentral           0             0          0&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Next we use cosine from the lsa package to get a matrix of user-user similarity. This is then crushed down to two dimensions X1 and X2&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the cosine similarity between all users
-cosine_rstats &amp;lt;- rstats_shares_by_user %&amp;gt;%
-  select(2:ncol(.)) %&amp;gt;%
-  data.matrix() %&amp;gt;%
-  lsa::cosine(.)
-
-#sort this into two dimensions
-#X1 and X2
-rstats_clustering &amp;lt;- cmdscale(1-cosine_rstats, eig = TRUE, k = 2)$points %&amp;gt;% 
-  data.frame() %&amp;gt;%
-  mutate(screen_name = rownames(cosine_rstats)) %&amp;gt;%
-  merge(rstats_users, by = &amp;quot;screen_name&amp;quot;)
-
-head(rstats_clustering)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##       screen_name         X1         X2 tweet_count
-## 1       _ColinFay -0.1192867 -0.2821199         989
-## 2        abresler -0.1712703 -0.3224543        1443
-## 3     AnalyticsFr -0.3210288  0.4201589        1386
-## 4 AnalyticsFrance -0.3210288  0.4201589        1989
-## 5 AnalyticsVidhya -0.2969805  0.4152374        1814
-## 6        AndySugs  0.1371950  0.2465780        8216&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If we plot this we get a nice graph of the top #rstats users qhich fall neatly into two dimensions. The first X1 seems to be ‘social’ vs. ‘professional’. People further to the left are users I recognise off the top of my head for sharing amateur data analyses/package building (e.g. JennyBryan) whereas those on the right seem to be more industrial users (e.g. MangoTheCat).&lt;/p&gt;
-&lt;p&gt;The second dimension is a bit harder to gauge but strikes me as sort of software vs. data science divide with more package creators/rstudio employees towards the bottom and people doing analysis of data towards the top (but this is only a gut feeling).&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot the users by their cosine similarity and number of tweets
-rstats_clustering %&amp;gt;%
-  ggplot(aes(X1,X2)) +
-  geom_text(aes(label= screen_name, size = tweet_count), alpha = 0.3) +
-  scale_size_continuous(range = c(2,5), guide = FALSE) +
-  xlab(&amp;quot;Dimension X1&amp;quot;) +
-  ylab(&amp;quot;Dimension X2&amp;quot;) +
-  ggtitle(&amp;quot;#rstats Tweeters Arranged by Links Shared&amp;quot;,
-          subtitle = &amp;quot;position based on cosine similarity between users&amp;quot;) +
-  theme_minimal()&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-7-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;To investigate a bit further I decided to see what each person was sharing. First I used c-means clustering as it’s something else I was working on in a separate project recently to cluster each use based on their cosine similarity (mostly just to have something to order the final plot by).&lt;/p&gt;
-&lt;p&gt;I then used geom_tile to show how often each user was sending links from which domains. Roughly, I would say that the ‘industrial’ (green) cluster makes shows a concentration of links to sites such as &lt;a href=&#34;https://www.r-bloggers.com/&#34;&gt;r-bloggers&lt;/a&gt; and &lt;a href=&#34;https://blog.revolutionanalytics.com/&#34;&gt;revolutionanalytics’ blog&lt;/a&gt;, whereas the ‘social data science’ cluster (blue) links much more to twitter itself, github, and CRAN. The red (‘software’) cluster links to these too, but especially much more to the r-project blog in particular.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;set.seed(22081992)
-#use fuzzy c means to find clusters based on cosine similarity
-#chose 3 as seems to be 3 clear nodes
-c_grouping &amp;lt;- cmeans(select(rstats_clustering, X1, X2) %&amp;gt;% as.matrix(), 3, iter.max = 1000)
-
-#merge this data in
-rstats_clustering %&amp;lt;&amp;gt;%
-  mutate(cluster = c_grouping$cluster) %&amp;gt;%
-  cbind(as.data.frame(c_grouping$membership)) %&amp;gt;%
-  mutate(cluster_membership = apply(.[, (ncol(.)-(max(.$cluster)-1)):ncol(.)], 1, max))
-
-#plot a heatmap of links shared vs. cluster grouping
-#remember cluster grouping is related to cosine similarity
-rstats_shares_by_user %&amp;gt;%
-  reshape2::melt(id.vars = &amp;quot;domain&amp;quot;, variable.name = &amp;quot;screen_name&amp;quot;, value.name = &amp;quot;shares&amp;quot;) %&amp;gt;%
-  merge(rstats_clustering, by = &amp;quot;screen_name&amp;quot;) %&amp;gt;%
-  filter(shares &amp;gt; 0) %&amp;gt;%
-  ggplot(., aes(x = domain, y = reorder(screen_name, cluster + cluster_membership))) +
-  geom_tile(aes(fill = log(shares), colour = factor(cluster)), size = 0.5) +
-  scale_fill_viridis_c(option = &amp;quot;plasma&amp;quot;, guide = FALSE) +
-  scale_colour_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;green&amp;quot;, &amp;quot;purple&amp;quot;), guide = FALSE) +
-  xlab(&amp;quot;Domain Shared&amp;quot;) +
-  ylab(&amp;quot;Screen Name&amp;quot;) +
-  ggtitle(&amp;quot;Domains Shared by #rstats Tweeters Coloured by User Cluster&amp;quot;) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 30, hjust = 1))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-8-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;Finally, I wanted to recreate the previous cosine similarity graph but with the clusters highlighted just because I think it makes a pretty graph.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#replot our initial plot of cosine similarity with the cluster information
-#alpha of screen_name indicates group membership strength
-rstats_clustering %&amp;gt;%
-  ggplot(aes(X1, X2)) +
-  geom_label(aes(label= screen_name, fill = factor(cluster), colour = cluster_membership, size = tweet_count), alpha = 0.3) +
-  scale_colour_gradient(high = &amp;quot;black&amp;quot;, low = &amp;quot;white&amp;quot;, guide = FALSE) +
-  scale_fill_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;green&amp;quot;, &amp;quot;purple&amp;quot;), guide = FALSE) +
-  scale_size_continuous(range = c(2,5), guide = FALSE) +
-  xlab(&amp;quot;Dimension X1&amp;quot;) +
-  ylab(&amp;quot;Dimension X2&amp;quot;) +
-  ggtitle(&amp;quot;#rstats Tweeters Grouped by Links Shared&amp;quot;,
-          subtitle = &amp;quot;grouping based on cosine similarity between users&amp;quot;) +
-  theme_minimal()&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-01-02-tidytuesday1_files/figure-html/unnamed-chunk-9-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;That’s all for this post. I think I’ll keep on throwing up quick #TidyTuesday posts throughout the year which will be as sparse as this, but hopefully be interesting to one or two people.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Planning a Pub Crawl Using R</title>
-      <link>/post/cambridge_pub_crawl/</link>
-      <pubDate>Thu, 22 Nov 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/cambridge_pub_crawl/</guid>
-      <description>
-
-
-&lt;p&gt;A few weeks ago I went on the first pub crawl I’d been on in years around my city of Cambridge. Around the same time I had also been visiting &lt;a href=&#34;https://www.google.co.uk/maps/@52.2046202,0.1289874,18z&#34;&gt;4 very good pubs within ~200m of each other&lt;/a&gt; tucked away in a quiet neighbourhood of the town. Together, I wondered if it was possible with freely avaiable data to plan an optimal pub crawl around any town/area of the UK, and also, if it would be feasbile to visit every pub within the city in a single day if travelling optimally.&lt;/p&gt;
-&lt;p&gt;Once again, I found that the simple features library (sf) for R basically can do all of this pretty simply, with igraph picking up most of the networking slack. In fact, overall it was much much simpler than I thought it would be. In total, I only needed 9 libraries (though granted tidyverse is one).&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#data munging
-library(tidyverse)
-library(magrittr)
-
-#scrape pub data
-library(rvest)
-library(googleway)
-
-#spatial manipulation
-#almost all done in sf
-library(sf)
-library(rgdal)
-
-#networking the pubs
-library(igraph)
-library(TSP)
-library(geosphere)
-
-rm(list=ls())&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;For the data, I was able to get by using &lt;a href=&#34;https://www.ordnancesurvey.co.uk/opendatadownload/products.html#BDLINE&#34;&gt;Ordnance Survey data&lt;/a&gt; data for the spatial work. I used Boundary Line for the city boundaries (taking the Cambridge Boro Westminster constituency limits as the city boundaries), and OS OpenRoads for all the road work. These are freely avaiable via email using the link above.&lt;/p&gt;
-&lt;p&gt;For reproducibility, these are both presented as if saved in path/to/os/data with folders called ./roads and ./boundary containing the extracted files from both of these.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;file_path &amp;lt;- &amp;quot;path/to/os/data&amp;quot;
-
-#load the westminster constituency boundaries
-cambridge &amp;lt;- readOGR(dsn = file.path(file_path, &amp;quot;boundary/Data/GB&amp;quot;), 
-                     layer = &amp;quot;westminster_const_region&amp;quot;) %&amp;gt;%
-  #convert to sf
-  st_as_sf() %&amp;gt;%
-  #select only the cambridge constituency
-  filter(NAME == &amp;quot;Cambridge Boro Const&amp;quot;) %&amp;gt;%
-  #get rid of associated data for cleanness
-  select()
-
-#load the road link and node data
-#uses the uk national grid to partion road files
-#https://en.wikivoyage.org/wiki/National_Grid_(Britain)
-#cambridge is in grid TL
-roads &amp;lt;- readOGR(dsn = file.path(file_path, &amp;quot;roads/data&amp;quot;), 
-                     layer = &amp;quot;TL_RoadLink&amp;quot;) %&amp;gt;%
-  st_as_sf() %&amp;gt;%
-  #transform to the crs of the city boundary
-  st_transform(st_crs(cambridge)) %&amp;gt;%
-  #take only the roads which cross into the city
-  .[unlist(st_intersects(cambridge, .)),]
-
-nodes &amp;lt;- readOGR(dsn = file.path(file_path, &amp;quot;roads/data&amp;quot;), 
-                     layer = &amp;quot;TL_RoadNode&amp;quot;)
-#converting straight to sf gives an error so munge data manually
-nodes &amp;lt;- cbind(nodes@data, nodes@coords) %&amp;gt;%
-  st_as_sf(coords = c(&amp;quot;coords.x1&amp;quot;, &amp;quot;coords.x2&amp;quot;),
-           crs = st_crs(&amp;quot;+init=epsg:27700&amp;quot;)) %&amp;gt;%
-  st_transform(st_crs(cambridge)) %&amp;gt;%
-  #take only nodes which are related to the roads we previously selected
-  .[which(.$identifier %in% c(as.character(roads$startNode), 
-                              as.character(roads$endNode))),]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Once we have these we can make a quick plot of the layout of the city&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#quickly plot the roads and nodes data
-(p1 &amp;lt;- ggplot(cambridge) +
-   geom_sf() +
-   geom_sf(data = roads, colour = &amp;quot;black&amp;quot;) +
-   geom_sf(data = nodes, colour = &amp;quot;red&amp;quot;, alpha = 0.5, size = 0.5) +
-   theme_minimal())&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-11-22-cambridge_pub_crawl_files/figure-html/roads_plot-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;Next we need point locations for all the pubs in Cambridge. Fortunately &lt;a href=&#34;www.pubsgalore.co.uk&#34;&gt;pubsgalore.co.uk&lt;/a&gt; has us covered with a pretty extensive list. It doesn’t contain the college bars of the University which is a bit of a shame, but is still a pretty good sample of 199 pubs in/around Cambridge.&lt;/p&gt;
-&lt;p&gt;We want the name and address of every open pub which this will scrape.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#page with every pub in cambridge
-pub_page &amp;lt;- &amp;quot;https://www.pubsgalore.co.uk/towns/cambridge/cambridgeshire/&amp;quot; %&amp;gt;%
-  read_html()
-
-
-open_pubs &amp;lt;- pub_page %&amp;gt;%
-  html_nodes(&amp;quot;.pubicons .pubclosed&amp;quot;) %&amp;gt;%
-  html_attr(&amp;quot;src&amp;quot;) %&amp;gt;%
-  grep(&amp;quot;grey&amp;quot;, .)
-
-pub_info &amp;lt;- pub_page %&amp;gt;%
-  html_nodes(&amp;quot;#pagelist a&amp;quot;) %&amp;gt;%
-  html_attr(&amp;quot;href&amp;quot;) %&amp;gt;%
-  .[open_pubs] %&amp;gt;%
-  paste0(&amp;quot;https://www.pubsgalore.co.uk&amp;quot;, .) %&amp;gt;%
-  lapply(., function(single_pub) {
-    pub_page_read &amp;lt;- single_pub %&amp;gt;%
-      read_html()
-    
-    #get the name of the pub
-    pub_name &amp;lt;- pub_page_read %&amp;gt;%
-      html_nodes(&amp;quot;.pubname&amp;quot;) %&amp;gt;%
-      html_text()
-    
-    #get the address of the pub 
-    line1 &amp;lt;- pub_page_read %&amp;gt;% html_nodes(&amp;quot;.address&amp;quot;) %&amp;gt;% html_text()
-    line2 &amp;lt;- pub_page_read %&amp;gt;% html_nodes(&amp;quot;.town&amp;quot;) %&amp;gt;% html_text()
-    line3 &amp;lt;- pub_page_read %&amp;gt;% html_nodes(&amp;quot;.postcode&amp;quot;) %&amp;gt;% html_text()
-    
-    pub_address &amp;lt;- paste0(line1, &amp;quot;, &amp;quot;, line2, &amp;quot;, &amp;quot;, line3)
-    
-    #put together into data.frame
-    pub_data &amp;lt;- data.frame(name = pub_name, address = pub_address)
-    return(pub_data)
-  }) %&amp;gt;%
-  #rbind the lapply results
-  do.call(rbind, .) %&amp;gt;%
-  #remove duplicated pub addresses
-  filter(!duplicated(address))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We then need to geocode these adresses into coordinates. Because ggmap has been playing up for me, I tend to use the googleway package with a Google API key which you can get for free &lt;a href=&#34;https://developers.google.com/maps/documentation/javascript/get-api-key&#34;&gt;here&lt;/a&gt;. My key isn’t in the code published here for obvious reasons.&lt;/p&gt;
-&lt;p&gt;These coordinates are then bound back onto the pub df and we filter out only the pubs which are located within the city limits (103).&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;pubs &amp;lt;- pub_info$address %&amp;gt;%
-  #convert to character
-  as.character() %&amp;gt;%
-  #find the coords of every pub address using googleway
-  lapply(., function(address) {
-    #get the coords
-    coords &amp;lt;- google_geocode(address, key = key) %&amp;gt;%
-      .$results %&amp;gt;%
-      .$geometry %&amp;gt;%
-      .$location %&amp;gt;%
-      #covert to df and add the address back
-      data.frame() %&amp;gt;%
-      mutate(address = address)
-  }) %&amp;gt;%
-  #rbind the results
-  do.call(rbind, .) %&amp;gt;%
-  #merge back in the pub names
-  merge(pub_info, by = &amp;quot;address&amp;quot;) %&amp;gt;%
-  #convert to sf
-  st_as_sf(coords = c(&amp;quot;lng&amp;quot;, &amp;quot;lat&amp;quot;),
-           crs = st_crs(&amp;quot;+init=epsg:4326&amp;quot;),
-           remove = FALSE) %&amp;gt;%
-  #convert to the same crs as the city shapefile
-  st_transform(crs = st_crs(cambridge)) %&amp;gt;%
-  #only take those which fall within the city shapefile
-  #the postal district is a little large and extends into Cambridgeshire
-  .[unlist(st_contains(cambridge, .)),]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If we plot these we can see that most are in the very centre of the city, with some sparsely distributed out in Trumpington (south), Cherry Hinton (east), and Arbury (north).&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#quickly plot the roads and nodes data
-(p2 &amp;lt;- ggplot(cambridge) +
-   geom_sf() +
-   geom_sf(data = roads, colour = &amp;quot;black&amp;quot;) +
-   #pubs in blue
-   geom_sf(data = pubs, colour = &amp;quot;blue&amp;quot;, size = 1.5) +
-   theme_minimal())&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-11-22-cambridge_pub_crawl_files/figure-html/pubs_plot-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;We could just take the nearest roads to each pub and then easily create a node graph using the lookup between the roads and nodes in the OS data. However, I wanted to play around with manipulating the spatial data (this is a learning exercise after all) and so decided to see how ‘accurate’ I could get the distance on the optimal pub crawl path. In reality, the point locations given by google are probably slightly off anyway, but I’m going to ignore that.&lt;/p&gt;
-&lt;p&gt;In order to include ‘half-roads’ (i.e. when the pub is halfway down a road you don’t want to walk the full length of the road), I need to first find the nearest point on &lt;em&gt;any&lt;/em&gt; road to each pub. dist2Line from the geosphere package does this nicely, though it does require turning our sf objects back into SpatialDataFrames.&lt;/p&gt;
-&lt;p&gt;(this is by far the longest step in the script btw)&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#convert to spatial for dist2Line
-pubs_spatial &amp;lt;- st_transform(pubs, crs = st_crs(&amp;quot;+init=epsg:4326&amp;quot;)) %&amp;gt;%
-  as_Spatial()
-roads_spatial &amp;lt;- st_transform(roads, crs = st_crs(&amp;quot;+init=epsg:4326&amp;quot;)) %&amp;gt;%
-  as_Spatial()
-
-#finds the distance to each nearest line and that point
-road_distances &amp;lt;- suppressWarnings(dist2Line(pubs_spatial, roads_spatial)) %&amp;gt;%
-  as.data.frame() %&amp;gt;%
-  #convert to sf
-  st_as_sf(coords = c(&amp;quot;lon&amp;quot;, &amp;quot;lat&amp;quot;),
-           crs = st_crs(&amp;quot;+init=epsg:4326&amp;quot;),
-           remove = FALSE) %&amp;gt;%
-  st_transform(crs = st_crs(cambridge))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Taking a peek at these reveals the distance of each pub the nearest road, and the ID of that road and the point on the road nearest the pub.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#display the first few of these
-head(road_distances)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## Simple feature collection with 6 features and 4 fields
-## geometry type:  POINT
-## dimension:      XY
-## bbox:           xmin: 544907.5 ymin: 256223.8 xmax: 548593.7 ymax: 258690.9
-## epsg (SRID):    NA
-## proj4string:    +proj=tmerc +lat_0=49 +lon_0=-2 +k=0.999601272 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.06,0.1502,0.247,0.8421,-20.4894 +units=m +no_defs
-##     distance       lon      lat   ID                  geometry
-## 1  5.8371470 0.1422209 52.20374 2696   POINT (546488.8 258331)
-## 2  0.1801197 0.1391954 52.19889 2989   POINT (546298 257784.9)
-## 3 29.6403166 0.1720762 52.18425 4059 POINT (548593.7 256223.8)
-## 4 10.4782939 0.1223197 52.20734 1765 POINT (545117.3 258690.9)
-## 5 32.6370002 0.1203945 52.20662 1757 POINT (544988.1 258606.7)
-## 6 10.9321895 0.1191027 52.20427 1751 POINT (544907.5 258343.3)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I then want to break up the roads that these point lie on. To illustrate this, I’ll use the 3rd pub in the dataset, which is The Robin Hood in Cherry Hinton (as the plots look better and make more sense than the first two in my opinion).&lt;/p&gt;
-&lt;p&gt;First we take the pub, and all roads and their nodes within 100m of the pub:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#take the first pub
-x_pub &amp;lt;- pubs[3,]
-#get all roads within 100m and their nodes
-x_roads &amp;lt;- roads %&amp;gt;%
-  .[unlist(st_intersects(st_buffer(x_pub, 100), .)),]
-x_nodes &amp;lt;- nodes %&amp;gt;%
-  .[which(.$nodeid %in% c(as.character(x_roads$start), 
-                          as.character(x_roads$end))),]
-
-#plot the roads local to this pub
-(p3 &amp;lt;- ggplot() +
-  geom_sf(data = x_roads) +
-  geom_sf(data = x_nodes, colour = &amp;quot;red&amp;quot;, alpha = 0.5) +
-  geom_sf(data = x_pub, colour = &amp;quot;blue&amp;quot;) +
-  theme_minimal())&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-11-22-cambridge_pub_crawl_files/figure-html/splitting_roads1-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;We then use the point on any road nearest to this pub (green) as the ‘entrance’ of the pub (this may not strictly be the case and it might be possible to instead match road names to the address, but whatever).&lt;/p&gt;
-&lt;p&gt;Using this point, we split up the road it lies on into two new separate roads (in orange and purple). To get to this pub you would have to travel down one of these to the green point.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the nearest point that lies on a road
-x_nearest_road_point &amp;lt;- road_distances[3,]
-
-#split that road into two over that point
-x_split_roads &amp;lt;- roads %&amp;gt;%
-  .[which(.$id == x_nearest_road_point$ID),] %&amp;gt;%
-  st_difference(., st_buffer(x_nearest_road_point, 0.2)) %&amp;gt;%
-    st_cast(&amp;quot;LINESTRING&amp;quot;) 
-
-#add to the plot
-(p3 &amp;lt;- p3 + 
-    geom_sf(data = x_split_roads[1,], colour = &amp;quot;purple&amp;quot;, size = 1.5, alpha = 0.5) +
-    geom_sf(data = x_split_roads[2,], colour = &amp;quot;goldenrod&amp;quot;, size = 1.5, alpha = 0.5) +
-    geom_sf(data = x_nearest_road_point, colour = &amp;quot;darkgreen&amp;quot;, size = 2))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-11-22-cambridge_pub_crawl_files/figure-html/splitting_roads2-1.png&#34; width=&#34;672&#34; /&gt; I could have used the green ‘entrance’ nodes for the travelling salesman part of the problem, but decided also to create roads from this ‘entrance’ to the geocoded location of the pub (blue). This is probably the equivalent of travelling from the pavement to the bar of each pub and worthy of consideration*.&lt;/p&gt;
-&lt;p&gt;These roads are created by binding the green and blue points together from each pub, grouping them, and then casting a line between them.&lt;/p&gt;
-&lt;p&gt;*another reason to take this into account is that some pubs may appear far away from roads. One example that I visit fairly often is &lt;a href=&#34;https://www.google.co.uk/maps/place/Fort+St+George/@52.2123057,0.1272911,18.75z/data=!4m5!3m4!1s0x47d870ecb4e8556d:0x3bfb0ff82c243075!8m2!3d52.2124367!4d0.1278073&#34;&gt;Fort St George&lt;/a&gt; which is on a river footpath and does not have direct road access.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#combine the green point on the roads with the point for the pub
-x_pub_entrance &amp;lt;- select(x_nearest_road_point) %&amp;gt;%
-  rbind(., select(x_pub)) %&amp;gt;%
-  group_by(&amp;quot;pub road&amp;quot;) %&amp;gt;%
-  summarise() %&amp;gt;%
-  #cast to a line (for a new road)
-  st_cast(&amp;#39;LINESTRING&amp;#39;)
-
-#plot the pub entrance
-(p3 &amp;lt;- p3 +
-    geom_sf(data = x_pub_entrance, colour = &amp;quot;lightblue&amp;quot;, size = 1.5))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-11-22-cambridge_pub_crawl_files/figure-html/splitting_roads3-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#remove all the extra objects we created in the example
-rm(list=ls()[grep(&amp;quot;x_&amp;quot;, ls())])&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;First we create all the new nodes (the green pub entrances, and the blue pub locations)&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#add information to the pubs df
-pubs &amp;lt;- pubs %&amp;gt;%
-  mutate(pub = 1:nrow(.), 
-         id = (max(nodes$id)+1):(max(nodes$id) + nrow(.)),
-         nodeid = NA,
-         class = &amp;quot;pubnode&amp;quot;)
-
-#bind the pubs to the nodes data frame
-nodes &amp;lt;- rbind(nodes, select(pubs, pub, nodeid, id, class))
-
-#add the nodes found as the nearest road point to each pub to the nodes df
-new_nodes &amp;lt;- road_distances %&amp;gt;%
-  select() %&amp;gt;%
-  mutate(pub = pubs$pub, 
-         id = (max(nodes$id)+1):(max(nodes$id)+nrow(.)),
-         nodeid = NA,
-         class = &amp;quot;entrancenode&amp;quot;)
-nodes &amp;lt;- rbind(nodes, new_nodes)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then we create all of the split roads in a for loop and all of the roads from the green to the blue points. These are bound back into the original roads data frame.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#split up the roads that have a new node for the netrance of a pub
-roads_2_split &amp;lt;- roads %&amp;gt;%
-  slice(unique(road_distances$ID))
-#leave the rest alone
-roads &amp;lt;- roads %&amp;gt;%
-  slice(-unique(road_distances$ID))
-
-#for each new node split up the road that it bisects it 
-#as we did in the example
-for(node in seq(nrow(new_nodes))) {
-  #find the road that the pub is nearest to
-  split_road &amp;lt;- st_intersects(st_buffer(new_nodes[node,], .2),
-                              roads_2_split) %&amp;gt;%
-    unlist() %&amp;gt;%
-    roads_2_split[.,]
-  
-  #split this road up
-  split_roads &amp;lt;- st_difference(split_road, st_buffer(new_nodes[node,], .2)) %&amp;gt;%
-    st_cast(&amp;quot;LINESTRING&amp;quot;) %&amp;gt;%
-    select(start_id, end_id, id)
-
-  #keep hold of the old id
-  old_id &amp;lt;- unique(split_roads$id)
-  
-  #get rid of this road from the df
-  roads_2_split &amp;lt;- roads_2_split %&amp;gt;%
-    slice(-which(roads_2_split$id == old_id))
-
-  #get the nodes for the old road
-  old_nodes &amp;lt;- filter(nodes, id %in% c(unique(split_roads$start_id),
-                                       unique(split_roads$end_id)))
-  
-  #add the correct nodes to the newly split road
-  split_roads$start_id &amp;lt;- old_nodes$id[
-      unlist(st_contains(st_buffer(split_roads, .2), old_nodes))
-    ]
-  split_roads$end_id &amp;lt;- new_nodes$id[node]
-  
-  #add in new information for the new road
-  split_roads %&amp;lt;&amp;gt;%
-    mutate(id = max(roads_2_split$id) + seq(nrow(split_roads)),
-           class = &amp;quot;split road&amp;quot;,
-           start = NA, 
-           end = NA)
-  #bind back to the original df
-  roads_2_split &amp;lt;- rbind(roads_2_split, split_roads)
-}
-
-#bind the split roads to the original roads df
-roads &amp;lt;- rbind(roads, roads_2_split)
-
-#generate paths from the nearest point on a road to the pub gecoded location
-#i.e. walking from the pavement to the bar itself
-pub_roads &amp;lt;- select(road_distances) %&amp;gt;%
-  #add in information and bind to equivalent pub points
-  mutate(name = pubs$name, start_id = pubs$id, end_id = new_nodes$id) %&amp;gt;%
-  rbind(., mutate(select(pubs, name, start_id = id), end_id = new_nodes$id)) %&amp;gt;%
-  #group each pub together
-  group_by(name, start_id, end_id) %&amp;gt;%
-  summarise() %&amp;gt;%
-  #cast to a line
-  st_cast(&amp;#39;LINESTRING&amp;#39;) %&amp;gt;%
-  ungroup() %&amp;gt;%
-  #munge required information
-  mutate(id = max(roads$id)+1 + seq(nrow(.)),
-         start = NA,
-         end = NA,
-         class = &amp;quot;pub road&amp;quot;) %&amp;gt;%
-  select(class, id, start_id, end_id, start, end)
-
-#bind these into the original road df
-roads &amp;lt;- rbind(roads, pub_roads)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now that I have all the pubs and roads I want to traverse, I can move onto the &lt;a href=&#34;https://en.wikipedia.org/wiki/Travelling_salesman_problem&#34;&gt;travelling salesman&lt;/a&gt; portion of the problem- what is the shortest journey between all of them.&lt;/p&gt;
-&lt;p&gt;For this, I need to use the igraph package and convert my df of roads (which contains the node at each end of every road) into a weighted node graph. Once I have this, I iterate through every combination of pubs and find the shortest path between the two and the vertices that comprise it.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#add in the length between each pair of nodes using st_length
-nodes_df &amp;lt;- roads %&amp;gt;%
-  mutate(length = as.numeric(st_length(.))) %&amp;gt;%
-  #select only the node ids and length between them
-  select(start_id, end_id, length)
-#get rid of the geometry
-st_geometry(nodes_df) = NULL
-
-#create a node graph from this df
-#uses graph.data.frame from the igraph package
-node_graph &amp;lt;- graph.data.frame(nodes_df, directed=FALSE)
-
-#to get the shortest distance between every pair of pubs
-#need to create each combination of pub id number
-combinations &amp;lt;- combn(1:nrow(pubs), 2)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The shortest path between any two pubs is found using igraph::get.shortest.paths() and then extracting the path of nodes. Each vertex of the path is then found by using pairwise combinations of the nodes, and the travelled vertices for each pub-&amp;gt;pub journey are saved into a (large) df.&lt;/p&gt;
-&lt;p&gt;The whole thing is pretty quick but obviously the number of combinations grows quickly. For 103 pubs in Cambridge, it takes ~20mins on my machine.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#go through each of these pairs
-journeys &amp;lt;- lapply(seq(length(combinations)/2), function(combination) {
-  #the two pubs we&amp;#39;ll test
-  pub1 &amp;lt;- combinations[1,][combination]
-  pub2 &amp;lt;- combinations[2,][combination]
-  
-  #get the shortest path (node-node) between these two pubs
-  travel_nodes &amp;lt;- get.shortest.paths(node_graph,
-                                     from = as.character(pubs$id[pub1]),
-                                     to = as.character(pubs$id[pub2]),
-                                     weights = E(node_graph)$length) %&amp;gt;%
-    .$vpath %&amp;gt;%
-    unlist() %&amp;gt;%
-    names() %&amp;gt;%
-    as.numeric()
-  
-  #find the vertices that connect between these nodes
-  connecting_vertices &amp;lt;- lapply(seq(length(travel_nodes)-1), function(node_pair) {
-    between_nodes &amp;lt;- travel_nodes[c(node_pair:(node_pair+1))]
-    connecting_vertex &amp;lt;- which(roads$start_id %in% between_nodes &amp;amp;
-                                 roads$end_id %in% between_nodes)
-    #if more than one potential vertex, take the shorter one
-    if(length(connecting_vertex) &amp;gt; 1) {
-      connecting_vertex &amp;lt;- connecting_vertex[
-        which.min(st_length(roads[connecting_vertex,]))
-      ]
-    }
-    
-  return(connecting_vertex)
-  }) %&amp;gt;%
-    unlist() %&amp;gt;%
-    roads[.,] %&amp;gt;%
-    #id this journey between pubs
-    mutate(journey = paste0(pub1, &amp;quot;-&amp;quot;, pub2))
-  
-  return(connecting_vertices)
-}) %&amp;gt;%
-  #rbind it all together
-  do.call(rbind, .)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;It’s possible to check a journey between two pubs easily using this df, and show that it does seem like igraph is finding the shortest route between the two&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get only the journey between two random pubs
-set.seed(3459)
-x_random_numbers &amp;lt;- sample(nrow(pubs), 2) %&amp;gt;%
-  sort()
-x_journey &amp;lt;- journeys %&amp;gt;%
-  filter(journey == paste0(x_random_numbers[1], &amp;quot;-&amp;quot;, x_random_numbers[2]))
-
-#get the nodes of this journey
-x_journey_nodes &amp;lt;- nodes %&amp;gt;%
-  filter(id %in% c(as.character(x_journey$start_id),
-                   as.character(x_journey$end_id)))
-
-#find the pubs at the start and end of this journey
-#random pubs as defined earlier
-x_journey_pubs &amp;lt;- pubs[x_random_numbers,]
-
-#get all roads within a kilometer of each pub
-x_local_roads &amp;lt;- roads %&amp;gt;%
-  .[unlist(st_intersects(
-    #select all roads that at least will be between the two pubs
-    st_buffer(x_journey_pubs, max(st_distance(x_journey_pubs)/1.5)
-  ), .)),]
-
-#plot the shortest path between these two pubs
-(p4 &amp;lt;- ggplot() +
-    geom_sf(data = x_local_roads, colour = &amp;quot;grey&amp;quot;) +
-    geom_sf(data = x_journey_nodes, colour = &amp;quot;black&amp;quot;) +
-    geom_sf(data = x_journey, colour = &amp;quot;black&amp;quot;) +
-    geom_sf(data = x_journey_pubs, colour = &amp;quot;blue&amp;quot;, alpha = 0.5, size = 3) +
-    theme_minimal())&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-11-22-cambridge_pub_crawl_files/figure-html/check_shortest_paths-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#remove all the extra objects we created in the example
-rm(list=ls()[grep(&amp;quot;x_&amp;quot;, ls())])&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Finally, I have to find the shortest combination of these journeys which visits every pub at least once. For this I find the shortest distances between each pub and every other pub and bind it into a matrix.&lt;/p&gt;
-&lt;p&gt;If you just wanted to find the distance of a pub crawl (and not the path) you could just skip to here and save a lot of time.&lt;/p&gt;
-&lt;p&gt;This matrix of 103x103 is then converted into TSP object using TSP::TSP() and converted to a Hamtiltonian path problem by inserting a dummy variable. The TSP is then solved given the order of nodes (in this case, just pubs) to visit.&lt;/p&gt;
-&lt;p&gt;A lot of help in doing this came from the StackOverflow answer &lt;a href=&#34;https://stackoverflow.com/questions/27363653/find-shortest-path-from-x-y-coordinates-with-start-%E2%89%A0-end&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the distances 
-distances &amp;lt;- lapply(seq(nrow(pubs)), function(node) {
-  distance &amp;lt;- shortest.paths(node_graph, 
-                             v = as.character(pubs$id[node]),
-                             to = as.character(pubs$id[seq(nrow(pubs))]), 
-                             weights = E(node_graph)$length)
-}) %&amp;gt;%
-  do.call(rbind, .) %&amp;gt;%
-  as.dist() %&amp;gt;%
-  TSP()
-
-#insert a dummy city to turn this into a Hamiltonian path question
-#i.e. we do not need to return to the start at the end
-tsp &amp;lt;- insert_dummy(distances, label = &amp;quot;cut&amp;quot;)
-
-#solve the shortest Hamiltonian tour of each pub in Cambridge
-#get the total distance ()
-tour &amp;lt;- solve_TSP(tsp, method=&amp;quot;2-opt&amp;quot;, control=list(rep=10))&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## Warning: executing %dopar% sequentially: no parallel backend registered&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;tour&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## object of class &amp;#39;TOUR&amp;#39; 
-## result of method &amp;#39;2-opt_rep_10&amp;#39; for 104 cities
-## tour length: 41289.44&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the order of pubs to visit in an optimal Hamtilonian path
-tour &amp;lt;-  unname(cut_tour(tour, &amp;quot;cut&amp;quot;))
-tour&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##   [1]  38  76  70  14   8  49  86  32  75  63  10   9   2  41   1  27  40
-##  [18]  54  20  82  90  80  72   4  61  98  83  77   5  89  47   6  60  88
-##  [35]  59  46  57  11 101  78  84   7  36  65  44  71  21  39 103  18 102
-##  [52]  93  19  85  62  23  16  22  29 100  42  51  50  48  64  56  79  92
-##  [69]  30  28  87  96  55  35  67  69  68  91  13  17  52  94  12  97  58
-##  [86]  26  73  66  25  24  31  81  37  33  53  15  74  45  43  99  34   3
-## [103]  95&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So to visit every pub, you’d expect to walk just under 41km, which fits with eye-testing the size of Cambridge (approx 10km diameter).&lt;/p&gt;
-&lt;p&gt;In order to plot this, the pub order is converted into strings in the format we’ve used for journeys between pubs (e.g. “1-2”) and each journey is then extracted from the df of shortest journeys between all pubs.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#it might be possible that doing some journeys in &amp;#39;reverse&amp;#39; is faster
-#when considering the tour of all pubs
-#e.g. from pub2 -&amp;gt; pub1 rather than the other way round
-rev_journeys &amp;lt;- journeys
-rev_journeys$journey &amp;lt;- strsplit(journeys$journey, &amp;quot;-&amp;quot;) %&amp;gt;%
-  #reverse the journey tag
-  lapply(., rev) %&amp;gt;%
-  lapply(., paste, collapse = &amp;quot;-&amp;quot;)
-
-#bind these together in a df of all journeys
-journeys &amp;lt;- rbind(journeys, rev_journeys) %&amp;gt;%
-  mutate(journey = as.character(journey))
-
-#take the nodes from the shortest tour and arrange them as in
-#the journeys tag for each path between two pubs
-tour_strings &amp;lt;- paste0(tour, &amp;quot;-&amp;quot;, lead(tour)) %&amp;gt;%
-  .[-grep(&amp;quot;NA&amp;quot;, .)] %&amp;gt;%
-  data.frame(journey = .,
-             journey_order = 1:length(.))
-
-#use this to find each vertex that needs traversing in order to complete
-#the shortest tour of all pubs
-#subset this from the df of all shortest journeys between any two pubs
-shortest_tour &amp;lt;- journeys[which(journeys$journey %in% tour_strings$journey),] %&amp;gt;%
-  merge(., tour_strings,  by = &amp;quot;journey&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;All that’s left to do is plot this shortest pub crawl&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;(p5 &amp;lt;- ggplot(data = shortest_tour) +
-  geom_sf(data = cambridge) +
-  geom_sf(data = roads, size = 0.5) + 
-  geom_sf(aes(colour = journey_order), size = 1.5, alpha = 0.7) +
-  scale_colour_gradient(high = &amp;quot;darkred&amp;quot;, low = &amp;quot;orange&amp;quot;, name = &amp;quot;journey order&amp;quot;) +
-  geom_sf(data = pubs, colour = &amp;quot;blue&amp;quot;, size = 1.5) +
-  theme_minimal() +
-  ggtitle(&amp;quot;Hamiltonian Path of Every Pub in the City of Cambridge&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-11-22-cambridge_pub_crawl_files/figure-html/plot_shortest_tour-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;As it turns out, you’d want to start in Trumpington at The Lord Byron Inn and then get into central Cambridge where you dart around a lot before heading out to the north and finally the east at The Red Lion in Cherry Hinton.&lt;/p&gt;
-&lt;p&gt;A bigger image of the above can be found at imgure &lt;a href=&#34;https://i.imgur.com/r18SG2B.png&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;All together this script calculates a distances of ~41km (give or take probably quite a bit) to visit every pub, which is actually kind of doable in a single day (if you forgo [at least some of] the drinking).&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>How I Learned To Stop Worrying and Love Heatmaps</title>
-      <link>/post/getis-ord-heatmaps-tutorial/</link>
-      <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/getis-ord-heatmaps-tutorial/</guid>
-      <description>
-
-
-&lt;p&gt;Whilst &lt;del&gt;getting some work done&lt;/del&gt; browsing twitter at work today, I came across &lt;a href=&#34;https://twitter.com/jburnmurdoch/status/1047470445459644416&#34;&gt;this tweet&lt;/a&gt; from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.&lt;/p&gt;
-&lt;p&gt;For instance, lets load some mapping libraries&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
-library(sf)
-library(rgdal)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;For this blog I’m going to use data of bus stops in London, because there’s an absolute ton of them and because I love the London Datastore and it was the first public, heavy, point data file I came across.&lt;/p&gt;
-&lt;p&gt;Let’s grab some data to use as exemplars&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the shapefile data of london from GADM
-#downloads into a temp file
-gadm_url &amp;lt;- &amp;quot;https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_GBR_2_sf.rds&amp;quot;
-temp_dir &amp;lt;- tempdir()
-download.file(gadm_url, destfile = file.path(temp_dir, &amp;quot;london_shapefile.rds&amp;quot;), 
-              mode = &amp;quot;wb&amp;quot;, quiet = TRUE)
-london &amp;lt;- sf::st_as_sf(readRDS(file.path(temp_dir, &amp;quot;london_shapefile.rds&amp;quot;))) %&amp;gt;%
-  filter(grepl(&amp;quot;London&amp;quot;, NAME_2))
-
-#get the bus stop data
-#https://data.london.gov.uk/dataset/tfl-bus-stop-locations-and-routes
-bus &amp;lt;- read.csv(&amp;quot;https://files.datapress.com/london/dataset/tfl-bus-stop-locations-and-routes/bus-stops-10-06-15.csv&amp;quot;,
-                stringsAsFactors = FALSE) %&amp;gt;%
-  filter(!is.na(Location_Easting)) %&amp;gt;%
-  #convert to simple features
-  st_as_sf(coords = c(&amp;quot;Location_Easting&amp;quot;, &amp;quot;Location_Northing&amp;quot;), crs = st_crs(&amp;quot;+init=epsg:27700&amp;quot;)) %&amp;gt;%
-  #transform projection to match the boundary data
-  st_transform(crs = st_crs(london)) %&amp;gt;%
-  #remove bus stops outside of the limits of the london shapefile
-  .[unlist(st_intersects(london, .)),]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now that we have the data, let’s have a first pass at plotting the points on a map of London using ggplot2&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot the bus stop locations
-p1 &amp;lt;- ggplot(bus) +
-  geom_sf(data = london, fill = &amp;quot;grey&amp;quot;) +
-  geom_sf(colour = &amp;quot;blue&amp;quot;, alpha = 0.2) +
-  ggtitle(&amp;quot;Bus Stops in London&amp;quot;) +
-  theme_void()
-
-plot(p1)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-10-04-getis-ord-tutorial_files/figure-html/plot_bus_stops-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;The points here do kiiiind of work alone- it’s possible to see the route along which buses travel. However, it’s still pretty heavy and takes some cognitive effort. It’s also worth remembering this is just the first example of data I came across- if working with stuff like common incident data, even a heavy alpha on the points is going to cover the map and leave it unreadable, as in the tweet up top.&lt;/p&gt;
-&lt;p&gt;But let’s say we plot it as a heatmap to try and sumamrise where the points are. In my opinion, this is even worse. For one- it stretches utside the boundaries of the shapes, even though we have filtered data to include no bus stops outside London. In this example that’s not a huge deal- but if London was (e.g.) an Island, the graph is now suggesting commutes into the sea. It’s also incredibly taxing to keep track of the various peaks and troughs- even in a simple model where bus stops generally increase as you go near to the centre&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#bind the coordinates as numeric
-bus &amp;lt;- bus %&amp;gt;%
-  cbind(., st_coordinates(bus))
-
-#plot the bus stops as a density map
-p2 &amp;lt;- ggplot() +
-  geom_sf(data = london) +
-  stat_density_2d(data = bus, aes(X, Y)) +
-  ggtitle(&amp;quot;Bus Stops in London&amp;quot;) +
-  theme_void()
-
-plot(p2)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-10-04-getis-ord-tutorial_files/figure-html/unnamed-chunk-1-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;Instead, we can bin the point data into equi-sized containers. I’m extremely partial to this, even though it’s not super popular. To do this with hexagonal bins (the closest to circular that still tessellates perfectly), we just have to create a grid of points and connect them up&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge the london wards into one boundary file
-london_union &amp;lt;- london %&amp;gt;%
-  group_by(&amp;quot;group&amp;quot;) %&amp;gt;%
-  summarise()
-
-#generate a grid of points separated hexagonally
-#no way to do this purely in sf yet afaik
-hex_points &amp;lt;- spsample(as_Spatial(london_union), type = &amp;quot;hexagonal&amp;quot;, cellsize = 0.01)
-
-#generate hexgaon polygons from these points
-hex_polygons &amp;lt;- HexPoints2SpatialPolygons(hex_points) %&amp;gt;%
-  st_as_sf(crs = st_crs(london_union)) %&amp;gt;%
-  #clip to the london shapefile
-  st_intersection(., london_union)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We can then find out which bin every bus stop is located in using st_intersects&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find how many bus stops are within each hexagon
-hex_polygons$planning_no &amp;lt;- lengths(st_intersects(hex_polygons, bus))
-
-#plot the number of bus stops per bin
-p2 &amp;lt;- ggplot(hex_polygons) +
-  geom_sf(aes(fill = planning_no)) +
-  scale_fill_viridis_c(option = &amp;quot;magma&amp;quot;, &amp;quot;# Bus Stops&amp;quot;) +
-  theme_void() +
-  ggtitle(&amp;quot;Binned London Bus Stops&amp;quot;)
-
-plot(p2)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-10-04-getis-ord-tutorial_files/figure-html/bin_stops-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;However, this is still pretty confusing. It seems like bus stops are fairly randomly distributed as by chance one hexagon may contain multiple stops at its edges, whereas a neighbour may be juuuust missing out on these.&lt;/p&gt;
-&lt;p&gt;To mitigate this effect, we can study the spatial autocorrelation of each hexagon to it’s neighbours. There are multiple ways to do this, but the one I was first introduced to and have used most is the Getis-Ord local statistic. In this example I will include.self() which means we are using the Gi* variant of the statistic.&lt;/p&gt;
-&lt;p&gt;Basically- we tell R to find all the nearest neighbours of any bin (hexagon- though not necessarily so, we could e.g. use wards, but I think it looks messier). It then calculates the ratio of values within the bin and it’s neighbours, to the total number of points (bus stops). The reported Gi* value is a z statistic- it can be positive (more clustering) or negative (less) and used to find significant clusters. I’m not going to do any of that here- just accept for now that a high Getis_Ord Gi* value means a greater cluster of bus stops in that region.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(spdep)
-
-#find the centroid of each hexagon and convert to a matrix of points
-hex_points &amp;lt;- do.call(rbind, st_geometry(st_centroid(hex_polygons))) %&amp;gt;%
-  unlist() %&amp;gt;%
-  as.matrix.data.frame()
-
-#use a k-nearest-neighbour algorithm to find which shape neighbour which
-#super easy for the hexagons analytically obvs but important for e.g. using the ward boundaries instead
-neighbouring_hexes &amp;lt;- knn2nb(knearneigh(hex_points, k = 6), 
-                             row.names = rownames(hex_points)) %&amp;gt;%
-  include.self()
-
-#calculate the local G for a given variable (#bus stops) using the neihbours found previously
-localGvalues &amp;lt;- localG(x = as.numeric(hex_polygons$planning_no),
-                       listw = nb2listw(neighbouring_hexes, style = &amp;quot;B&amp;quot;),
-                       zero.policy = TRUE)
-
-#bind this back to the sf as a numeric variable column
-hex_polygons$smooth_planning_no &amp;lt;- as.numeric(localGvalues)
-
-#plot the statistic
-#+ve indicates more than would be expected
-p3 &amp;lt;- ggplot(hex_polygons) +
-  geom_sf(aes(fill = smooth_planning_no)) +
-  scale_fill_viridis_c(option = &amp;quot;magma&amp;quot;, name = &amp;quot;Gi* Statistic&amp;quot;) +
-  theme_void() +
-  ggtitle(&amp;quot;Getis-Ord Binned London Bus Stops Statistic&amp;quot;)
-
-plot(p3)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-10-04-getis-ord-tutorial_files/figure-html/getis_ord-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;which generates a nice plot showing smoothed autocorrelation of dense public-transportation access. I like how you can clearly see the darker regions for the Lea Valley and Richmond Park, and in contrast the hubs of Kingston and Croydon, but in a way to is much more manageable than the contour map, or the point data itself.&lt;/p&gt;
-&lt;p&gt;It’s also worth bearing in mind, that this data is fairly organised (bus routes are to some extent, logically planned). When I first looked into spatial autocorrelation I was dealing with a huge number of dense points randomly dispersed over a significant proportion of England. At that level, techniques such as the finding the Getis-Ord statistic allow you to make sense of the data, AS WELL AS statistically test it. Though I haven’t ever worked with epidemiology data, apparently it’s a powerful technique to find clusters of disease outbreaks, and indeed, the data packaged with spdep is for SIDS data in North Carolina.&lt;/p&gt;
-&lt;p&gt;For more on this, I first learned about Getis-Ord from an excellent &lt;a href=&#34;https://pudding.cool/process/regional_smoothing/&#34;&gt;The Pudding&lt;/a&gt; post (from which some of my code is stolen), &lt;a href=&#34;http://pro.arcgis.com/en/pro-app/tool-reference/spatial-statistics/h-how-hot-spot-analysis-getis-ord-gi-spatial-stati.htm&#34;&gt;ARCGIS has&lt;/a&gt; a pretty good write up, and of course there is the CRAN page for the &lt;a href=&#34;https://cran.r-project.org/web/packages/spdep/index.html&#34;&gt;spdep library&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;Best,&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>sf.chlorodot mini-package</title>
-      <link>/post/sf.schlorodot/</link>
-      <pubDate>Sun, 09 Sep 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/sf.schlorodot/</guid>
-      <description>
-
-
-&lt;p&gt;Recently, I’d seen two tweets with stunning examples of maps by Paul Campbell &lt;a href=&#34;https://twitter.com/PaulCampbell91/status/992043182996193280&#34;&gt;here&lt;/a&gt; and (taken inspiration from the first) by Imer Muhović &lt;a href=&#34;https://twitter.com/ImerM1/status/1037358973807210498&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;The basic idea of the dot chloropleths is to visualise not only the location clustering of each variable but the number of observations (something traditional ‘filled’ chloropleths don’t do). More importantly than this, the maps also just look really really cool.&lt;/p&gt;
-&lt;p&gt;I had a spare few minutes during work on Friday which I tidied up into a package to calculate the random position of dots for such maps which can be found &lt;a href=&#34;https://github.com/RobWHickman/sf.chlorodot&#34;&gt;on my github&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;Below, I’ll outline the code for the South African example used in the package README. Data comes from Adrian Frith’s &lt;a href=&#34;https://census2011.adrianfrith.com/&#34;&gt;very good 2011 census site&lt;/a&gt; and &lt;a href=&#34;https://gadm.org/download_country_v3.html&#34;&gt;gadm&lt;/a&gt; for the shapefiles.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(sf)
-library(ggplot2)
-library(tidyverse)
-library(data.table)
-library(rvest)
-
-devtools::install_github(&amp;#39;RobWHickman/sf.chlorodot&amp;#39;)
-library(sf.chlordot)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Next, download and scrape the data for the map&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#download the South African shapefile fom gadm
-admin_url &amp;lt;- &amp;quot;https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_ZAF_3_sf.rds&amp;quot;
-download.file(admin_url, destfile = &amp;quot;shapefiles.rds&amp;quot;, mode = &amp;quot;wb&amp;quot;)
-south_africa &amp;lt;- readRDS(&amp;quot;shapefiles.rds&amp;quot;) %&amp;gt;%
-  #convert to sf
-  st_as_sf() %&amp;gt;%
-  select(region = NAME_3) %&amp;gt;%
-  #merge geometries that have two rows
-  group_by(region) %&amp;gt;%
-  summarise()
-
-#get the links to the data from Adrian Frith&amp;#39;s site
-sa_data_url &amp;lt;- &amp;quot;https://census2011.adrianfrith.com&amp;quot;
-south_africa_data &amp;lt;- sa_data_url %&amp;gt;%
-  read_html() %&amp;gt;% html_nodes(&amp;quot;.namecell a&amp;quot;) %&amp;gt;% html_attr(&amp;quot;href&amp;quot;) %&amp;gt;% paste0(sa_data_url, .) %&amp;gt;%
-  lapply(., function(x) read_html(x) %&amp;gt;% html_nodes(&amp;quot;.namecell a&amp;quot;) %&amp;gt;% html_attr(&amp;quot;href&amp;quot;) %&amp;gt;% paste0(sa_data_url, .)) %&amp;gt;% unlist() %&amp;gt;%
-   lapply(., function(x) read_html(x) %&amp;gt;% html_nodes(&amp;quot;.namecell a&amp;quot;) %&amp;gt;% html_attr(&amp;quot;href&amp;quot;) %&amp;gt;% paste0(sa_data_url, .)) %&amp;gt;% unlist()
-
-#scrape the data on primary language from the 2011 South African census
-language_data &amp;lt;- rbindlist(lapply(south_africa_data, function(x) {
-  read &amp;lt;- read_html(x)
-  language_nos &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.datacell&amp;quot;) %&amp;gt;% html_text()
-  start &amp;lt;- grep(&amp;quot;Percentage&amp;quot;, language_nos)[3] + 1
-  stop &amp;lt;- grep(&amp;quot;Population&amp;quot;, language_nos) - 1
-  #some areas have no data
-  if(!is.na(start) &amp;amp; !is.na(stop)) {
-    language_nos &amp;lt;- language_nos[start:stop]
-    language_nos &amp;lt;- language_nos[seq(1, length(language_nos), 2)]
-  } else {
-    language_nos &amp;lt;- NA
-  }
-  
-  languages &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;tr &amp;gt; :nth-child(1)&amp;quot;) %&amp;gt;% html_text()
-  start &amp;lt;- grep(&amp;quot;First language&amp;quot;, languages) + 1
-  stop &amp;lt;- grep(&amp;quot;Name&amp;quot;, languages) - 1
-  if(length(start) &amp;gt; 0 &amp;amp; !is.na(stop)) {
-    languages &amp;lt;- languages[start:stop]
-  } else {
-    languages &amp;lt;- NA
-  }
-  
-  region_names &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;.topname&amp;quot;) %&amp;gt;% html_text()
-  
-  #combine into a df
-  df &amp;lt;- data.frame(language = languages, primary_speakers = language_nos, region = region_names)
-  return(df)
-}))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;the lanaguage data then needs to be transformed before the dot position is calculated. It must be in ‘short’ format with variables as column names. At the same time we can do some cleaning in order to match the shape areas with the region names from the census and remove data we don’t want to plot&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;language_data %&amp;lt;&amp;gt;%
-  #convert number of speakers to numeric
-  mutate(primary_speakers = as.numeric(as.character(primary_speakers))) %&amp;gt;%
-  #matching of area names with South African shapefile
-  mutate(region = gsub(&amp;quot; NU&amp;quot;, &amp;quot;&amp;quot;, region)) %&amp;gt;%
-  mutate(region = gsub(&amp;quot;Tshwane&amp;quot;, &amp;quot;City of Tshwane&amp;quot;, region)) %&amp;gt;%
-  #filter only the data we want to merge
-  filter(region %in% south_africa$region) %&amp;gt;%
-  filter(!is.na(language)) %&amp;gt;%
-  filter(language != &amp;quot;Not applicable&amp;quot;) %&amp;gt;%
-  #spread the data
-  dcast(., region ~ language, value.var = &amp;quot;primary_speakers&amp;quot;, fun.aggregate = sum) %&amp;gt;%
-  #join in the spatial geometry
-  left_join(., south_africa) %&amp;gt;%
-  #convert to sf
-  st_as_sf()&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;then we can calculate the random dot position using calc_dots() from the sf.chlorodot package. This takes three arguments. The first is the df to take the data from (language_data). The second is which variables to calculate positions for. The easiest way to do this is to use names(df) and select from there, though a character vector can also be passed. Finally, n_per_dot is the number of observations (speakers of language x) for each dot on the map. This will affect the look of the map, but also the processing time (lower n_per_dot = greater time) so play around with it a bit.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#calculate the dot positions using calc_dots from the sf.chlorodot package
-sf_dots &amp;lt;- calc_dots(df = language_data, col_names = names(language_data)[2:14], n_per_dot = 1000)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Finally, we can plot the output of this&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#stolen the background colour scheme from Paul Campbell&amp;#39;s blog
-#original inspiration for this package
-p &amp;lt;- ggplot() +
-  geom_sf(data = south_africa, fill = &amp;quot;transparent&amp;quot;,colour = &amp;quot;white&amp;quot;) +
-  geom_point(data = sf_dots, aes(lon, lat, colour = variable), size = 0.1) +
-  scale_colour_discrete(name = &amp;quot;Primary Language&amp;quot;) +
-  ggtitle(&amp;quot;Language Diversity in South Africa&amp;quot;) +
-  theme_void() +
-  guides(colour = guide_legend(override.aes = list(size = 10))) +
-  theme(plot.background = element_rect(fill = &amp;quot;#212121&amp;quot;, color = NA), 
-        panel.background = element_rect(fill = &amp;quot;#212121&amp;quot;, color = NA),
-        legend.background = element_rect(fill = &amp;quot;#212121&amp;quot;, color = NA),
-        text =  element_text(color = &amp;quot;white&amp;quot;),
-        title =  element_text(color = &amp;quot;white&amp;quot;),
-        legend.text=element_text(size=12),
-        plot.title = element_text(size = 20),
-        plot.margin = margin(1, 1, 1, 1, &amp;quot;cm&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;../../img/south_africa.png&#34; alt=&#34;chlorodot map of South African languages&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;Enjoy!&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>The Knowledge 4th August 2018</title>
-      <link>/post/the-knowledge-4th-august-2018/</link>
-      <pubDate>Sat, 04 Aug 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/the-knowledge-4th-august-2018/</guid>
-      <description>
-
-
-&lt;p&gt;The Guardian publish a weekly set of questions and answers on a variety of football minutiae at &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt;. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(rvest)
-library(dplyr)
-library(magrittr)
-library(data.table)
-library(zoo)
-library(ggplot2)
-library(rvest)
-library(stringr)
-
-#jalapic/engsoccerdata
-library(engsoccerdata)&lt;/code&gt;&lt;/pre&gt;
-&lt;div id=&#34;we-aint-going-to-the-town..&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;We Ain’t Going To The Town..&lt;/h1&gt;
-&lt;p&gt;&lt;a href=&#34;https://twitter.com/topes_lose/status/1023537060668473344?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E1023537060668473344&amp;amp;ref_url=https%3A%2F%2Fwww.theguardian.com%2Ffootball%2F2018%2Faug%2F01%2Ffootballers-who-have-backed-out-of-a-transfer-for-another-late-in-the-day&#34;&gt;‘This season, Tranmere Rovers return to contest League Two alongside eight teams with the suffix Town, including six successive fixtures against these clubs over the New Year. What is the record for successive fixtures versus clubs with the same (or no) prefix or suffix?’&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;For this question I decided to ignore prefixes as the dataset I’m using doesn’t have any that could be matches between teams except the ‘West’ in West Ham and West Bromwich Albion. That dataset is the excellent engsoccerdata from James Curley found at his github &lt;a href=&#34;https://github.com/jalapic/engsoccerdata&#34;&gt;here&lt;/a&gt; and on CRAN.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#take all of the english soccer data in the package and bind it together
-england_data &amp;lt;- bind_rows(
-    select(engsoccerdata::england,
-           .data$home, .data$visitor, date = .data$Date),
-    select(engsoccerdata::englandplayoffs,
-           .data$home, .data$visitor, date = .data$Date),
-    select(engsoccerdata::england1939,
-           .data$home, .data$visitor, date = .data$Date)) %&amp;gt;%
-  setDT() %&amp;gt;%
-  #convert the date to date class
-  .[, date := as.Date(date)]
-
-#get a list of each unique team in the dataset
-all_teams &amp;lt;- unique(c(as.character(england_data$home),
-                      as.character(england_data$visitor)))
-
-#melt the dataset by each teams matches
-find_chains &amp;lt;- rbindlist(lapply(all_teams, function(team) {
-  england_data %&amp;gt;%
-    .[home == team | visitor == team] %&amp;gt;%
-    .[, matching_team := team]
-  })) %&amp;gt;%
-  .[home == matching_team, other := visitor] %&amp;gt;%
-  .[visitor == matching_team, other := home] %&amp;gt;%
-  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;)] %&amp;gt;%
-  #get the suffixes and prefixes of the other team
-  .[, other_prefix := gsub(&amp;quot; .*&amp;quot;, &amp;quot;&amp;quot;, other)] %&amp;gt;%
-  .[, other_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, other)] %&amp;gt;%
-  #arrange by team and date
-  .[order(matching_team, date)] %&amp;gt;%
-  #convert to an id
-  .[, suffix_id := as.numeric(as.factor(other_suffix))] %&amp;gt;%
-  #if playing consecutively against the same suffix id (ignoring prefixes for now) put in same &amp;#39;chain&amp;#39;
-  .[, match := suffix_id - lead(suffix_id), by = &amp;quot;matching_team&amp;quot;] %&amp;gt;%
-  .[match == 0 &amp;amp; lead(match) != 0, chain_id := 1:.N] %&amp;gt;%
-  .[match == 0] %&amp;gt;%
-  .[, chain_id := na.locf(chain_id, fromLast = TRUE)] %&amp;gt;%
-  .[, chain_length := .N, by = chain_id] %&amp;gt;%
-  #take only chains at least as long as Tranmere&amp;#39;s run (6)
-  .[chain_length &amp;gt; 5] %&amp;gt;%
-  .[order(chain_length)] %&amp;gt;%
-  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;, &amp;quot;chain_length&amp;quot;)]
-
-#print the chains of equal length to Tranmere&amp;#39;s run
-print(find_chains)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##           date  matching_team               other chain_length
-##  1: 1950-12-30   Chesterfield      Leicester City            6
-##  2: 1951-01-13   Chesterfield     Manchester City            6
-##  3: 1951-01-20   Chesterfield       Coventry City            6
-##  4: 1951-02-03   Chesterfield        Cardiff City            6
-##  5: 1951-02-17   Chesterfield     Birmingham City            6
-##  6: 1951-02-24   Chesterfield        Swansea City            6
-##  7: 2009-03-21 Leicester City   Colchester United            6
-##  8: 2009-03-28 Leicester City Peterborough United            6
-##  9: 2009-04-04 Leicester City     Carlisle United            6
-## 10: 2009-04-11 Leicester City     Hereford United            6
-## 11: 2009-04-13 Leicester City        Leeds United            6
-## 12: 2009-04-18 Leicester City     Southend United            6
-## 13: 1921-05-02         Fulham           Hull City            7
-## 14: 1921-05-07         Fulham           Hull City            7
-## 15: 1921-08-27         Fulham       Coventry City            7
-## 16: 1921-08-29         Fulham      Leicester City            7
-## 17: 1921-09-03         Fulham       Coventry City            7
-## 18: 1921-09-05         Fulham      Leicester City            7
-## 19: 1921-09-10         Fulham           Hull City            7
-## 20: 1920-04-17  Leyton Orient     Birmingham City            7
-## 21: 1920-04-24  Leyton Orient     Birmingham City            7
-## 22: 1920-04-26  Leyton Orient      Leicester City            7
-## 23: 1920-05-01  Leyton Orient      Leicester City            7
-## 24: 1920-08-28  Leyton Orient      Leicester City            7
-## 25: 1920-08-30  Leyton Orient        Cardiff City            7
-## 26: 1920-09-04  Leyton Orient      Leicester City            7
-## 27: 1920-10-09   Notts County          Stoke City            7
-## 28: 1920-10-16   Notts County          Stoke City            7
-## 29: 1920-10-23   Notts County        Cardiff City            7
-## 30: 1920-10-30   Notts County        Cardiff City            7
-## 31: 1920-11-06   Notts County       Coventry City            7
-## 32: 1920-11-13   Notts County       Coventry City            7
-## 33: 1920-11-20   Notts County      Leicester City            7
-##           date  matching_team               other chain_length&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;so In fact an identical length chain on matching suffixes has occured twice, with Chesterfield playing a range of cities at the start of 1951 in League Two, and much more recently, Leicester playing 6 different Uniteds in a row at the tail end of the 2008/2009 season. This is also the season that saw them recover from being relegated from the Chmapionship and start moving towards winning the title in 2015-2016 season.&lt;/p&gt;
-&lt;p&gt;Some longer chains involving cities happened in the 1920-1921 seasons in the Second Division, but it seems like the scheduling worked differently then and teams played back to back more, so doesn’t really count.&lt;/p&gt;
-&lt;p&gt;Having originally misread the question, I also wanted to find out the longest chain of a team playing teams that matched &lt;em&gt;their own&lt;/em&gt; suffix. We can do this using a similar method&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;matching_fixtures &amp;lt;- england_data %&amp;gt;%
-  #get only matches between teams with matching prefix/suffixes
-  .[, home_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, home)] %&amp;gt;%
-  .[, away_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, visitor)] %&amp;gt;%
-  .[home_suffix == away_suffix, match := home_suffix] %&amp;gt;%
-  .[!is.na(match)] %&amp;gt;%
-  #remove matches where teams from the same city play each other
-  .[!match %in% c(&amp;quot;Bradford&amp;quot;, &amp;quot;Bristol&amp;quot;, &amp;quot;Burton&amp;quot;, &amp;quot;Manchester&amp;quot;, &amp;quot;Sheffield&amp;quot;)]
-
-#get all the teams that have played teams with matching suffixes
-matching_teams &amp;lt;- unique(c(as.character(matching_fixtures$home),
-                           as.character(matching_fixtures$visitor)))
-
-#elongate the data and look for chains
-find_chains &amp;lt;- rbindlist(lapply(matching_teams, function(team) {
-  england_data %&amp;gt;%
-    .[home == team | visitor == team] %&amp;gt;%
-    .[order(date)] %&amp;gt;%
-    .[, matching_team := team]
-  })) %&amp;gt;%
-  .[home == matching_team, other := visitor] %&amp;gt;%
-  .[visitor == matching_team, other := home] %&amp;gt;%
-  #id matches and remove matches not involving teams with identical suffixes
-  .[, match_id := 1:.N, by = matching_team] %&amp;gt;%
-  .[!is.na(match)] %&amp;gt;%
-  #find chains of identical suffixed matches
-  .[, chain := match_id - lag(match_id)] %&amp;gt;%
-  .[chain == 1 &amp;amp; lag(chain) != 1, chain_id := 1:.N] %&amp;gt;%
-  .[chain == 1] %&amp;gt;%
-  .[, chain_id := na.locf(chain_id)] %&amp;gt;%
-    .[, chain_length := .N, by = chain_id] %&amp;gt;%
-  #take only chains at least as long as Tranmere&amp;#39;s run (6)
-  .[chain_length &amp;gt; 4] %&amp;gt;%
-  .[order(chain_length)] %&amp;gt;%
-  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;, &amp;quot;chain_length&amp;quot;)]
-
-print(find_chains)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##           date   matching_team             other chain_length
-##  1: 1919-12-13      Stoke City   Birmingham City            5
-##  2: 1919-12-20      Stoke City    Leicester City            5
-##  3: 1919-12-25      Stoke City     Coventry City            5
-##  4: 1919-12-26      Stoke City     Coventry City            5
-##  5: 1919-12-27      Stoke City    Leicester City            5
-##  6: 1919-09-01       Hull City        Stoke City            5
-##  7: 1919-09-06       Hull City   Birmingham City            5
-##  8: 1919-09-08       Hull City        Stoke City            5
-##  9: 1919-09-13       Hull City        Leeds City            5
-## 10: 1919-09-20       Hull City        Leeds City            5
-## 11: 1988-09-24 Carlisle United  Rotherham United            5
-## 12: 1988-09-30 Carlisle United  Cambridge United            5
-## 13: 1988-10-04 Carlisle United Colchester United            5
-## 14: 1988-10-08 Carlisle United   Hereford United            5
-## 15: 1988-10-15 Carlisle United    Torquay United            5&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So the record for that is only slightly shorter! with Stoke and Hull City playing a range of cities in the 1919-1920 season (but see above for scheduling differences) and Carlisle United playing 5 other different Uniteds in a row in the old Fourth Division.&lt;/p&gt;
-&lt;div id=&#34;answer&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Answer&lt;/h2&gt;
-&lt;p&gt;The record is 7 matches set by Notts County, Leyton Orient, and Fulham in 1920/1921 playing 7 teams with the suffix ‘city’ in a row. The Leyton Orient and Fulham chains stretch over the end of one season and into the next, so only Notts County really satisifies the question. However, the scheduling in these years involved a lot of back to back matches and so is cheating a bit.&lt;/p&gt;
-&lt;p&gt;More recently Chesterfield played 6 different teams with the suffix ‘city’ in a row in 1950/1951, and Leceister played 6 different ’united’s in a row in their promotion season from League One in 2008/2009.&lt;/p&gt;
-&lt;p&gt;Even more bizarre, Carlisle United played 5 other different United’s at the start of the 1988/1989 old Fourth Division season.&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div id=&#34;youth-of-the-nation&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Youth Of The Nation&lt;/h1&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.theguardian.com/football/2018/aug/01/footballers-who-have-backed-out-of-a-transfer-for-another-late-in-the-day&#34;&gt;“If Lucas Hernández was born a year and a half later, his age would be a lower than his shirt number (21). Have any World Cup winners achieved this?” muses Edward Gibson.&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;The easiest way to check this is just to scrape all of the squads off of the wiki pages for the World Cups. I only did from 1954 onwards as before this the squad no and birthdate data is a bit patchy.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#links to the world cup squads pages
-wiki_cup_squads &amp;lt;- sprintf(&amp;quot;https://en.wikipedia.org/wiki/%s_FIFA_World_Cup_squads&amp;quot;,
-                           seq(1954, 2018, by = 4))
-
-#scrape all the player data we need
-world_cup_squads &amp;lt;- rbindlist(lapply(wiki_cup_squads[1:17], function(link) {
-  year &amp;lt;- gsub(&amp;quot;.*\\/wiki\\/&amp;quot;, &amp;quot;&amp;quot;, gsub(&amp;quot;_FIFA_World.*&amp;quot;, &amp;quot;&amp;quot;, link))
-  read &amp;lt;- read_html(link)
-  
-  sq_no &amp;lt;- read %&amp;gt;% 
-    html_nodes(&amp;quot;.plainrowheaders td:nth-child(1)&amp;quot;) %&amp;gt;%
-    html_text() %&amp;gt;%
-    as.numeric()
-  sq_names &amp;lt;- read %&amp;gt;%
-    html_nodes(&amp;quot;.plainrowheaders a:nth-child(1)&amp;quot;) %&amp;gt;% 
-    html_text() %&amp;gt;%
-    .[. != &amp;quot;&amp;quot;] %&amp;gt;%
-    .[!grepl(&amp;quot;^\\[&amp;quot;, .)] %&amp;gt;%
-    .[. != &amp;quot;Unattached&amp;quot;] %&amp;gt;% 
-    .[!grepl(&amp;quot;captain&amp;quot;, .)]
-  sq_dobs &amp;lt;- read %&amp;gt;% 
-    html_nodes(&amp;quot;.plainrowheaders td:nth-child(4)&amp;quot;) %&amp;gt;%
-    html_text() %&amp;gt;%
-    str_extract(., &amp;quot;[0-9]{4}-[0-9]{2}-[0-9]{2}&amp;quot;) %&amp;gt;% 
-    as.Date()
-  countries &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;h3 .mw-headline&amp;quot;) %&amp;gt;% 
-    html_text() %&amp;gt;% 
-    trimws()
-
-  if(year &amp;gt; 2006) countries &amp;lt;- countries[1:32]
-  
-  squad_data &amp;lt;- data.frame(name = sq_names,
-                           no = sq_no,
-                           dob = sq_dobs,
-                           year= year) %&amp;gt;%
-    setDT() %&amp;gt;%
-    .[!grepl(&amp;quot;Nery Pumpido&amp;quot;, name)] %&amp;gt;%
-    .[no == 1, country := countries] %&amp;gt;%
-    .[, country := na.locf(country)] %&amp;gt;%
-    .[, c(&amp;quot;name&amp;quot;, &amp;quot;no&amp;quot;, &amp;quot;dob&amp;quot;, &amp;quot;year&amp;quot;, &amp;quot;country&amp;quot;)]
-}))
-
-#find all world cup squad players with shirt numbers greater than their age in years
-young_players &amp;lt;- world_cup_squads %&amp;gt;%
-  .[, age := as.numeric(difftime(as.Date(paste0(year, &amp;quot;-07-01&amp;quot;)), dob)) / 365] %&amp;gt;%
-  .[age &amp;lt; no]
-
-print(young_players)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##                        name no        dob year    country      age
-##   1:   Aleksandar Petakovic 22 1932-08-06 1954 Yugoslavia 21.91507
-##   2:         Ranulfo Cortés 22 1934-07-09 1954     Mexico 19.99178
-##   3:             Coskun Tas 22 1935-04-23 1954     Turkey 19.20274
-##   4:            Omar Méndez 20 1934-08-07 1954    Uruguay 19.91233
-##   5:          Johnny Haynes 21 1934-10-17 1954    England 19.71781
-##  ---                                                              
-## 110: Trent Alexander-Arnold 22 1998-10-07 2018    England 19.74521
-## 111:    José Luis Rodríguez 21 1998-06-19 2018     Panama 20.04658
-## 112:       Dávinson Sánchez 23 1996-06-12 2018   Colombia 22.06575
-## 113:         Dawid Kownacki 23 1997-03-14 2018     Poland 21.31233
-## 114:           Moussa Wagué 22 1998-10-04 2018    Senegal 19.75342&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Overall 114 players are found. England actually have the most players with shirt numbers higher than their age with 9: Haynes, Hooper, Owen, Ferdinand, Carson, Walcott, Barkeley, Shaw, Alexander-Arnold. Surprisingly, most of these young English callups are pretty recent.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p &amp;lt;- ggplot(data = young_players, aes(year)) +
-  geom_bar() +
-  ggtitle(&amp;quot;Number of Players in World Cup Squads With Nos &amp;gt; Age&amp;quot;) +
-  xlab(&amp;quot;World Cup Year&amp;quot;) +
-  ylab(&amp;quot;Number&amp;quot;)
-
-print(p)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-08-05-The_Knowledge_1_files/figure-html/unnamed-chunk-4-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;It seems that the real high point for this was the turn of the century with young players being given a shot at the tail end of squads, which is returning to pre-1998 levels by 2018.&lt;/p&gt;
-&lt;p&gt;The data on these squad players is then merged with the data on the winning teams to find those who played for nations who went on to win the world cup.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;wc_winners &amp;lt;- data.frame(winner = c(&amp;quot;West Germany&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;England&amp;quot;,
-                                    &amp;quot;Brazil&amp;quot;,&amp;quot;West Germany&amp;quot;,&amp;quot;Argentina&amp;quot;,&amp;quot;Italy&amp;quot;,
-                                    &amp;quot;Argentina&amp;quot;,&amp;quot;West Germany&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;France&amp;quot;,
-                                    &amp;quot;Brazil&amp;quot;,&amp;quot;Italy&amp;quot;,&amp;quot;Spain&amp;quot;,&amp;quot;Germany&amp;quot;,&amp;quot;France&amp;quot;),
-                         year = seq(1954, 2018, 4))
-
-#merge data with winners and find matches
-young_players %&amp;lt;&amp;gt;% .[, year := as.numeric(as.character(year))] %&amp;gt;%
-  .[, country := gsub(&amp;quot;(^\\s+)|(\\s+$)&amp;quot;, &amp;quot;&amp;quot;, country)] %&amp;gt;%
-  merge(., wc_winners, by = &amp;quot;year&amp;quot;) %&amp;gt;%
-  .[winner == country]
-
-#kaka only one to have played as per https://en.wikipedia.org/wiki/List_of_FIFA_World_Cup_winners#By_year
-print(young_players)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##    year    name no        dob country      age winner
-## 1: 1970    Leão 22 1949-07-11  Brazil 20.98630 Brazil
-## 2: 1994 Ronaldo 20 1976-09-22  Brazil 17.78356 Brazil
-## 3: 2002    Kaká 23 1982-04-22  Brazil 20.20548 Brazil&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So only the great &lt;a href=&#34;https://en.wikipedia.org/wiki/%C3%89merson_Le%C3%A3o&#34;&gt;Émerson Leão&lt;/a&gt;, &lt;a href=&#34;https://en.wikipedia.org/wiki/Ronaldo_(Brazilian_footballer)&#34;&gt;Ronaldo&lt;/a&gt; and &lt;a href=&#34;https://en.wikipedia.org/wiki/Kak%C3%A1&#34;&gt;Kaka&lt;/a&gt; satisfy the question. However, of these only Kaka played any part during the tournament, which only amounted to 25 minutes vs Costa Rica.&lt;/p&gt;
-&lt;p&gt;Which players &lt;em&gt;could&lt;/em&gt; have satisfied this if they had a larger squad number?&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;youngest_players &amp;lt;- world_cup_squads %&amp;gt;%
-  .[, age := as.numeric(difftime(as.Date(paste0(year, &amp;quot;-07-01&amp;quot;)), dob)) / 365] %&amp;gt;%
-  .[age &amp;lt; 23] %&amp;gt;%
-  .[, country := gsub(&amp;quot;(^\\s+)|(\\s+$)&amp;quot;, &amp;quot;&amp;quot;, country)] %&amp;gt;%
-  .[, year := as.numeric(as.character(year))] %&amp;gt;%
-  merge(., wc_winners, by = &amp;quot;year&amp;quot;) %&amp;gt;%
-  .[winner == country] %&amp;gt;%
-  .[, dob := NULL]
-
-#gives 53 potential results with world cup winners under the age of 23
-print(youngest_players)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##     year                 name no      country      age       winner
-##  1: 1954          Horst Eckel  6 West Germany 22.40822 West Germany
-##  2: 1954     Ulrich Biesinger 18 West Germany 20.91507 West Germany
-##  3: 1958                 Pelé 10       Brazil 17.69863       Brazil
-##  4: 1958               Moacir 13       Brazil 22.13425       Brazil
-##  5: 1958              Orlando 15       Brazil 22.79452       Brazil
-##  6: 1958              Mazzola 18       Brazil 19.95068       Brazil
-##  7: 1962             Coutinho  9       Brazil 19.06849       Brazil
-##  8: 1962                 Pelé 10       Brazil 21.70137       Brazil
-##  9: 1962             Jurandir 14       Brazil 21.64658       Brazil
-## 10: 1962            Mengálvio 17       Brazil 22.55342       Brazil
-## 11: 1962        Jair da Costa 18       Brazil 21.99178       Brazil
-## 12: 1966            Alan Ball  7      England 21.15068      England
-## 13: 1966        Martin Peters 16      England 22.66027      England
-## 14: 1966        Norman Hunter 18      England 22.68767      England
-## 15: 1970            Clodoaldo  5       Brazil 20.77534       Brazil
-## 16: 1970        Marco Antônio  6       Brazil 19.41096       Brazil
-## 17: 1970          Paulo Cézar 18       Brazil 21.05479       Brazil
-## 18: 1970                  Edu 19       Brazil 20.91507       Brazil
-## 19: 1970             Zé Maria 21       Brazil 21.13425       Brazil
-## 20: 1970                 Leão 22       Brazil 20.98630       Brazil
-## 21: 1974        Paul Breitner  3 West Germany 22.83562 West Germany
-## 22: 1974           Uli Hoeneß 14 West Germany 22.50137 West Germany
-## 23: 1974        Rainer Bonhof 16 West Germany 22.27123 West Germany
-## 24: 1978    Alberto Tarantini 20    Argentina 22.59178    Argentina
-## 25: 1978 José Daniel Valencia 21    Argentina 22.75890    Argentina
-## 26: 1982        Franco Baresi  2        Italy 22.16164        Italy
-## 27: 1982     Giuseppe Bergomi  3        Italy 18.53699        Italy
-## 28: 1982      Daniele Massaro 17        Italy 21.12055        Italy
-## 29: 1986       Claudio Borghi  4    Argentina 21.76986    Argentina
-## 30: 1986           Luis Islas 15    Argentina 20.53699    Argentina
-## 31: 1990       Andreas Möller 17 West Germany 22.84384 West Germany
-## 32: 1994              Ronaldo 20       Brazil 17.78356       Brazil
-## 33: 1998       Patrick Vieira  4       France 22.03562       France
-## 34: 1998        Thierry Henry 12       France 20.88493       France
-## 35: 1998      David Trezeguet 20       France 20.72329       France
-## 36: 2002           Ronaldinho 11       Brazil 22.29315       Brazil
-## 37: 2002                 Kaká 23       Brazil 20.20548       Brazil
-## 38: 2006     Daniele De Rossi  4        Italy 22.95342        Italy
-## 39: 2010            Juan Mata 13        Spain 22.18904        Spain
-## 40: 2010      Sergio Busquets 16        Spain 21.97260        Spain
-## 41: 2010                Pedro 18        Spain 22.94247        Spain
-## 42: 2010        Javi Martínez 20        Spain 21.84110        Spain
-## 43: 2014      Matthias Ginter  3      Germany 20.46027      Germany
-## 44: 2014       Julian Draxler 14      Germany 20.79178      Germany
-## 45: 2014            Erik Durm 15      Germany 22.15068      Germany
-## 46: 2014          Mario Götze 19      Germany 22.09041      Germany
-## 47: 2014     Shkodran Mustafi 21      Germany 22.21918      Germany
-## 48: 2018      Benjamin Pavard  2       France 22.27397       France
-## 49: 2018     Presnel Kimpembe  3       France 22.89863       France
-## 50: 2018         Thomas Lemar  8       France 22.64932       France
-## 51: 2018        Kylian Mbappé 10       France 19.54247       France
-## 52: 2018      Ousmane Dembélé 11       France 21.14247       France
-## 53: 2018      Lucas Hernández 21       France 22.39178       France
-##     year                 name no      country      age       winner&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#most of these young players actually played at their world cups and many appeared in finals
-youngest_players_appeared &amp;lt;- youngest_players[c(1, 3:6, 8, 12:13, 15:18, 21:23, 24:25, 27, 29, 31, 33:35, 36:37, 38, 39:42, 44, 46:47, 48:53)]
-
-#find nearest matches
-youngest_players_appeared %&amp;lt;&amp;gt;% .[, diff := age - no]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The closest other players to make it are David Trezeguet (1998, 20.7years no 20), Shkodran Mustafi (2014, 22.2years, no 21) and then Lucas Hernandez (22.4years, no 21). Hernandez is the closest one to actually play in the World Cup final. Alberto Tarantini is his closest competition at 22.6 years old and wearing shirt number 20 in the 1978 final.&lt;/p&gt;
-&lt;div id=&#34;answer-1&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Answer&lt;/h2&gt;
-&lt;p&gt;Yes, three winners have appeared in World Cups with an age less than their shirt number. All Brazilians: Émerson Leão in 1970, Ronaldo in 1994, and Kaka in 2002. However only Kaka actually played (for 25 minutes vs. Costa Rica) in the finals.&lt;/p&gt;
-&lt;p&gt;Other close calls are David Trezeguet (20.7, no 20 in 1998) and Shkodran Mustafi (22.2, no 21 in 2014).&lt;/p&gt;
-&lt;p&gt;Hernandez &lt;em&gt;is&lt;/em&gt; the closest to acheiving this having played in the final itself, with only Alberto Tarantini (22.5, no 20 in 1978) and Mario Goetze (22.1, no 19 in 2014) in close competition.&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Could an Independent Yorkshire Win the World Cup - Rest of the World/UK</title>
-      <link>/post/yorkshire_world_cup_6/</link>
-      <pubDate>Sun, 10 Jun 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/yorkshire_world_cup_6/</guid>
-      <description>
-
-
-&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
-&lt;p&gt;I &lt;a href=&#34;http://www.robert-hickman.eu/post/yorkshire_world_cup_1/&#34;&gt;published&lt;/a&gt; the complete code for that article on this blog this week. However, one question which I kept being asked was how a ‘All of the UK’ team would do (i.e. if the country wasn’t split up into England, Wales, Scotland, and Northern Ireland). Listening to the latest &lt;a href=&#34;https://twitter.com/doublepivotpod?lang=en&#34;&gt;Double Pivot Podcast&lt;/a&gt;, drafting plyers not going to the World Cup, I also wondered what a ‘Rest of the World’ 11 would look like/fare.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
-library(magrittr)
-library(data.table)
-library(ggplot2)&lt;/code&gt;&lt;/pre&gt;
-&lt;div id=&#34;building-teams&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Building Teams&lt;/h1&gt;
-&lt;p&gt;To save time, I’m gonig to used saved versions of the datasets I built up over the 5 blog posts.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#world rankings
-world_rankings &amp;lt;- readRDS(&amp;quot;national_rankings.rds&amp;quot;)
-
-#player data
-all_players_data &amp;lt;- readRDS(&amp;quot;all_players_position_data.rds&amp;quot;)
-#all British players
-british_player_birthplaces &amp;lt;- readRDS(&amp;quot;british_player_birthplaces.rds&amp;quot;)
-
-#the countries going to the world cup
-world_cup_countries &amp;lt;- c(&amp;quot;Russia&amp;quot;, &amp;quot;Saudi Arabia&amp;quot;, &amp;quot;Egypt&amp;quot;, &amp;quot;Uruguay&amp;quot;,
-                         &amp;quot;Portugal&amp;quot;, &amp;quot;Spain&amp;quot;, &amp;quot;Morocco&amp;quot;, &amp;quot;Iran&amp;quot;,
-                         &amp;quot;France&amp;quot;, &amp;quot;Australia&amp;quot;, &amp;quot;Peru&amp;quot;, &amp;quot;Denmark&amp;quot;,
-                         &amp;quot;Argentina&amp;quot;, &amp;quot;Iceland&amp;quot;, &amp;quot;Croatia&amp;quot;, &amp;quot;Nigeria&amp;quot;,
-                         &amp;quot;Brazil&amp;quot;, &amp;quot;Switzerland&amp;quot;, &amp;quot;Costa Rica&amp;quot;, &amp;quot;Serbia&amp;quot;,
-                         &amp;quot;Germany&amp;quot;, &amp;quot;Mexico&amp;quot;, &amp;quot;Sweden&amp;quot;, &amp;quot;Korea Republic&amp;quot;,
-                         &amp;quot;Belgium&amp;quot;, &amp;quot;Panama&amp;quot;, &amp;quot;Tunisia&amp;quot;, &amp;quot;England&amp;quot;,
-                         &amp;quot;Poland&amp;quot;, &amp;quot;Senegal&amp;quot;, &amp;quot;Colombia&amp;quot;, &amp;quot;Japan&amp;quot;)
-
-#load data to save having to recalculate optimal teams
-optimal_national_teams &amp;lt;- readRDS(&amp;quot;optimal_national_teams.rds&amp;quot;)
-national_teams &amp;lt;- readRDS(&amp;quot;national_teams.rds&amp;quot;)
-
-#the formations for selecting teams
-formations_df &amp;lt;- readRDS(&amp;quot;formations_df.rds&amp;quot;)
-formation_coords &amp;lt;- readRDS(&amp;quot;player_position_coords.rds&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I won’t include the functions in this blog post either, but the article uses (at most very slight modified) functions from the previous 5 posts.&lt;/p&gt;
-&lt;p&gt;We first need to sort the players into either the UK vs. the rest of the World* and finding the optimal teams for each, as we did prviously.&lt;/p&gt;
-&lt;p&gt;*it’s possible Welsh (especially Gareth Bale), Northern Irish, or Scottish players might make the rest of the World team, but I’ll ignore that possibility for simplicity&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the names of each player to merge in
-player_lookup &amp;lt;- all_players_data %&amp;gt;%
-  select(id, name, nationality) %&amp;gt;%
-  mutate(original_nation = as.character(nationality))
-
-#sort the data for finding teams
-nationalised_players &amp;lt;- all_players_data %&amp;gt;%
-  setDT() %&amp;gt;%
-  #convert british players nationality to UK
-  .[id %in% british_player_birthplaces$id, nationality := &amp;quot;UK&amp;quot;] %&amp;gt;%
-  #filter out players from countries at the world cup
-  .[!nationality %in% world_cup_countries] %&amp;gt;%
-  #convert non-UK players nationality to &amp;quot;Rest of World&amp;quot;
-  .[!id %in% british_player_birthplaces$id, nationality := &amp;quot;RoW&amp;quot;]
-
-#find the optimal teams for both these nations
-extranational_teams &amp;lt;- rbindlist(lapply(unique(nationalised_players$nationality), find_optimal_team, 
-                                           select(nationalised_players, id, nationality, 49:60), replicates = 100))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;These can then be plotted to show the teams as before.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#select the best 4 county teams by total ability
-extranational_teams %&amp;lt;&amp;gt;%
-  setDT() %&amp;gt;%
-  .[, unique_position := make.unique(as.character(position)), by = &amp;quot;nation&amp;quot;] %&amp;gt;%
-  merge(., formation_coords, by = c(&amp;quot;formation&amp;quot;, &amp;quot;unique_position&amp;quot;)) %&amp;gt;%
-  merge(player_lookup, by = &amp;quot;id&amp;quot;) 
-
-#plot the data
-p &amp;lt;- ggplot(data = extranational_teams)
-p &amp;lt;- p %&amp;gt;%
-  #custom pitch aesthetic function
-  draw_pitch()
-p &amp;lt;- p + 
-  geom_text(aes(x = player_x, y = player_y, label = gsub(&amp;quot; &amp;quot;, &amp;quot;\n&amp;quot;, name), colour = original_nation), fontface = &amp;quot;bold&amp;quot;) +
-  scale_colour_manual(values = c(&amp;quot;darkred&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;yellow&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;darkblue&amp;quot;, &amp;quot;orange&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;red&amp;quot;),
-                      guide = FALSE) +
-  facet_wrap(~nation)
-
-plot(p)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/unnamed-chunk-1-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;calculating-ability&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Calculating Ability&lt;/h1&gt;
-&lt;p&gt;As previously, we can calculate the expected ELO of such teams via linear regression of the FIFA18 ability vs. ELO of actual national teams.&lt;/p&gt;
-&lt;p&gt;This time, let’s predict the ability of the extranational teams based on this regression before plotting, just to save on plots/time/code/etc.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge in the world rankings for each fieldable national team
-national_teams %&amp;lt;&amp;gt;% merge(., world_rankings, by = &amp;quot;nation&amp;quot;) %&amp;gt;%
-  #merge in the optimal team total_ability for each nation
-  merge(., unique(select(optimal_national_teams, nation, total_ability)), by = &amp;quot;nation&amp;quot;)
-
-#regress ELO against total_ability (as judged by selection of FIFA18 players)
-ability_regression &amp;lt;- lm(data = national_teams, ELO ~ total_ability)
-
-#munge the extranational teams df to predict the ELO
-extranational_teams &amp;lt;- data.frame(nation = c(&amp;quot;UK&amp;quot;, &amp;quot;RoW&amp;quot;)) %&amp;gt;%
-  merge(., select(extranational_teams, nation, total_ability), by = &amp;quot;nation&amp;quot;) %&amp;gt;%
-  #predict the ELO of each county using the previous regression
-  mutate(predicted_ELO = predict(ability_regression, .)) %&amp;gt;%
-  unique()&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then we can plot this regression and see where the RoW and UK fall in terms of actual nations&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot ELO vs. total_ability
-p &amp;lt;- ggplot(data = national_teams, aes(x = total_ability, y = ELO)) +
-  geom_text(aes(label = nation), colour = &amp;quot;grey60&amp;quot;) +
-  #add in the linear regression line + confidence intervals
-  stat_smooth(method = &amp;quot;lm&amp;quot;, colour = &amp;quot;darkred&amp;quot;) +
-  geom_text(data = extranational_teams, aes(label = nation, x = total_ability, y = predicted_ELO), colour = &amp;quot;darkblue&amp;quot;) +
-  xlab(&amp;quot;FIFA18 Optimal Team Ability&amp;quot;) +
-  ylab(&amp;quot;National Team ELO&amp;quot;) +
-  ggtitle(&amp;quot;FIFA18 ability vs. ELO for National Teams&amp;quot;) +
-  theme_minimal()
-
-plot(p)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/plot_regression-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;What’s quite nice about the graph is it shows the limitation of this approach. By definition, a UK team should be &lt;em&gt;at least&lt;/em&gt; as good as the English national team, but because England overperform their ‘FIFA ability’, the UK is actually ranked a fair bit lower in terms of ELO&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#show the ELOs of the English national football team
-#and predicted ELO of a UK team
-national_teams$ELO[national_teams$nation == &amp;quot;England&amp;quot;]&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## [1] 1941&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;extranational_teams$predicted_ELO[extranational_teams$nation == &amp;quot;UK&amp;quot;]&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##       12 
-## 1910.421&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The RoW team is similarly probably undervalued in terms of ELO. FIFA18 ranks the players as a lot better than teams like Germany and Brazil, but with much lower ELO&lt;/p&gt;
-&lt;p&gt;We can then run the simulations, swapping the UK/RoW in for countries. The obvious substitute for the UK is England. For the RoW I decided to remove the team with the lowest ELO, which turns out to be Saudi Arabia&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge the ELOs with the world cup draw information
-wc_teams %&amp;lt;&amp;gt;% merge(., select(national_teams, nation, ELO) %&amp;gt;%
-                      rbind(., data.frame(nation = &amp;quot;Panama&amp;quot;, ELO = 1669)), by = &amp;quot;nation&amp;quot;)
-wc_teams$nation &amp;lt;- as.character(wc_teams$nation)
-
-simulate_counties &amp;lt;- function(extranation, simulations, replace_country) {
-  #replace Englands ELO with that of the county team replacing them
-  wc_teams$ELO[wc_teams$nation == replace_country] &amp;lt;- extranational_teams$predicted_ELO[extranational_teams$nation == extranation]
-  wc_teams$nation[wc_teams$nation == replace_country] &amp;lt;- extranation
-  
-  #run x number of simulations
-  for(simulation in 1:simulations) {
-    winner &amp;lt;- simulate_tournament(wc_teams, knockout_matches, group_matches)
-    if(simulation == 1) {
-      winners &amp;lt;- winner
-    } else {
-      winners &amp;lt;- append(winners, winner)
-    }
-  }
-  
-  #spit out a df with each winner and the number of times they win
-  simulation_df &amp;lt;- data.frame(table(winners))
-  names(simulation_df) &amp;lt;- c(&amp;quot;nation&amp;quot;, &amp;quot;championships&amp;quot;)
-  
-  #work out the percentage chane of each nation/county winning
-  simulation_df$percentage &amp;lt;- simulation_df$championships / (simulations/100)
-  return(simulation_df)
-}
-
-#run the simulations
-UK_simulation &amp;lt;- simulate_counties(&amp;quot;UK&amp;quot;, 1000, &amp;quot;England&amp;quot;) %&amp;gt;% 
-  mutate(simulation = &amp;quot;UK&amp;quot;)
-RoW_simulation &amp;lt;- simulate_counties(&amp;quot;RoW&amp;quot;, 1000, wc_teams$nation[which.min(wc_teams$ELO)]) %&amp;gt;%
-  mutate(simulation = &amp;quot;RoW&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;simulation_results &amp;lt;- rbind(UK_simulation, RoW_simulation) %&amp;gt;%
-  setDT() %&amp;gt;%
-    .[, perc_chance := mean(percentage), by = &amp;quot;nation&amp;quot;] %&amp;gt;%
-  .[, c(&amp;quot;nation&amp;quot;, &amp;quot;perc_chance&amp;quot;)] %&amp;gt;%
-  unique(.) %&amp;gt;%
-  .[nation %in% c(&amp;quot;RoW&amp;quot;, &amp;quot;UK&amp;quot;), nation_status := &amp;quot;simulation&amp;quot;] %&amp;gt;%
-  .[!nation %in% c(&amp;quot;RoW&amp;quot;, &amp;quot;UK&amp;quot;), nation_status := &amp;quot;nation&amp;quot;] %&amp;gt;%
-  #order by percentage chance of winning the WC
-  .[, nation := factor(nation, levels = nation[order(-.$perc_chance)])]
-
-#plot the results
-p &amp;lt;- ggplot(data = simulation_results, aes(x = nation, y = perc_chance)) +
-  geom_bar(stat = &amp;quot;identity&amp;quot;, aes(fill = nation_status)) +
-  scale_fill_manual(values = c(&amp;quot;darkblue&amp;quot;, &amp;quot;darkred&amp;quot;), name = &amp;quot;Nation Status&amp;quot;) +
-  xlab(&amp;quot;Team&amp;quot;) +
-  ylab(&amp;quot;World Cup Win Percentage Chance&amp;quot;) +
-  ggtitle(&amp;quot;Percetange Chance of Winning the World Cup from 1000 Simulations&amp;quot;,
-          subtitle = &amp;quot;UK/RoW Substituted for England/Saudi Arabia Respectively&amp;quot;) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.2))
-
-plot(p)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/munge_simulation_results-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;The team for the RoW tend to do fairly well. In fact only Brazil, Germany, or Spain (3 of the tournament favourites) tend to win more simulated World Cups than them. The team for the whole of the UK disappoints as much as the English national team, winning about the same as the original, and other similarly ranked nations, such as Colombia, or Peru.&lt;/p&gt;
-&lt;/div&gt;
 </description>
     </item>
     

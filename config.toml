@@ -264,15 +264,10 @@ defaultContentLanguageInSubdir = false
   weight = 4
 
 [[menu.main]]
-  name = "Writing"
-  url = "#writing"
+  name = "CV"
+  url = "files/cv/placeholder.pdf"
   weight = 5
-
-[[menu.main]]
-  name = "Contact"
-  url = "#contact"
-  weight = 6
-
+  
 # Taxonomies.
 [taxonomies]
   tag = "tags"

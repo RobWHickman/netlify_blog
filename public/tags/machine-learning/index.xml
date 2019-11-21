@@ -1,0 +1,47 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>machine-learning on Robert Hickman</title>
+    <link>/tags/machine-learning/</link>
+    <description>Recent content in machine-learning on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Thu, 21 Nov 2019 00:00:00 +0000</lastBuildDate>
+    <atom:link href="/tags/machine-learning/" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Statsbomb Conference</title>
+      <link>/project/statsbomb_conference/</link>
+      <pubDate>Thu, 21 Nov 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/project/statsbomb_conference/</guid>
+      <description>
+
+&lt;p&gt;In August 2019, I won the oppurtunity to present a research talk at the inagural &lt;a href=&#34;https://statsbomb.com/conference/&#34; target=&#34;_blank&#34;&gt;Statsbomb football analytics conference&lt;/a&gt;. My proposal focused on &lt;a href=&#34;https://karun.in/blog/expected-threat.html&#34; target=&#34;_blank&#34;&gt;Markov models&lt;/a&gt; of possession value when playing football, and incorporating a risk factor into these models.&lt;/p&gt;
+
+&lt;p&gt;I presented a 25 minute talk on my work at the conference in October 2019. Below is a list of resources related to the project.&lt;/p&gt;
+
+&lt;h1 id=&#34;original-application&#34;&gt;Original Application&lt;/h1&gt;
+
+&lt;p&gt;&amp;lt; to be added &amp;gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;the-talk&#34;&gt;The Talk&lt;/h1&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://www.youtube.com/watch?v=nzaHaWEa9BA&#34; title=&#34;my talk&#34; target=&#34;_blank&#34;&gt;&lt;img src=&#34;/img/statsbomb_talk.png&#34; alt=&#34;My Statsbomb Talk Video&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;talk-slides&#34;&gt;Talk Slides&lt;/h1&gt;
+
+&lt;p&gt;&amp;lt; to be added &amp;gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;white-paper&#34;&gt;White Paper&lt;/h1&gt;
+
+&lt;p&gt;currently in the process of writing up a white paper based on the research. Will upload here when completed.&lt;/p&gt;
+
+&lt;h1 id=&#34;r-package&#34;&gt;R Package&lt;/h1&gt;
+
+&lt;p&gt;alongside the white paper, I am putting together an R package to easily reproduce the findings, and also extend into other similar models of possession value. The code can be found &lt;a href=&#34;https://github.com/RobWHickman/EPV&#34; target=&#34;_blank&#34;&gt;on Github&lt;/a&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
