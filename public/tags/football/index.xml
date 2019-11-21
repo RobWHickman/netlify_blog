@@ -1187,8 +1187,7 @@ library(tidyverse)
 
 # seed for reproducibility
 set.seed(3459)&lt;/code&gt;&lt;/pre&gt;
-&lt;div id=&#34;set-up&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Set up&lt;/h2&gt;
+&lt;p&gt;##Set up&lt;/p&gt;
 &lt;p&gt;In reality, we’d probably want to model a whole league or cup. However, these can generally contain 20+ teams, many of which will have similar abilities. For simplicity here, lets instead imagine a summer league between 6 English football clubs where each team plays each other twice (once at home and once away)&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;teams &amp;lt;- c(&amp;quot;Arsenal&amp;quot;, # 5th in the 1st tier
            &amp;quot;Blackburn_Rovers&amp;quot;, # 15th in 2nd tier
@@ -1296,9 +1295,7 @@ league_table &amp;lt;- results  %&amp;gt;%
 ## 5 Enfield_Town                8     6    22   -16      3
 ## 6 Frimley_Green               8     2    37   -35      0&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Where teams positions are nicely rank ordered (the data for this example is fairly curated so it’s not that surprising).&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;predictions&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Predictions&lt;/h2&gt;
+&lt;p&gt;##Predictions&lt;/p&gt;
 &lt;p&gt;With two rounds to go, there’s still 6 fixtures we might want to predict (to try and judge which team will end up where, or just to bet on the remaining games).&lt;/p&gt;
 &lt;p&gt;This are:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# get the yet to be played matches
@@ -1326,13 +1323,13 @@ real_data &amp;lt;- engsoccerdata::england %&amp;gt;%
   mutate(data = &amp;quot;real&amp;quot;)
 
 head(real_data)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##   location    team g_for g_ag data
-## 1     home Arsenal     0    1 real
-## 2     home Arsenal     0    1 real
-## 3     home Arsenal     2    1 real
-## 4     home Arsenal     3    0 real
-## 5     home Arsenal     3    0 real
-## 6     home Arsenal     2    0 real&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##   location           team g_for g_ag data
+## 1     home        Arsenal     2    4 real
+## 2     home        Chelsea     1    1 real
+## 3     home  Coventry City     2    1 real
+## 4     home Crystal Palace     3    3 real
+## 5     home        Everton     1    1 real
+## 6     home   Ipswich Town     1    1 real&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Here every row shows a team that played a match (as it’s sorted by league then alphabetically, the first 6 records are all for Arsenal). It also shows if the team played home or away. The data also shows the goals scored by (e.g.) Arsenal in g_for, and the goals they conceded in g_ag.&lt;/p&gt;
 &lt;p&gt;If we plot the goals scored for each game, we get a nice humped distribution with slightly offset peaks for home and away. That is to say, in most games teams will score 0, 1, or 2 goals, and that scoring more than 6 goals in a match is incredibly rare. The difference between the home and away distributions mean that teams are slightly more likely to score more if playing at home, compared to play away from home.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# plot goals scored home/away for real english football matches
@@ -1360,8 +1357,8 @@ real_data_means &amp;lt;- real_data %&amp;gt;%
 &lt;pre&gt;&lt;code&gt;## # A tibble: 2 x 2
 ##   location mean_scored
 ##   &amp;lt;chr&amp;gt;          &amp;lt;dbl&amp;gt;
-## 1 away            1.11
-## 2 home            1.48&lt;/code&gt;&lt;/pre&gt;
+## 1 away            1.12
+## 2 home            1.47&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Goals in games are both relatively sparse, and relatively stochastic; football is a low scoring game where goals are evenly distributed throughout the game. In theory any attack made by a team i has a probability of being scored dependent upon the strength of team i’s attack (α&lt;sub&gt;i&lt;/sub&gt;) which is independent of all the other attacks that team has made.&lt;/p&gt;
 &lt;p&gt;(there is some reason to doubt this may be the case&lt;sup&gt;3&lt;/sup&gt;, but for now this is a fine generalisation)&lt;/p&gt;
 &lt;p&gt;By grouping all teams together into “home” and “away” categories (in a league setting each team will play each other home and away so this should average out) and taking the average number of goals scored per match as the Poisson mean (λ) we can see how well our above graph fits a simulated Poisson process.&lt;/p&gt;
@@ -1380,44 +1377,7 @@ p2 + geom_density(data = simulated_poisson, aes(x = dist),
   scale_fill_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;), guide = FALSE) +
   facet_wrap(~location)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/simulated_poisson-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;It’s not perfect, but it’s not a bad fit either. We can quantify how well the Poisson distribution fits the data using a &lt;a href=&#34;https://stats.stackexchange.com/questions/92627/how-to-use-the-chi-squared-test-to-determine-if-data-follow-the-poisson-distribu&#34;&gt;Chi Squared test&lt;/a&gt;.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# calc chi squared for home and away goals following Poisson distribution
-calc_chi_squared &amp;lt;- function(game_location) {
-  goals_scored &amp;lt;- filter(real_data, location == game_location)$g_for
-  
-  observed_goal_counts &amp;lt;- table(goals_scored)
-
-  mean_goals &amp;lt;- mean(goals_scored)
-  
-  probs = dpois(sort(unique(goals_scored)), lambda = mean_goals) %&amp;gt;%
-    append(., 1-sum(.))
-  
-  # the chi squared test
-  test &amp;lt;- chisq.test(x = c(observed_goal_counts,0), p = probs, simulate.p.value = TRUE)
-  test$data.name &amp;lt;- game_location
-  
-  return(test)
-}
-
-# run test for both home and away goals
-lapply(c(&amp;quot;home&amp;quot;, &amp;quot;away&amp;quot;), calc_chi_squared)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## [[1]]
-## 
-##  Chi-squared test for given probabilities with simulated p-value
-##  (based on 2000 replicates)
-## 
-## data:  home
-## X-squared = 53.752, df = NA, p-value = 0.001499
-## 
-## 
-## [[2]]
-## 
-##  Chi-squared test for given probabilities with simulated p-value
-##  (based on 2000 replicates)
-## 
-## data:  away
-## X-squared = 38.599, df = NA, p-value = 0.01599&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;It’s actually perhaps not as significant as might be expected given the sheer amount of observations we have (see above reservations about modelling goals as a Poisson process) but it’s clearly not the worst approximation either. The p-values &amp;lt; 0.05 for both home and away match data show we have a good reason to reject the null hypothesis that the data is not a Poisson distribution.&lt;/p&gt;
+&lt;p&gt;It’s not perfect, but it’s not a bad fit either. In actuality, a Chi-squared test will show that goals scored &lt;em&gt;does not&lt;/em&gt; follow a Poisson distribution given the number of matches we have as data. But for the sake of this post, put that out of mind.&lt;/p&gt;
 &lt;p&gt;If we think that goals scored represents some Poisson process, it can be modeled using the equation which underlies the Poisson distribution. For a given interval (one match), the probability of x events (goals scored) in that interval will be:&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;The simplest model we can produce is to estimate λ as each team’s attack rating (henceforth α&lt;sub&gt;i&lt;/sub&gt;) which is equal to observed mean rate of goals for that team.&lt;/p&gt;
@@ -1489,8 +1449,8 @@ real_data_means&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## # A tibble: 2 x 2
 ##   location mean_scored
 ##   &amp;lt;chr&amp;gt;          &amp;lt;dbl&amp;gt;
-## 1 away            1.11
-## 2 home            1.48&lt;/code&gt;&lt;/pre&gt;
+## 1 away            1.12
+## 2 home            1.47&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;It’s pretty common knowledge that football teams do better at home, so we’ll want to factor that in. A simple estimate is to divide the mean home goals/game by the mean away goals/game.&lt;/p&gt;
 &lt;p&gt;We’ll call this parameter γ and can be formalised as the sum of home goals (which we’ll refer to as x from now on) divided by the sum of away goals (y)&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\gamma = \frac{\sum{x}}{\sum{y}}\]&lt;/span&gt;&lt;/p&gt;
@@ -1658,7 +1618,7 @@ likelihoods &amp;lt;- data.frame(lik_hgoal = dpois(results$hgoal,
 
 log_likehood&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## [1] 105.995&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;(n.b. there will be some rounding errors- especially on the pre-log probabilities, but this will suffice for now)&lt;/p&gt;
+&lt;p&gt;(n.b. there will be some rounding errors- especially on the pre-log probabilities, but this will suffice for now)&lt;/p&gt;
 &lt;p&gt;To get an idea of whether or not this is good, let’s quickly run the model with all the parameters set to zero. Given that we’re pretty sure that at least Arsenal will be a lot better than Frimley Green, this model should do worse than our basic model above.&lt;/p&gt;
 &lt;p&gt;If it indeed does fit the results worse we will get a greater error term- the log likelihood sum&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# do the same but set each teams attack and defence to 1
@@ -1683,7 +1643,6 @@ worse_log_likelihood &amp;lt;- map2_df(results$home, results$away,
 worse_log_likelihood&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## [1] 112.618&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;The worse log likelihood (112.6) is worse (only a bit though) than the 106.0 we previously. This suggests that either the teams are actually quite equal, or that our basic model wasn’t all that good.&lt;/p&gt;
-&lt;/div&gt;
 &lt;div id=&#34;parameter-optimisation&#34; class=&#34;section level2&#34;&gt;
 &lt;h2&gt;Parameter Optimisation&lt;/h2&gt;
 &lt;p&gt;There will exist some parameters (α and β for each team, and γ for the home field advantage) that will minimise this negative log likelihood. That is to say, they will predict the results of the already played games most accurately.&lt;/p&gt;
@@ -1727,7 +1686,8 @@ worse_log_likelihood&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Hopefully this is at least bearable to follow. Formalised, this can be written for teams i and matches k as:&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\mathcal L(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{K}{\frac{\lambda_{k}^{x_{k}}e^{-\lambda_{k}}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^{-\mu_{k}}}{y_{k}!}}\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;where for match k and teams i and j, home goals, x is defined by&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{k} \sim Poisson(\lambda_{k} = \alpha_{i(k)}\beta_{j(k)}\gamma)\]&lt;/span&gt; and away goals, y&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{k} \sim Poisson(\lambda_{k} = \alpha_{i(k)}\beta_{j(k)}\gamma)\]&lt;/span&gt;
+and away goals, y&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[y_{k} \sim Poisson(\mu_{k} = \alpha_{j(k)}\beta_{i(k)})\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;which seems daunting when you write it down, but we’ve already covered everything we need to do solve it. It’s just saying we want to minimise the result of the multiplication (the sum of logs in our case above) of the probability of scoring x and y goals in a game. The probability of goals scored assumed to be Poisson distributed, controlled by parameters α, β, and γ for home and away teams.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# optim requires parameters to be supplied as a vector
@@ -1818,9 +1778,11 @@ optimised_parameters$par&lt;/code&gt;&lt;/pre&gt;
 &lt;h2&gt;Tinkering&lt;/h2&gt;
 &lt;p&gt;This is all very well but there’s still some small improvements we can make.&lt;/p&gt;
 &lt;p&gt;For starters, I always think it’s simpler to have both scales of α and β to increase as a teams becomes more skillful in attack or defence. In our original equation the expected home and away goals follow the formula&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(α_{i}β_{j}γ)\]&lt;/span&gt; &lt;span class=&#34;math display&#34;&gt;\[y_{ij} \sim Poisson(α_{j}β_{i})\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(α_{i}β_{j}γ)\]&lt;/span&gt;
+&lt;span class=&#34;math display&#34;&gt;\[y_{ij} \sim Poisson(α_{j}β_{i})\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;if instead of multiplying by β, we divide instead, a stronger defence will reduce the value of x&lt;sub&gt;ij&lt;/sub&gt;/y&lt;sub&gt;ij&lt;/sub&gt; (reducing the number of expected goals for the opposing team).&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]&lt;/span&gt; &lt;span class=&#34;math display&#34;&gt;\[y_{ij} \sim Poisson(\frac{α_{j}}{β_{i}})\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]&lt;/span&gt;
+&lt;span class=&#34;math display&#34;&gt;\[y_{ij} \sim Poisson(\frac{α_{j}}{β_{i}})\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;To achieve this we just have to flip two lines of the predict_results function. Instead of multiplying α and β, we divide them instead.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# change prediction to inverse defence parameters
 predict_results &amp;lt;- function(home, away, param_list) {
@@ -1843,14 +1805,18 @@ optimised_parameters2 &amp;lt;- optim(
 
 # check this does what we want
 optimised_parameters2$par&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;(n.b. I won’t print out the results of all these steps as this post is long enough, but you can run and see the gradual improvements for yourself)&lt;/p&gt;
+&lt;p&gt;(n.b. I won’t print out the results of all these steps as this post is long enough, but you can run and see the gradual improvements for yourself)&lt;/p&gt;
 &lt;p&gt;Next we want to subtly change how the expected goals are calculated.&lt;/p&gt;
 &lt;p&gt;Given that&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ A = \frac{B \cdot C}{D}\]&lt;/span&gt; is exactly the same as&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ A = e ^{log(B) + log(C) - log(D)}\]&lt;/span&gt; we can convert the parameters we are looking for into log(parameters) and take the exponent of their sum as the predicted goals. This might seem like a minor change, but prevents an important exception. Using home goals as an example, remember that&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]&lt;/span&gt; if any of the three parameters become negative then we’re left with a Poisson distribution with a negative mean, which is is absurd: events cannot unhappen. For instance, imagine a football game where one team scores negative goals.&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ A = \frac{B \cdot C}{D}\]&lt;/span&gt;
+is exactly the same as&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ A = e ^{log(B) + log(C) - log(D)}\]&lt;/span&gt;
+we can convert the parameters we are looking for into log(parameters) and take the exponent of their sum as the predicted goals. This might seem like a minor change, but prevents an important exception. Using home goals as an example, remember that&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]&lt;/span&gt;
+if any of the three parameters become negative then we’re left with a Poisson distribution with a negative mean, which is is absurd: events cannot unhappen. For instance, imagine a football game where one team scores negative goals.&lt;/p&gt;
 &lt;p&gt;If we take the log parameters instead we have&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(e ^ {α_{i} - β_{j} + γ})\]&lt;/span&gt; where no matter what values α, β, or γ take, the exponent of their sum will never be negative. When playing a very strong away teams, the mean goals will tend towards 0 (though will never actually reach it).&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(e ^ {α_{i} - β_{j} + γ})\]&lt;/span&gt;
+where no matter what values α, β, or γ take, the exponent of their sum will never be negative. When playing a very strong away teams, the mean goals will tend towards 0 (though will never actually reach it).&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# change prediction to use log parameters
 # exp(log(x) + log(y)) = x * y
 predict_results &amp;lt;- function(home, away, param_list) {
@@ -1883,8 +1849,10 @@ optimised_parameters3 &amp;lt;- optim(
 &lt;p&gt;We’ve also switched optimisation algorithm from Nelder-Mead to BFGS. BFGS is &lt;a href=&#34;https://docs.mantidproject.org/v3.7.1/concepts/FittingMinimizersComparisonDetailed.html#minimizers-unweighted-comparison-in-terms-of-accuracy&#34;&gt;quicker&lt;/a&gt; than Nelder-Mead but requires the minimisation function (i.e. the negative log likelihood we calculate) to be finite. Before, we could get infinite negative log likelihoods, as it was possible to calculate a negative mean (expected goals for a team). Running dpois() for a negative lambda will return NaN so it becomes impossible to calculate the final negative log likelihood.&lt;/p&gt;
 &lt;p&gt;Finally, we want to constrain the final optimised parameters by fixing the sum of all attack parameters, and the sum of all defence parameters, to equal 0. In practice, this basically means that above average attacking/defending teams will have parameters above 0, and below average teams will have parameters below 0. This is handy, but also the main advantage is this prevents &lt;a href=&#34;https://en.wikipedia.org/wiki/Overfitting&#34;&gt;overfitting&lt;/a&gt; of the parameters by the optimisation algorithm.&lt;/p&gt;
 &lt;p&gt;To do this, we can simply drop the first (or last, or any, it doesn’t matter) parameter from attack or defence (the parameters for Arsenal) and then calculate Arsenal’s parameters as the sum of the remaining parameters multiplied by minus 1.&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\alpha_{n} = -\sum_{i = 1}^{n-1} \alpha_{i} \]&lt;/span&gt; and also&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\beta_{n} = -\sum_{i = 1}^{n-1} \beta_{i} \]&lt;/span&gt; In terms of code this just requires adding one line to the relist_params() function to append the value back. We also then need to remove this parameter that we will add back in from the initial parameters which is done below.&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\alpha_{n} = -\sum_{i = 1}^{n-1} \alpha_{i} \]&lt;/span&gt;
+and also&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\beta_{n} = -\sum_{i = 1}^{n-1} \beta_{i} \]&lt;/span&gt;
+In terms of code this just requires adding one line to the relist_params() function to append the value back. We also then need to remove this parameter that we will add back in from the initial parameters which is done below.&lt;/p&gt;
 &lt;p&gt;Our output will now be missing the parameters for Arsenal (as they will only exist within the function), but we can easily calculate it from the parameters we do get out.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# introduce sum to zero constraint by calculating
 # first teams parameters as minus sum of the rest
@@ -1963,7 +1931,8 @@ p3&lt;/code&gt;&lt;/pre&gt;
   theme_minimal()
 
 p4&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_parameters-1.png&#34; width=&#34;672&#34; /&gt; Notice how the teams monotonically increase in both attack and defensive ability. This is by design on how the results were created (see the bottom of this post). With only 8 games per team however, there is quite a lot of noise in the signal. Hitting the crossbar instead of scoring in one game could make a fairly large difference in how the function rates a team.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_parameters-1.png&#34; width=&#34;672&#34; /&gt;
+Notice how the teams monotonically increase in both attack and defensive ability. This is by design on how the results were created (see the bottom of this post). With only 8 games per team however, there is quite a lot of noise in the signal. Hitting the crossbar instead of scoring in one game could make a fairly large difference in how the function rates a team.&lt;/p&gt;
 &lt;p&gt;Also note how the regression line passes through the origin- this is a result of us constraining the parameters to sum to zero.&lt;/p&gt;
 &lt;p&gt;If we want to see how optim() selects these, we can plot how they change over iterations. You can see how it jumps around then settles on incremental improvements to the model.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p5 &amp;lt;- current_parameters %&amp;gt;%
@@ -1992,6 +1961,7 @@ p4&lt;/code&gt;&lt;/pre&gt;
 
 # animate the plot
 gganimate::animate(p5, nframes = i)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_optimisation_animation-1.gif&#34; /&gt;&lt;!-- --&gt;&lt;/p&gt;
 &lt;/div&gt;
 &lt;div id=&#34;predict-remaining-matches&#34; class=&#34;section level2&#34;&gt;
 &lt;h2&gt;Predict Remaining Matches&lt;/h2&gt;
@@ -2166,30 +2136,30 @@ results &amp;lt;- predict_expg(model, fixtures$home, fixtures$away, return_df = 
 # print results
 results&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;##                home             away hgoal agoal gameweek
-## 1    Dover_Athletic    Coventry_City     2     3        1
-## 2      Enfield_Town Blackburn_Rovers     0     3        1
-## 3     Frimley_Green          Arsenal     0     8        1
-## 4           Arsenal     Enfield_Town     7     0        2
-## 5  Blackburn_Rovers    Coventry_City     2     1        2
-## 6     Frimley_Green   Dover_Athletic     1     3        2
-## 7  Blackburn_Rovers    Frimley_Green     6     1        3
-## 8     Coventry_City     Enfield_Town     3     0        3
-## 9    Dover_Athletic          Arsenal     0     3        3
+## 1    Dover_Athletic    Coventry_City     0     2        1
+## 2      Enfield_Town Blackburn_Rovers     1     3        1
+## 3     Frimley_Green          Arsenal     0     6        1
+## 4           Arsenal     Enfield_Town     6     0        2
+## 5  Blackburn_Rovers    Coventry_City     2     0        2
+## 6     Frimley_Green   Dover_Athletic     0     3        2
+## 7  Blackburn_Rovers    Frimley_Green     8     0        3
+## 8     Coventry_City     Enfield_Town     3     1        3
+## 9    Dover_Athletic          Arsenal     1     3        3
 ## 10          Arsenal    Coventry_City     3     0        4
-## 11   Dover_Athletic Blackburn_Rovers     0     3        4
-## 12     Enfield_Town    Frimley_Green     1     0        4
-## 13 Blackburn_Rovers          Arsenal     1     1        5
-## 14     Enfield_Town   Dover_Athletic     1     1        5
-## 15    Frimley_Green    Coventry_City     1     4        5
-## 16          Arsenal    Frimley_Green    10     1        6
+## 11   Dover_Athletic Blackburn_Rovers     1     2        4
+## 12     Enfield_Town    Frimley_Green     2     1        4
+## 13 Blackburn_Rovers          Arsenal     2     2        5
+## 14     Enfield_Town   Dover_Athletic     0     2        5
+## 15    Frimley_Green    Coventry_City     1     3        5
+## 16          Arsenal    Frimley_Green     9     0        6
 ## 17 Blackburn_Rovers     Enfield_Town     5     0        6
-## 18    Coventry_City   Dover_Athletic     2     0        6
-## 19    Coventry_City Blackburn_Rovers     1     2        7
+## 18    Coventry_City   Dover_Athletic     1     2        6
+## 19    Coventry_City Blackburn_Rovers     0     2        7
 ## 20   Dover_Athletic    Frimley_Green     3     1        7
 ## 21     Enfield_Town          Arsenal     0     5        7
 ## 22          Arsenal   Dover_Athletic     4     1        8
 ## 23     Enfield_Town    Coventry_City     1     2        8
-## 24    Frimley_Green Blackburn_Rovers     0     4        8&lt;/code&gt;&lt;/pre&gt;
+## 24    Frimley_Green Blackburn_Rovers     1     4        8&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 </description>
     </item>
