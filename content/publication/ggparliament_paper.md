@@ -1,6 +1,6 @@
 +++
 title = "ggparliament: A ggplot2 extension for parliament plots in R"
-date = "2013-07-01"
+date = "2019-04-27"
 
 # Authors. Comma separated list, e.g. `["Bob Smith", "David Jones"]`.
 authors = ["Zoe Meers", "Robert Hickman", "Thomas Leeper"]

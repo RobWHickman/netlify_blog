@@ -4,6 +4,84 @@
     
     <url>
     
+      <loc>/project/guardian_knowledge/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/project/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/project/statsbomb_conference/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/football/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/machine-learning/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/statsbomb/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/tags/r/</loc>
       <lastmod>2019-11-17T00:00:00+00:00</lastmod>
       <priority>0</priority>
@@ -16,26 +94,6 @@
     
       <loc>/post/racing_bar_charts/</loc>
       <lastmod>2019-11-17T00:00:00+00:00</lastmod>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/</loc>
-      <lastmod>2019-11-17T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/</loc>
-      <lastmod>2019-11-17T00:00:00+00:00</lastmod>
-      <priority>0</priority>
     </url>
     
   
@@ -63,6 +121,15 @@
     
     <url>
     
+      <loc>/talk/statsbomb_conference_talk/</loc>
+      <lastmod>2019-10-11T00:00:00+01:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/dynamic_web_scraping/</loc>
       <lastmod>2019-07-06T00:00:00+00:00</lastmod>
     </url>
@@ -74,16 +141,6 @@
     
       <loc>/post/guardian_knowledge_june/</loc>
       <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/football/</loc>
-      <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-      <priority>0</priority>
     </url>
     
   
@@ -143,6 +200,35 @@
       <loc>/tags/models/</loc>
       <lastmod>2019-05-30T00:00:00+00:00</lastmod>
       <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/publication_types/2/</loc>
+      <lastmod>2019-04-27T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/publication_types/</loc>
+      <lastmod>2019-04-27T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/publication/ggparliament_paper/</loc>
+      <lastmod>2019-04-27T00:00:00+00:00</lastmod>
     </url>
     
   
@@ -483,16 +569,6 @@
     
     <url>
     
-      <loc>/project/</loc>
-      <lastmod>2018-01-05T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
       <loc>/project/rinforcement_learning/</loc>
       <lastmod>2018-01-05T00:00:00+00:00</lastmod>
     </url>
@@ -513,15 +589,6 @@
     <url>
     
       <loc>/tags/academic/</loc>
-      <lastmod>2017-01-01T00:00:00+00:00</lastmod>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/talk/example-talk/</loc>
       <lastmod>2017-01-01T00:00:00+00:00</lastmod>
     </url>
     
@@ -557,28 +624,8 @@
     
     <url>
     
-      <loc>/publication_types/2/</loc>
-      <lastmod>2013-07-01T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
       <loc>/publication/no_evidence_for_magnetoreceptors/</loc>
       <lastmod>2013-07-01T00:00:00+00:00</lastmod>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/publication_types/</loc>
-      <lastmod>2013-07-01T00:00:00+00:00</lastmod>
-      <priority>0</priority>
     </url>
     
   
