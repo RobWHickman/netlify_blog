@@ -4,6 +4,15 @@
     
     <url>
     
+      <loc>/project/yorkshire_world_cup/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/project/guardian_knowledge/</loc>
       <lastmod>2019-11-21T00:00:00+00:00</lastmod>
     </url>
@@ -16,6 +25,15 @@
       <loc>/project/</loc>
       <lastmod>2019-11-21T00:00:00+00:00</lastmod>
       <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/project/r_packages/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
     </url>
     
   
@@ -63,6 +81,16 @@
     <url>
     
       <loc>/tags/machine-learning/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/machine_learning/</loc>
       <lastmod>2019-11-21T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>

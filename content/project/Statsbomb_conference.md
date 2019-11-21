@@ -16,10 +16,33 @@ image_preview = "Statsbomb.jpg"
 tags = ["machine-learning", "football", "statsbomb"]
 
 # Optional external URL for project (replaces project detail page).
-external_link = "https://statsbomb.com/conference/"
+#external_link = "https://statsbomb.com/conference/"
 
 # Does the project detail page use math formatting?
 math = false
 
 +++
 
+In August 2019, I won the oppurtunity to present a research talk at the inagural [Statsbomb football analytics conference](https://statsbomb.com/conference/). My proposal focused on [Markov models](https://karun.in/blog/expected-threat.html) of possession value when playing football, and incorporating a risk factor into these models.
+
+I presented a 25 minute talk on my work at the conference in October 2019. Below is a list of resources related to the project.
+
+# Original Application
+
+< to be added >
+
+# The Talk 
+
+[![My Statsbomb Talk Video](/img/statsbomb_talk.png)](https://www.youtube.com/watch?v=nzaHaWEa9BA "my talk")
+
+# Talk Slides
+
+< to be added >
+
+# White Paper
+
+currently in the process of writing up a white paper based on the research. Will upload here when completed.
+
+# R Package
+
+alongside the white paper, I am putting together an R package to easily reproduce the findings, and also extend into other similar models of possession value. The code can be found [on Github](https://github.com/RobWHickman/EPV)
