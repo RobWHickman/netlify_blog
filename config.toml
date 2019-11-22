@@ -265,7 +265,7 @@ defaultContentLanguageInSubdir = false
 
 [[menu.main]]
   name = "CV"
-  url = "files/cv/placeholder.pdf"
+  url = "files/cv/cv.pdf"
   weight = 5
   
 # Taxonomies.
