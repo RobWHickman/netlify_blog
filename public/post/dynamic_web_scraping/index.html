@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="theme" content="hugo-academic">
-  <meta name="generator" content="Hugo 0.37.1" />
+  <meta name="generator" content="Hugo 0.54.0" />
   <meta name="author" content="Robert Hickman">
 
   
@@ -308,7 +308,10 @@ MathJax.Hub.Config({
 
 
       <div class="article-style" itemprop="articleBody">
-        <p>For <a href="http://www.robert-hickman.eu/post/guardian_knowledge_june">a recent blogpost</a>, I required data on the ELO ratings of national football teams over time. Such a list exists online at <a href="https://eloratings.net/">eloratings.net</a> and so in theory this was just a simple task for <a href="https://blog.rstudio.com/2014/11/24/rvest-easy-web-scraping-with-r/">rvest</a> to read the html pages on that site and then fish out the data I wanted. However, while this works for the static websites which make up the vast majority of sites containing tables of data, it struggles with websites that use JavaScript to dynamically generate pages.</p>
+        
+
+
+<p>For <a href="http://www.robert-hickman.eu/post/guardian_knowledge_june">a recent blogpost</a>, I required data on the ELO ratings of national football teams over time. Such a list exists online at <a href="https://eloratings.net/">eloratings.net</a> and so in theory this was just a simple task for <a href="https://blog.rstudio.com/2014/11/24/rvest-easy-web-scraping-with-r/">rvest</a> to read the html pages on that site and then fish out the data I wanted. However, while this works for the static websites which make up the vast majority of sites containing tables of data, it struggles with websites that use JavaScript to dynamically generate pages.</p>
 <p>Eloratings.net is one such website which rvest is unable to scrape. E.g.</p>
 <pre class="r"><code>library(tidyverse)
 library(rvest)
