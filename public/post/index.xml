@@ -11,12 +11,199 @@
     <atom:link href="/post/" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>Predicting the Unpredictable- Analysing Rowing in Cambridge pt. 1</title>
+      <link>/post/cam_rowing_1/</link>
+      <pubDate>Sun, 24 Nov 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/cam_rowing_1/</guid>
+      <description>
+
+
+&lt;p&gt;In my free time away from PhD and data science work, I (used to) enjoy rowing. Aside from obvious benefits like socialising, providing a (very intense) workout, seeing the outdoors at least a few times a week… there are really two things that I love(d) about rowing:&lt;/p&gt;
+&lt;ol style=&#34;list-style-type: decimal&#34;&gt;
+&lt;li&gt;It’s the sport that is closest to a simple engineering problem. Going fast basically boils down to how in time and how hard you can get 1-8 guys to move an oar through the water. Realistically, you could probably model how good a boat of guys will row just by tracking them on a rowing machine (and I have suspicions that this is what British Rowing etc. do for national teams).&lt;/li&gt;
+&lt;li&gt;I learnt to row as an undergraduate at Oxford, and really got serious about it as a postgraduate student at Cambridge. This might seem like a irrelevant detail but it’s not.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div id=&#34;how-rowing-usually-works&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;How rowing usually works&lt;/h1&gt;
+&lt;p&gt;Generally when racing boats, some n number of rowing crews line up alongside each other, and row straight down a lake (usually ~2km). The first boat to cross the finish line is generally considered the winner. For an example of such a race, see this Olympic final from 2012:&lt;/p&gt;
+&lt;iframe width=&#34;560&#34; height=&#34;315&#34; src=&#34;https://youtu.be/x6wHZNWF7pA?t=655&#34; frameborder=&#34;0&#34; allowfullscreen&gt;
+&lt;/iframe&gt;
+&lt;p&gt;You might notice that there are four men in each boat here, each of whom are rowing. This works well on a reservoir where this race was held, but not so well on (e.g.) the River Cam that flows through Cambridge, which is both a pretty thin river, and has lots of tight corners.&lt;/p&gt;
+&lt;div class=&#34;figure&#34;&gt;
+&lt;img src=&#34;/img/river_cam.png&#34; alt=&#34;the river cam&#34; /&gt;
+&lt;p class=&#34;caption&#34;&gt;the river cam&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;how-rowing-in-cambridgeoxford-works&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;How rowing in Cambridge/Oxford works&lt;/h1&gt;
+&lt;p&gt;Instead of these rivers, boat typically contain 8 rowers, and one cox, who is responsible for steering the boat. In lieu of the space needed to row side by side, various races across the year are run as time trials down a portion of the river. The &lt;em&gt;real&lt;/em&gt; highlight of the year however, are two four day competitions in which crews line up one-behind-the-other and attempt to chase down and ‘bump’ the crew ahead (before being chased down themselves).&lt;/p&gt;
+&lt;iframe width=&#34;560&#34; height=&#34;315&#34; src=&#34;https://www.youtube.com/watch?v=x6N6-B_ob2k&#34; frameborder=&#34;0&#34; allowfullscreen&gt;
+&lt;/iframe&gt;
+&lt;p&gt;Upon hitting the boat that starts ahead, the two crews switch places the next day and then the race is run again, until hopefully, the positions roughly reflect the speeds of the boats.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;predicting-bumps-races&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Predicting bumps races&lt;/h1&gt;
+&lt;p&gt;Generally therefore, if two boats line up for a bumps race, the faster one should catch the slower boat (or if the positions are reversed, the faster boat should fail to be caught by the slower boat behind). It &lt;em&gt;should&lt;/em&gt; be fairly easy to predict bumps races, but it isn’t. The nature of the relative inexperience of lots of crews, the panic of the races, and the pretty tight course means mistakes are made early and often.&lt;/p&gt;
+&lt;iframe width=&#34;560&#34; height=&#34;315&#34; src=&#34;https://youtu.be/SCaeOsQmpTs?t=59&#34; frameborder=&#34;0&#34; allowfullscreen&gt;
+&lt;/iframe&gt;
+&lt;p&gt;However, I wanted to see how possible it was. The only real data to train predictions on are the time-trial races that happen before bumps, so I’m going to see how well it’s possible to model a bumps race using the implied speeds of crews from these previous time trials.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;libraries-and-data&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Libraries and Data&lt;/h1&gt;
+&lt;p&gt;For this post, I’m only going to do some simple munging and logistic regression, so I only need the (new) version of the Tidyverse (as I’m also going to play with pivot_longer and pivot_shorter for the &lt;a href=&#34;&#34;&gt;first time&lt;/a&gt;).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The data comes from my own scraping of race results on the river cam over the last ten years. I’ll eventually package this up properly. For now it can be found at &lt;a href=&#34;https://github.com/RobWHickman/CamStroker&#34;&gt;my Github&lt;/a&gt;. Today I’ll just read in the raw .csv files.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#download the raw data
+#wil lbe packages eventually
+race_results &amp;lt;- read.csv(&amp;quot;https://raw.githubusercontent.com/RobWHickman/CamStroker/master/data-raw/cambridge_race_results.csv&amp;quot;,
+                         stringsAsFactors = FALSE)
+bumps_results &amp;lt;- read.csv(&amp;quot;https://raw.githubusercontent.com/RobWHickman/CamStroker/master/data-raw/cambridge_bumps_results.csv&amp;quot;,
+                          stringsAsFactors = FALSE)&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;data-munging&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Data Munging&lt;/h1&gt;
+&lt;p&gt;We then want to lengthen out the bumps data by days to squeeze as much data as possible out of possible combinations of boats we have data for. I need to line boats up by the start position each day, so I also init a column for this at the end&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;bumps_long &amp;lt;- bumps_results %&amp;gt;%
+  #pivot bumps results to longer so we can model each day of racing
+  pivot_longer(., starts_with(&amp;quot;Day&amp;quot;),
+               names_to = &amp;quot;Day&amp;quot;, values_to = &amp;quot;Bump&amp;quot;) %&amp;gt;%
+  mutate(Bump = case_when(
+    is.na(Bump) ~ 0,
+    TRUE ~ as.numeric(Bump)
+  )) %&amp;gt;%
+  group_by(Competition, College, Year, Crew, Gender) %&amp;gt;%
+  #calculate day start and end positions
+  mutate(day_end = StartPos - cumsum(Bump)) %&amp;gt;%
+  mutate(day_start = day_end + Bump)
+
+head(bumps_long)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 10
+## # Groups:   Competition, College, Year, Crew, Gender [2]
+##   Competition College  Year  Crew Gender StartPos Day    Bump day_end
+##   &amp;lt;chr&amp;gt;       &amp;lt;chr&amp;gt;   &amp;lt;int&amp;gt; &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt;     &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt; &amp;lt;dbl&amp;gt;   &amp;lt;dbl&amp;gt;
+## 1 Lent        Caius    2016    NA M             1 Day1      0       1
+## 2 Lent        Caius    2016    NA M             1 Day2      0       1
+## 3 Lent        Caius    2016    NA M             1 Day3      0       1
+## 4 Lent        Caius    2016    NA M             1 Day4      0       1
+## 5 Lent        Downing  2016    NA M             2 Day1      0       2
+## 6 Lent        Downing  2016    NA M             2 Day2      0       2
+## # ... with 1 more variable: day_start &amp;lt;dbl&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And we want to do the opposite for the race data so we can efficiently join this onto the bumps data. As the speed of the crew is all we care about I calculate this as the course distance / seconds taken to get an idea of roughly how fast each crew is.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;race_wide &amp;lt;- race_results %&amp;gt;%
+  #calculate implied racing speed
+  mutate(race_id = paste(race, leg),
+         av_speed = distance / seconds) %&amp;gt;%
+  select(Year = year, College = college, Crew = crew, Gender = gender,
+         race_id, av_speed) %&amp;gt;%
+  pivot_wider(., id_cols = c(&amp;quot;Year&amp;quot;, &amp;quot;College&amp;quot;, &amp;quot;Crew&amp;quot;, &amp;quot;Gender&amp;quot;),
+              names_from = race_id, values_from = av_speed) %&amp;gt;%
+  #rename to tidy up
+  rename(NSC = `Newnham Short Course NA`,
+         Frbrn = `Fairbairns NA`,
+         WH2H1 = `Winter Head 2 Head leg1`,
+         WH2H2 = `Winter Head 2 Head leg2`,
+         Rbnsn = `Robinson Head NA`) %&amp;gt;%
+  #not much data for Robinson regatta so leave out
+  select(-Rbnsn)
+
+head(race_wide)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 8
+##    Year College    Crew Gender   NSC Frbrn WH2H1 WH2H2
+##   &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt;     &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt;  &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;
+## 1  2010 Catz          1 M       5.42    NA    NA    NA
+## 2  2010 Robinson      1 M       5.41    NA    NA    NA
+## 3  2010 Sidney        1 M       5.39    NA    NA    NA
+## 4  2010 Caius         1 M       5.38    NA    NA    NA
+## 5  2010 Girton        1 M       5.22    NA    NA    NA
+## 6  2010 Churchill     1 M       5.21    NA    NA    NA&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then we simply join the data and calculate the implied speed differential between two crew who start a bumps race behind each other.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;regression_data &amp;lt;- bumps_long %&amp;gt;%
+  ungroup() %&amp;gt;%
+  #join datasets
+  left_join(race_wide, by = c(&amp;quot;Year&amp;quot;, &amp;quot;College&amp;quot;, &amp;quot;Crew&amp;quot;, &amp;quot;Gender&amp;quot;)) %&amp;gt;%
+  group_by(Competition, Year, Gender, Day) %&amp;gt;%
+  arrange(Competition, Year, Gender, Day, day_start) %&amp;gt;%
+  #calculate speed difference between boats starting bumps data behind each other
+  mutate(frbrn_diff = Frbrn - lag(Frbrn),
+         NSC_diff = NSC - lag(NSC),
+         WH2H1_diff = WH2H1 - lag(WH2H1),
+         WH2H2_diff = WH2H2 - lag(WH2H2)) %&amp;gt;%
+  select(-NSC, -Frbrn, -WH2H1, -WH2H2) %&amp;gt;%
+  #pivot longer for plotting
+  pivot_longer(., frbrn_diff:WH2H2_diff,
+               names_to = &amp;quot;race&amp;quot;, values_to = &amp;quot;speed_difference&amp;quot;) %&amp;gt;%
+  filter(!is.na(speed_difference)) %&amp;gt;%
+  #tidy up plotting data
+  filter(Bump %in% c(1, 0)) %&amp;gt;%
+  filter(Competition == &amp;quot;Lent&amp;quot;)
+
+head(regression_data)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 12
+## # Groups:   Competition, Year, Gender, Day [2]
+##   Competition College  Year  Crew Gender StartPos Day    Bump day_end
+##   &amp;lt;chr&amp;gt;       &amp;lt;chr&amp;gt;   &amp;lt;int&amp;gt; &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt;     &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt; &amp;lt;dbl&amp;gt;   &amp;lt;dbl&amp;gt;
+## 1 Lent        Sidney   2010     2 F            40 Day1      1      39
+## 2 Lent        Christs  2010     2 F            41 Day1      0      41
+## 3 Lent        Sidney   2010     2 F            40 Day2      0      39
+## 4 Lent        Christs  2010     2 F            41 Day2      1      40
+## 5 Lent        Magdal~  2010     2 F            46 Day2      0      45
+## 6 Lent        Newnham  2010     3 F            52 Day2      0      51
+## # ... with 3 more variables: day_start &amp;lt;dbl&amp;gt;, race &amp;lt;chr&amp;gt;,
+## #   speed_difference &amp;lt;dbl&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;plotting-data&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Plotting Data&lt;/h1&gt;
+&lt;p&gt;We can then plot the data and see if the speed differential of races earlier in theyear is a useful predictor of bumping a boat ahead of you. We can model this as a logistic problem where bumping is either a 1 (to catch the boat ahead) or a 0 (did not catch). This does cut out some data in weird ways that I’ll get onto in later posts, but will do for now.&lt;/p&gt;
+&lt;p&gt;For the logistic regression I use geom_smooth and a binomial generalised linear model. Again, there’s more we can explore here, but this is just a quick intro post so we won’t worry about standrad error etc. I also split out by Male/Female crews as I imagine gender might play a role.&lt;/p&gt;
+&lt;p&gt;Given that this week is the first race of the 2019/2020 calendar (Fairbairns) I first limited myself to only data from that race.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p1 &amp;lt;- regression_data %&amp;gt;%
+  #filter only Fairbairns results
+  filter(race == &amp;quot;frbrn_diff&amp;quot;) %&amp;gt;%
+  ggplot(., aes(x = speed_difference, y = Bump)) +
+  geom_point() +
+  #model as a logistic event
+  geom_smooth(method = &amp;quot;glm&amp;quot;, 
+    method.args = list(family = &amp;quot;binomial&amp;quot;), 
+    se = FALSE) +
+  facet_wrap(~Gender, scales = &amp;quot;free_x&amp;quot;) +
+  theme_minimal()
+
+#plot
+p1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-11-24-cambridge_rowing_1_files/figure-html/plot_fairbairns-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;And it seems being faster than a boat ahead of you does increase your chance of bumping, but not a huge amount.&lt;/p&gt;
+&lt;p&gt;There’s good reason to beleive Fairbairns regatta might not be the best predictor of performance later in the year. It’s the first race, where many collges are still testing out their crew. It also takes place during a weekday, so many students cannot take part, and is a 4.5km race, instead of the usual 2km of later races and bumps itself.&lt;/p&gt;
+&lt;p&gt;If we look at how all races predict later bumps success we can see much nicer logistic curves:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#do the same but for all race data
+p2 &amp;lt;- regression_data %&amp;gt;%
+  ggplot(., aes(x = speed_difference, y = Bump)) +
+  geom_point() +
+  geom_smooth(method = &amp;quot;glm&amp;quot;, 
+    method.args = list(family = &amp;quot;binomial&amp;quot;), 
+    se = FALSE) +
+  geom_vline(xintercept = 0, colour = &amp;quot;red&amp;quot;, linetype = &amp;quot;dashed&amp;quot;) +
+  facet_grid(race~Gender, scales = &amp;quot;free_x&amp;quot;) +
+  theme_minimal()
+
+p2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-11-24-cambridge_rowing_1_files/figure-html/plot_all_races-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Especially Newnham Short Course and the two legs of Winter Head 2 Head show nice curves where boats that are faster on these races have a greater chance of bumping later in the year.&lt;/p&gt;
+&lt;p&gt;There’s a lot more to do to properly model a bumps regatta, but the first step of validating our ideas and data seems to show promising results!&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Racing Bar Charts and Some data.table Munging</title>
       <link>/post/racing_bar_charts/</link>
       <pubDate>Sun, 17 Nov 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/racing_bar_charts/</guid>
-      <description>&lt;p&gt;A while ago (and also still a bit) &lt;a href=&#34;https://app.flourish.studio/@flourish/bar-chart-race&#34;&gt;racing bar charts&lt;/a&gt; were all the rage on data visualisation forums/twitter. Perhaps one of the real breakout examples is this tweet from the, always excellent, John Burn-Murdochat the Financial Times, looking at the most populous cities in the world since the middle ages:&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;A while ago (and also still a bit) &lt;a href=&#34;https://app.flourish.studio/@flourish/bar-chart-race&#34;&gt;racing bar charts&lt;/a&gt; were all the rage on data visualisation forums/twitter. Perhaps one of the real breakout examples is this tweet from the, always excellent, John Burn-Murdochat the Financial Times, looking at the most populous cities in the world since the middle ages:&lt;/p&gt;
 &lt;blockquote class=&#34;twitter-tweet&#34;&gt;
 &lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
 New project:&lt;br&gt; &lt;br&gt;A “Bar Chart Race” animation showing the changing ranks of the 10 biggest cities in the world since 1500.&lt;br&gt;&lt;br&gt;Fascinating to watch giant cities vanish after falling in conquests, and amazing that three UK cities were in the top 8 in the late 1800s. &lt;a href=&#34;https://t.co/KglMZbYobr&#34;&gt;pic.twitter.com/KglMZbYobr&lt;/a&gt;
@@ -445,7 +632,10 @@ football_gif &amp;lt;- animate(p_football,
       <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/dynamic_web_scraping/</guid>
-      <description>&lt;p&gt;For &lt;a href=&#34;http://www.robert-hickman.eu/post/guardian_knowledge_june&#34;&gt;a recent blogpost&lt;/a&gt;, I required data on the ELO ratings of national football teams over time. Such a list exists online at &lt;a href=&#34;https://eloratings.net/&#34;&gt;eloratings.net&lt;/a&gt; and so in theory this was just a simple task for &lt;a href=&#34;https://blog.rstudio.com/2014/11/24/rvest-easy-web-scraping-with-r/&#34;&gt;rvest&lt;/a&gt; to read the html pages on that site and then fish out the data I wanted. However, while this works for the static websites which make up the vast majority of sites containing tables of data, it struggles with websites that use JavaScript to dynamically generate pages.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;For &lt;a href=&#34;http://www.robert-hickman.eu/post/guardian_knowledge_june&#34;&gt;a recent blogpost&lt;/a&gt;, I required data on the ELO ratings of national football teams over time. Such a list exists online at &lt;a href=&#34;https://eloratings.net/&#34;&gt;eloratings.net&lt;/a&gt; and so in theory this was just a simple task for &lt;a href=&#34;https://blog.rstudio.com/2014/11/24/rvest-easy-web-scraping-with-r/&#34;&gt;rvest&lt;/a&gt; to read the html pages on that site and then fish out the data I wanted. However, while this works for the static websites which make up the vast majority of sites containing tables of data, it struggles with websites that use JavaScript to dynamically generate pages.&lt;/p&gt;
 &lt;p&gt;Eloratings.net is one such website which rvest is unable to scrape. E.g.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
 library(rvest)
@@ -656,7 +846,10 @@ gif &amp;lt;- animate(p, nframes = 20)&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/guardian_knowledge_june/</guid>
-      <description>&lt;p&gt;Most Wednesday’s I enjoy reading &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; blog on the Guardian’s website and reading the football trivia therein. When time (and questions) allow, I like to answer some of the questions posed, example of which are &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;here&lt;/a&gt;, &lt;a href=&#34;http://www.robert-hickman.eu/post/counties_league_points/&#34;&gt;here&lt;/a&gt;, and &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-7th-february-2019/&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Most Wednesday’s I enjoy reading &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; blog on the Guardian’s website and reading the football trivia therein. When time (and questions) allow, I like to answer some of the questions posed, example of which are &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;here&lt;/a&gt;, &lt;a href=&#34;http://www.robert-hickman.eu/post/counties_league_points/&#34;&gt;here&lt;/a&gt;, and &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-7th-february-2019/&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;div id=&#34;league-of-nations&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;League of Nations&lt;/h1&gt;
 &lt;p&gt;The first question comes from&lt;/p&gt;
@@ -1453,7 +1646,10 @@ head(lowest_ranked_champs, n = 10)&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Thu, 30 May 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/dixon_coles_1/</guid>
-      <description>&lt;p&gt;For anyone watching football, being able to predict matches is a key aspect of the hobby. Whether explicitly (e.g. when betting on matches, or deciding on recruitment for an upcoming season), or more implicitly when discussing favourites to win the league in the pub, almost all discussion of the sport on some level require predictions about some set of upcoming games.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;For anyone watching football, being able to predict matches is a key aspect of the hobby. Whether explicitly (e.g. when betting on matches, or deciding on recruitment for an upcoming season), or more implicitly when discussing favourites to win the league in the pub, almost all discussion of the sport on some level require predictions about some set of upcoming games.&lt;/p&gt;
 &lt;p&gt;The first step of prediction is some form of quantification of ability. We’d expect a better team to have a better chance of winning than a worse team. For an example of a more sophisticated set of rankings, see &lt;a href=&#34;https://projects.fivethirtyeight.com/soccer-predictions/&#34;&gt;fivethirtyeight’s Soccer Power Index&lt;/a&gt; which is explicitly used to predict the results of various football competitions.&lt;/p&gt;
 &lt;p&gt;The accuracy of our predictions therefore relies on the accuracy of our judgement on team’s ability. When discussing football with friends, we might use half-remembered match highlights to form some impression of how strong a team is. When programming however, we have free access to the results of teams thus far in a campaign and should be able to produce a model more grounded in truth.&lt;/p&gt;
 &lt;p&gt;Two seminal papers for using recent football results to assess the abilities of football teams (and then use this assessment to predict matches) are &lt;a href=&#34;https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1467-9574.1982.tb00782.x&#34;&gt;Maher’s 1982 paper&lt;/a&gt; on modelling football scores, which is complimented by &lt;a href=&#34;https://www.jstor.org/stable/pdf/2986290.pdf?casa_token=9deLgF7xOaEAAAAA:fGGfUQKOsezrWBvbmphK56HddtiaohxaUNPdkDBoTApL_beghKXFlru5USztLt7dDVEMSdhAfkg8yzubZsAs7eeyZvp307iAGwqAtVSMMhwk6xhUleM&#34;&gt;Mark Dixon and Stuart Coles’ 1997 paper&lt;/a&gt;. For R various packages to use the methods outlined in these papers exist including &lt;a href=&#34;https://github.com/Torvaney/regista&#34;&gt;Ben Torvaney’s regista&lt;/a&gt;, &lt;a href=&#34;https://github.com/opisthokonta/goalmodel&#34;&gt;opisthokonta’s goalmodel&lt;/a&gt;&lt;sup&gt;1&lt;/sup&gt;, and &lt;a href=&#34;https://cran.r-project.org/web/packages/fbRanks/index.html&#34;&gt;Eli Holmes’ fbRanks&lt;/a&gt;.&lt;/p&gt;
@@ -2447,7 +2643,10 @@ results&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Wed, 24 Apr 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/dca_1/</guid>
-      <description>&lt;p&gt;When studying why people make the economic choices they do, we need some way of quantifying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;When studying why people make the economic choices they do, we need some way of quantifying the value to the person of the offered choices. For instance, when deciding whether to ride to my office by bike or instead catch the bus, there are myriad factors that my brain feeds into an equation to get two values:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;the utility of taking the bus&lt;/li&gt;
 &lt;li&gt;the utility of riding my bike&lt;/li&gt;
@@ -2847,7 +3046,10 @@ trial_data &amp;lt;- choice_data %&amp;gt;%
       <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/the-knowledge-7th-february-2019/</guid>
-      <description>&lt;p&gt;In what is becoming a &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;repeated&lt;/a&gt; &lt;a href=&#34;http://www.robert-hickman.eu/post/counties_league_points/&#34;&gt;series&lt;/a&gt;, I enjoy answering trivia questions from The Guardian’s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; football trivia column.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;In what is becoming a &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;repeated&lt;/a&gt; &lt;a href=&#34;http://www.robert-hickman.eu/post/counties_league_points/&#34;&gt;series&lt;/a&gt;, I enjoy answering trivia questions from The Guardian’s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; football trivia column.&lt;/p&gt;
 &lt;p&gt;There’s a few questions that built up that seemed amenable to coding answers so I’ve taken a stab at them here&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#munging
 library(tidyverse)
@@ -3513,7 +3715,10 @@ head(data.frame(draws), 10)&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Sun, 03 Feb 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/riddler-1st-feb-2019/</guid>
-      <description>&lt;div id=&#34;riddler-classic&#34; class=&#34;section level1&#34;&gt;
+      <description>
+
+
+&lt;div id=&#34;riddler-classic&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;Riddler Classic&lt;/h1&gt;
 &lt;p&gt;In my spare time &lt;a href=&#34;http://www.robert-hickman.eu/post/riddler-27th-april-2018/&#34;&gt;I enjoy solving&lt;/a&gt; &lt;a href=&#34;https://fivethirtyeight.com/tag/the-riddler/&#34;&gt;538’s The Riddler column&lt;/a&gt;. This week I had a spare few hours waiting for the Superbowl to start and decided to code up a solution to the latest problem to keep me busy.&lt;/p&gt;
 &lt;p&gt;The question revolves around a card game in which whatever choice a player makes, they are likely to lose to a con artist. Formally this is phrased as:&lt;/p&gt;
@@ -3681,7 +3886,10 @@ microbenchmark(
       <pubDate>Mon, 21 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/counties_league_points/</guid>
-      <description>&lt;p&gt;Every so often a question on The Guardian’s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; football trivia section piques my interest and is amenable to analysis using R. Previously, I looked at &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;club name suffixes and young World Cup winners&lt;/a&gt; last August. This week (give or take), a question posed on twitter caught my attention:&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Every so often a question on The Guardian’s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; football trivia section piques my interest and is amenable to analysis using R. Previously, I looked at &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;club name suffixes and young World Cup winners&lt;/a&gt; last August. This week (give or take), a question posed on twitter caught my attention:&lt;/p&gt;
 &lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en&#34;&gt;
 &lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
 &lt;a href=&#34;https://twitter.com/TheKnowledge_GU?ref_src=twsrc%5Etfw&#34;&gt;&lt;span class=&#34;citation&#34;&gt;@TheKnowledge_GU&lt;/span&gt;&lt;/a&gt; was just chatting to some colleagues in the kitchen at work about why Essex doesn&#39;t have many big football clubs and it got me thinking. If you combined all the points from every league team in the ceremonial counties in England, which county would be on top?
@@ -3977,7 +4185,10 @@ county_points &amp;lt;- county_match_data %&amp;gt;%
       <pubDate>Fri, 04 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/wsl-prediction-1/</guid>
-      <description>&lt;p&gt;Over the last few years since I started coding I’d always been interested in how data science could help predict football results/ identify footballing talents, and just generally ‘solve’ football.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Over the last few years since I started coding I’d always been interested in how data science could help predict football results/ identify footballing talents, and just generally ‘solve’ football.&lt;/p&gt;
 &lt;p&gt;One of the major problems with analysing football had been the availability of data. Though there’s a lot of great published stuff freely available to read, a lot of the cutting edge work revolves around &lt;a href=&#34;https://www.optasports.com/services/analytics/advanced-metrics/&#34;&gt;advanced metrics&lt;/a&gt;, such as expected goals, which it’s hard to get the data for.&lt;/p&gt;
 &lt;p&gt;Over the summer StatsBomb committed to sharing &lt;a href=&#34;https://statsbomb.com/resource-centre/&#34;&gt;free data&lt;/a&gt; on (amongst others) the &lt;a href=&#34;http://www.fawsl.com/index.html&#34;&gt;Women’s Super League&lt;/a&gt; (the top women’s competition in England), and I’d been interested in looking into this since then.&lt;/p&gt;
 &lt;p&gt;This post is basically just a reproduction of two blogs by the excellent &lt;a href=&#34;https://twitter.com/torvaney?lang=en&#34;&gt;Ben Torvaney&lt;/a&gt;, using the &lt;a href=&#34;https://dashee87.github.io/football/python/predicting-football-results-with-statistical-modelling-dixon-coles-and-time-weighting/&#34;&gt;Dixon-Coles method&lt;/a&gt; to predict the the final positions of teams at the end of a football season.&lt;/p&gt;
@@ -4355,7 +4566,10 @@ simulated_tables %&amp;gt;%
       <pubDate>Wed, 02 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/tidytuesday-2019-1/</guid>
-      <description>&lt;p&gt;Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Given it’s the new year, I decided to try and get back onto more regular posting on this blog (mostly just to build up a portfolio of work).&lt;/p&gt;
 &lt;p&gt;A quick way to get something to work with that can be published unpolished is &lt;a href=&#34;https://github.com/rfordatascience/tidytuesday&#34;&gt;#TidyTuesday&lt;/a&gt; on twitter which (as far as I know/can tell) is organised by &lt;a href=&#34;https://twitter.com/thomas_mock&#34;&gt;Thomas Mock&lt;/a&gt; from RStudio.&lt;/p&gt;
 &lt;p&gt;This week, the data comes in the form of a massive corpus of every tweet using the #rstats hashtag, curated by rtweet package creator Mike Kearney.&lt;/p&gt;
 &lt;p&gt;I’m only going to leave sparse notes as this is just a post from some lunchtime work cleaned up and published after. I probably won’t fully spellcheck it either.&lt;/p&gt;
@@ -4599,7 +4813,10 @@ rstats_clustering %&amp;gt;%
       <pubDate>Thu, 22 Nov 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/cambridge_pub_crawl/</guid>
-      <description>&lt;p&gt;A few weeks ago I went on the first pub crawl I’d been on in years around my city of Cambridge. Around the same time I had also been visiting &lt;a href=&#34;https://www.google.co.uk/maps/@52.2046202,0.1289874,18z&#34;&gt;4 very good pubs within ~200m of each other&lt;/a&gt; tucked away in a quiet neighbourhood of the town. Together, I wondered if it was possible with freely avaiable data to plan an optimal pub crawl around any town/area of the UK, and also, if it would be feasbile to visit every pub within the city in a single day if travelling optimally.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;A few weeks ago I went on the first pub crawl I’d been on in years around my city of Cambridge. Around the same time I had also been visiting &lt;a href=&#34;https://www.google.co.uk/maps/@52.2046202,0.1289874,18z&#34;&gt;4 very good pubs within ~200m of each other&lt;/a&gt; tucked away in a quiet neighbourhood of the town. Together, I wondered if it was possible with freely avaiable data to plan an optimal pub crawl around any town/area of the UK, and also, if it would be feasbile to visit every pub within the city in a single day if travelling optimally.&lt;/p&gt;
 &lt;p&gt;Once again, I found that the simple features library (sf) for R basically can do all of this pretty simply, with igraph picking up most of the networking slack. In fact, overall it was much much simpler than I thought it would be. In total, I only needed 9 libraries (though granted tidyverse is one).&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#data munging
 library(tidyverse)
@@ -5097,7 +5314,10 @@ shortest_tour &amp;lt;- journeys[which(journeys$journey %in% tour_strings$journe
       <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/getis-ord-heatmaps-tutorial/</guid>
-      <description>&lt;p&gt;Whilst &lt;del&gt;getting some work done&lt;/del&gt; browsing twitter at work today, I came across &lt;a href=&#34;https://twitter.com/jburnmurdoch/status/1047470445459644416&#34;&gt;this tweet&lt;/a&gt; from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Whilst &lt;del&gt;getting some work done&lt;/del&gt; browsing twitter at work today, I came across &lt;a href=&#34;https://twitter.com/jburnmurdoch/status/1047470445459644416&#34;&gt;this tweet&lt;/a&gt; from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.&lt;/p&gt;
 &lt;p&gt;For instance, lets load some mapping libraries&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
 library(sf)
@@ -5224,7 +5444,10 @@ plot(p3)&lt;/code&gt;&lt;/pre&gt;
       <pubDate>Sun, 09 Sep 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/sf.schlorodot/</guid>
-      <description>&lt;p&gt;Recently, I’d seen two tweets with stunning examples of maps by Paul Campbell &lt;a href=&#34;https://twitter.com/PaulCampbell91/status/992043182996193280&#34;&gt;here&lt;/a&gt; and (taken inspiration from the first) by Imer Muhović &lt;a href=&#34;https://twitter.com/ImerM1/status/1037358973807210498&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;Recently, I’d seen two tweets with stunning examples of maps by Paul Campbell &lt;a href=&#34;https://twitter.com/PaulCampbell91/status/992043182996193280&#34;&gt;here&lt;/a&gt; and (taken inspiration from the first) by Imer Muhović &lt;a href=&#34;https://twitter.com/ImerM1/status/1037358973807210498&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;The basic idea of the dot chloropleths is to visualise not only the location clustering of each variable but the number of observations (something traditional ‘filled’ chloropleths don’t do). More importantly than this, the maps also just look really really cool.&lt;/p&gt;
 &lt;p&gt;I had a spare few minutes during work on Friday which I tidied up into a package to calculate the random position of dots for such maps which can be found &lt;a href=&#34;https://github.com/RobWHickman/sf.chlorodot&#34;&gt;on my github&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Below, I’ll outline the code for the South African example used in the package README. Data comes from Adrian Frith’s &lt;a href=&#34;https://census2011.adrianfrith.com/&#34;&gt;very good 2011 census site&lt;/a&gt; and &lt;a href=&#34;https://gadm.org/download_country_v3.html&#34;&gt;gadm&lt;/a&gt; for the shapefiles.&lt;/p&gt;
@@ -5333,7 +5556,10 @@ p &amp;lt;- ggplot() +
       <pubDate>Sat, 04 Aug 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/the-knowledge-4th-august-2018/</guid>
-      <description>&lt;p&gt;The Guardian publish a weekly set of questions and answers on a variety of football minutiae at &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt;. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.&lt;/p&gt;
+      <description>
+
+
+&lt;p&gt;The Guardian publish a weekly set of questions and answers on a variety of football minutiae at &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt;. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(rvest)
 library(dplyr)
 library(magrittr)
@@ -5666,193 +5892,6 @@ youngest_players_appeared %&amp;lt;&amp;gt;% .[, diff := age - no]&lt;/code&gt;&
 &lt;p&gt;Other close calls are David Trezeguet (20.7, no 20 in 1998) and Shkodran Mustafi (22.2, no 21 in 2014).&lt;/p&gt;
 &lt;p&gt;Hernandez &lt;em&gt;is&lt;/em&gt; the closest to acheiving this having played in the final itself, with only Alberto Tarantini (22.5, no 20 in 1978) and Mario Goetze (22.1, no 19 in 2014) in close competition.&lt;/p&gt;
 &lt;/div&gt;
-&lt;/div&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Could an Independent Yorkshire Win the World Cup - Rest of the World/UK</title>
-      <link>/post/yorkshire_world_cup_6/</link>
-      <pubDate>Sun, 10 Jun 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/yorkshire_world_cup_6/</guid>
-      <description>&lt;p&gt;Recently, a Yorkshire national football team &lt;a href=&#34;https://www.theguardian.com/uk-news/2018/jan/28/yorkshire-football-team-makes-debut-in-world-league-of-stateless-peoples&#34;&gt;appeared in a league of national teams for stateless people&lt;/a&gt;. This got me wondering how the historic counties of the UK would do at the world cup. Could any of them compete with full international teams?&lt;/p&gt;
-&lt;p&gt;I &lt;a href=&#34;http://www.robert-hickman.eu/post/yorkshire_world_cup_1/&#34;&gt;published&lt;/a&gt; the complete code for that article on this blog this week. However, one question which I kept being asked was how a ‘All of the UK’ team would do (i.e. if the country wasn’t split up into England, Wales, Scotland, and Northern Ireland). Listening to the latest &lt;a href=&#34;https://twitter.com/doublepivotpod?lang=en&#34;&gt;Double Pivot Podcast&lt;/a&gt;, drafting plyers not going to the World Cup, I also wondered what a ‘Rest of the World’ 11 would look like/fare.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
-library(magrittr)
-library(data.table)
-library(ggplot2)&lt;/code&gt;&lt;/pre&gt;
-&lt;div id=&#34;building-teams&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Building Teams&lt;/h1&gt;
-&lt;p&gt;To save time, I’m gonig to used saved versions of the datasets I built up over the 5 blog posts.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#world rankings
-world_rankings &amp;lt;- readRDS(&amp;quot;national_rankings.rds&amp;quot;)
-
-#player data
-all_players_data &amp;lt;- readRDS(&amp;quot;all_players_position_data.rds&amp;quot;)
-#all British players
-british_player_birthplaces &amp;lt;- readRDS(&amp;quot;british_player_birthplaces.rds&amp;quot;)
-
-#the countries going to the world cup
-world_cup_countries &amp;lt;- c(&amp;quot;Russia&amp;quot;, &amp;quot;Saudi Arabia&amp;quot;, &amp;quot;Egypt&amp;quot;, &amp;quot;Uruguay&amp;quot;,
-                         &amp;quot;Portugal&amp;quot;, &amp;quot;Spain&amp;quot;, &amp;quot;Morocco&amp;quot;, &amp;quot;Iran&amp;quot;,
-                         &amp;quot;France&amp;quot;, &amp;quot;Australia&amp;quot;, &amp;quot;Peru&amp;quot;, &amp;quot;Denmark&amp;quot;,
-                         &amp;quot;Argentina&amp;quot;, &amp;quot;Iceland&amp;quot;, &amp;quot;Croatia&amp;quot;, &amp;quot;Nigeria&amp;quot;,
-                         &amp;quot;Brazil&amp;quot;, &amp;quot;Switzerland&amp;quot;, &amp;quot;Costa Rica&amp;quot;, &amp;quot;Serbia&amp;quot;,
-                         &amp;quot;Germany&amp;quot;, &amp;quot;Mexico&amp;quot;, &amp;quot;Sweden&amp;quot;, &amp;quot;Korea Republic&amp;quot;,
-                         &amp;quot;Belgium&amp;quot;, &amp;quot;Panama&amp;quot;, &amp;quot;Tunisia&amp;quot;, &amp;quot;England&amp;quot;,
-                         &amp;quot;Poland&amp;quot;, &amp;quot;Senegal&amp;quot;, &amp;quot;Colombia&amp;quot;, &amp;quot;Japan&amp;quot;)
-
-#load data to save having to recalculate optimal teams
-optimal_national_teams &amp;lt;- readRDS(&amp;quot;optimal_national_teams.rds&amp;quot;)
-national_teams &amp;lt;- readRDS(&amp;quot;national_teams.rds&amp;quot;)
-
-#the formations for selecting teams
-formations_df &amp;lt;- readRDS(&amp;quot;formations_df.rds&amp;quot;)
-formation_coords &amp;lt;- readRDS(&amp;quot;player_position_coords.rds&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I won’t include the functions in this blog post either, but the article uses (at most very slight modified) functions from the previous 5 posts.&lt;/p&gt;
-&lt;p&gt;We first need to sort the players into either the UK vs. the rest of the World* and finding the optimal teams for each, as we did prviously.&lt;/p&gt;
-&lt;p&gt;*it’s possible Welsh (especially Gareth Bale), Northern Irish, or Scottish players might make the rest of the World team, but I’ll ignore that possibility for simplicity&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the names of each player to merge in
-player_lookup &amp;lt;- all_players_data %&amp;gt;%
-  select(id, name, nationality) %&amp;gt;%
-  mutate(original_nation = as.character(nationality))
-
-#sort the data for finding teams
-nationalised_players &amp;lt;- all_players_data %&amp;gt;%
-  setDT() %&amp;gt;%
-  #convert british players nationality to UK
-  .[id %in% british_player_birthplaces$id, nationality := &amp;quot;UK&amp;quot;] %&amp;gt;%
-  #filter out players from countries at the world cup
-  .[!nationality %in% world_cup_countries] %&amp;gt;%
-  #convert non-UK players nationality to &amp;quot;Rest of World&amp;quot;
-  .[!id %in% british_player_birthplaces$id, nationality := &amp;quot;RoW&amp;quot;]
-
-#find the optimal teams for both these nations
-extranational_teams &amp;lt;- rbindlist(lapply(unique(nationalised_players$nationality), find_optimal_team, 
-                                           select(nationalised_players, id, nationality, 49:60), replicates = 100))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;These can then be plotted to show the teams as before.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#select the best 4 county teams by total ability
-extranational_teams %&amp;lt;&amp;gt;%
-  setDT() %&amp;gt;%
-  .[, unique_position := make.unique(as.character(position)), by = &amp;quot;nation&amp;quot;] %&amp;gt;%
-  merge(., formation_coords, by = c(&amp;quot;formation&amp;quot;, &amp;quot;unique_position&amp;quot;)) %&amp;gt;%
-  merge(player_lookup, by = &amp;quot;id&amp;quot;) 
-
-#plot the data
-p &amp;lt;- ggplot(data = extranational_teams)
-p &amp;lt;- p %&amp;gt;%
-  #custom pitch aesthetic function
-  draw_pitch()
-p &amp;lt;- p + 
-  geom_text(aes(x = player_x, y = player_y, label = gsub(&amp;quot; &amp;quot;, &amp;quot;\n&amp;quot;, name), colour = original_nation), fontface = &amp;quot;bold&amp;quot;) +
-  scale_colour_manual(values = c(&amp;quot;darkred&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;yellow&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;darkblue&amp;quot;, &amp;quot;orange&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;red&amp;quot;),
-                      guide = FALSE) +
-  facet_wrap(~nation)
-
-plot(p)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/unnamed-chunk-1-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;calculating-ability&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Calculating Ability&lt;/h1&gt;
-&lt;p&gt;As previously, we can calculate the expected ELO of such teams via linear regression of the FIFA18 ability vs. ELO of actual national teams.&lt;/p&gt;
-&lt;p&gt;This time, let’s predict the ability of the extranational teams based on this regression before plotting, just to save on plots/time/code/etc.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge in the world rankings for each fieldable national team
-national_teams %&amp;lt;&amp;gt;% merge(., world_rankings, by = &amp;quot;nation&amp;quot;) %&amp;gt;%
-  #merge in the optimal team total_ability for each nation
-  merge(., unique(select(optimal_national_teams, nation, total_ability)), by = &amp;quot;nation&amp;quot;)
-
-#regress ELO against total_ability (as judged by selection of FIFA18 players)
-ability_regression &amp;lt;- lm(data = national_teams, ELO ~ total_ability)
-
-#munge the extranational teams df to predict the ELO
-extranational_teams &amp;lt;- data.frame(nation = c(&amp;quot;UK&amp;quot;, &amp;quot;RoW&amp;quot;)) %&amp;gt;%
-  merge(., select(extranational_teams, nation, total_ability), by = &amp;quot;nation&amp;quot;) %&amp;gt;%
-  #predict the ELO of each county using the previous regression
-  mutate(predicted_ELO = predict(ability_regression, .)) %&amp;gt;%
-  unique()&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then we can plot this regression and see where the RoW and UK fall in terms of actual nations&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot ELO vs. total_ability
-p &amp;lt;- ggplot(data = national_teams, aes(x = total_ability, y = ELO)) +
-  geom_text(aes(label = nation), colour = &amp;quot;grey60&amp;quot;) +
-  #add in the linear regression line + confidence intervals
-  stat_smooth(method = &amp;quot;lm&amp;quot;, colour = &amp;quot;darkred&amp;quot;) +
-  geom_text(data = extranational_teams, aes(label = nation, x = total_ability, y = predicted_ELO), colour = &amp;quot;darkblue&amp;quot;) +
-  xlab(&amp;quot;FIFA18 Optimal Team Ability&amp;quot;) +
-  ylab(&amp;quot;National Team ELO&amp;quot;) +
-  ggtitle(&amp;quot;FIFA18 ability vs. ELO for National Teams&amp;quot;) +
-  theme_minimal()
-
-plot(p)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/plot_regression-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;What’s quite nice about the graph is it shows the limitation of this approach. By definition, a UK team should be &lt;em&gt;at least&lt;/em&gt; as good as the English national team, but because England overperform their ‘FIFA ability’, the UK is actually ranked a fair bit lower in terms of ELO&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#show the ELOs of the English national football team
-#and predicted ELO of a UK team
-national_teams$ELO[national_teams$nation == &amp;quot;England&amp;quot;]&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## [1] 1941&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;extranational_teams$predicted_ELO[extranational_teams$nation == &amp;quot;UK&amp;quot;]&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##       12 
-## 1910.421&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The RoW team is similarly probably undervalued in terms of ELO. FIFA18 ranks the players as a lot better than teams like Germany and Brazil, but with much lower ELO&lt;/p&gt;
-&lt;p&gt;We can then run the simulations, swapping the UK/RoW in for countries. The obvious substitute for the UK is England. For the RoW I decided to remove the team with the lowest ELO, which turns out to be Saudi Arabia&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge the ELOs with the world cup draw information
-wc_teams %&amp;lt;&amp;gt;% merge(., select(national_teams, nation, ELO) %&amp;gt;%
-                      rbind(., data.frame(nation = &amp;quot;Panama&amp;quot;, ELO = 1669)), by = &amp;quot;nation&amp;quot;)
-wc_teams$nation &amp;lt;- as.character(wc_teams$nation)
-
-simulate_counties &amp;lt;- function(extranation, simulations, replace_country) {
-  #replace Englands ELO with that of the county team replacing them
-  wc_teams$ELO[wc_teams$nation == replace_country] &amp;lt;- extranational_teams$predicted_ELO[extranational_teams$nation == extranation]
-  wc_teams$nation[wc_teams$nation == replace_country] &amp;lt;- extranation
-  
-  #run x number of simulations
-  for(simulation in 1:simulations) {
-    winner &amp;lt;- simulate_tournament(wc_teams, knockout_matches, group_matches)
-    if(simulation == 1) {
-      winners &amp;lt;- winner
-    } else {
-      winners &amp;lt;- append(winners, winner)
-    }
-  }
-  
-  #spit out a df with each winner and the number of times they win
-  simulation_df &amp;lt;- data.frame(table(winners))
-  names(simulation_df) &amp;lt;- c(&amp;quot;nation&amp;quot;, &amp;quot;championships&amp;quot;)
-  
-  #work out the percentage chane of each nation/county winning
-  simulation_df$percentage &amp;lt;- simulation_df$championships / (simulations/100)
-  return(simulation_df)
-}
-
-#run the simulations
-UK_simulation &amp;lt;- simulate_counties(&amp;quot;UK&amp;quot;, 1000, &amp;quot;England&amp;quot;) %&amp;gt;% 
-  mutate(simulation = &amp;quot;UK&amp;quot;)
-RoW_simulation &amp;lt;- simulate_counties(&amp;quot;RoW&amp;quot;, 1000, wc_teams$nation[which.min(wc_teams$ELO)]) %&amp;gt;%
-  mutate(simulation = &amp;quot;RoW&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;simulation_results &amp;lt;- rbind(UK_simulation, RoW_simulation) %&amp;gt;%
-  setDT() %&amp;gt;%
-    .[, perc_chance := mean(percentage), by = &amp;quot;nation&amp;quot;] %&amp;gt;%
-  .[, c(&amp;quot;nation&amp;quot;, &amp;quot;perc_chance&amp;quot;)] %&amp;gt;%
-  unique(.) %&amp;gt;%
-  .[nation %in% c(&amp;quot;RoW&amp;quot;, &amp;quot;UK&amp;quot;), nation_status := &amp;quot;simulation&amp;quot;] %&amp;gt;%
-  .[!nation %in% c(&amp;quot;RoW&amp;quot;, &amp;quot;UK&amp;quot;), nation_status := &amp;quot;nation&amp;quot;] %&amp;gt;%
-  #order by percentage chance of winning the WC
-  .[, nation := factor(nation, levels = nation[order(-.$perc_chance)])]
-
-#plot the results
-p &amp;lt;- ggplot(data = simulation_results, aes(x = nation, y = perc_chance)) +
-  geom_bar(stat = &amp;quot;identity&amp;quot;, aes(fill = nation_status)) +
-  scale_fill_manual(values = c(&amp;quot;darkblue&amp;quot;, &amp;quot;darkred&amp;quot;), name = &amp;quot;Nation Status&amp;quot;) +
-  xlab(&amp;quot;Team&amp;quot;) +
-  ylab(&amp;quot;World Cup Win Percentage Chance&amp;quot;) +
-  ggtitle(&amp;quot;Percetange Chance of Winning the World Cup from 1000 Simulations&amp;quot;,
-          subtitle = &amp;quot;UK/RoW Substituted for England/Saudi Arabia Respectively&amp;quot;) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.2))
-
-plot(p)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-06-07-yorkshire_world_cup_6_files/figure-html/munge_simulation_results-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;The team for the RoW tend to do fairly well. In fact only Brazil, Germany, or Spain (3 of the tournament favourites) tend to win more simulated World Cups than them. The team for the whole of the UK disappoints as much as the English national team, winning about the same as the original, and other similarly ranked nations, such as Colombia, or Peru.&lt;/p&gt;
 &lt;/div&gt;
 </description>
     </item>

@@ -1,0 +1,187 @@
+---
+title: Predicting the Unpredictable- Analysing Rowing in Cambridge pt. 1
+author: Robert Hickman
+date: '2019-11-24'
+slug: cam_rowing_1
+output: pdf_document
+categories: []
+tags:
+  - rowing
+  - machine_learning
+  - rstats
+header:
+  caption: ''
+  image: ''
+---
+
+In my free time away from PhD and data science work, I (used to) enjoy rowing. Aside from obvious benefits like socialising, providing a (very intense) workout, seeing the outdoors at least a few times a week... there are really two things that I love(d) about rowing:
+
+1) It's the sport that is closest to a simple engineering problem. Going fast basically boils down to how in time and how hard you can get 1-8 guys to move an oar through the water. Realistically, you could probably model how good a boat of guys will row just by tracking them on a rowing machine (and I have suspicions that this is what British Rowing etc. do for national teams).
+2) I learnt to row as an undergraduate at Oxford, and really got serious about it as a postgraduate student at Cambridge. This might seem like a irrelevant detail but it's not.
+
+# How rowing usually works
+
+Generally when racing boats, some n number of rowing crews line up alongside each other, and row straight down a lake (usually ~2km). The first boat to cross the finish line is generally considered the winner. For an example of such a race, see this Olympic final from 2012:
+
+<iframe width="560" height="315" src="https://youtu.be/x6wHZNWF7pA?t=655" frameborder="0" allowfullscreen></iframe>
+
+You might notice that there are four men in each boat here, each of whom are rowing. This works well on a reservoir where this race was held, but not so well on (e.g.) the River Cam that flows through Cambridge, which is both a pretty thin river, and has lots of tight corners.
+
+![the river cam](/img/river_cam.png)
+
+# How rowing in Cambridge/Oxford works
+
+Instead of these rivers, boat typically contain 8 rowers, and one cox, who is responsible for steering the boat. In lieu of the space needed to row side by side, various races across the year are run as time trials down a portion of the river. The _real_ highlight of the year however, are two four day competitions in which crews line up one-behind-the-other and attempt to chase down and 'bump' the crew ahead (before being chased down themselves).
+
+<iframe width="560" height="315" src="https://www.youtube.com/watch?v=x6N6-B_ob2k" frameborder="0" allowfullscreen></iframe>
+
+Upon hitting the boat that starts ahead, the two crews switch places the next day and then the race is run again, until hopefully, the positions roughly reflect the speeds of the boats.
+
+# Predicting bumps races
+
+Generally therefore, if two boats line up for a bumps race, the faster one should catch the slower boat (or if the positions are reversed, the faster boat should fail to be caught by the slower boat behind). It _should_ be fairly easy to predict bumps races, but it isn't. The nature of the relative inexperience of lots of crews, the panic of the races, and the pretty tight course means mistakes are made early and often. 
+
+<iframe width="560" height="315" src="https://youtu.be/SCaeOsQmpTs?t=59" frameborder="0" allowfullscreen></iframe>
+
+However, I wanted to see how possible it was. The only real data to train predictions on are the time-trial races that happen before bumps, so I'm going to see how well it's possible to model a bumps race using the implied speeds of crews from these previous time trials.
+
+# Libraries and Data
+
+For this post, I'm only going to do some simple munging and logistic regression, so I only need the (new) version of the Tidyverse (as I'm also going to play with pivot_longer and pivot_shorter for the [first time]()).
+```{r libraries, warning=FALSE,message=FALSE}
+library(tidyverse)
+```
+
+The data comes from my own scraping of race results on the river cam over the last ten years. I'll eventually package this up properly. For now it can be found at [my Github](https://github.com/RobWHickman/CamStroker). Today I'll just read in the raw .csv files.
+
+```{r get_race_results, warning=FALSE,message=FALSE}
+#download the raw data
+#wil lbe packages eventually
+race_results <- read.csv("https://raw.githubusercontent.com/RobWHickman/CamStroker/master/data-raw/cambridge_race_results.csv",
+                         stringsAsFactors = FALSE)
+bumps_results <- read.csv("https://raw.githubusercontent.com/RobWHickman/CamStroker/master/data-raw/cambridge_bumps_results.csv",
+                          stringsAsFactors = FALSE)
+
+```
+
+# Data Munging
+
+We then want to lengthen out the bumps data by days to squeeze as much data as possible out of possible combinations of boats we have data for. I need to line boats up by the start position each day, so I also init a column for this at the end
+
+```{r munge_bumps, warning=FALSE,message=FALSE}
+bumps_long <- bumps_results %>%
+  #pivot bumps results to longer so we can model each day of racing
+  pivot_longer(., starts_with("Day"),
+               names_to = "Day", values_to = "Bump") %>%
+  mutate(Bump = case_when(
+    is.na(Bump) ~ 0,
+    TRUE ~ as.numeric(Bump)
+  )) %>%
+  group_by(Competition, College, Year, Crew, Gender) %>%
+  #calculate day start and end positions
+  mutate(day_end = StartPos - cumsum(Bump)) %>%
+  mutate(day_start = day_end + Bump)
+
+head(bumps_long)
+```
+
+And we want to do the opposite for the race data so we can efficiently join this onto the bumps data. As the speed of the crew is all we care about I calculate this as the course distance / seconds taken to get an idea of roughly how fast each crew is. 
+
+```{r munge_races, warning=FALSE,message=FALSE}
+race_wide <- race_results %>%
+  #calculate implied racing speed
+  mutate(race_id = paste(race, leg),
+         av_speed = distance / seconds) %>%
+  select(Year = year, College = college, Crew = crew, Gender = gender,
+         race_id, av_speed) %>%
+  pivot_wider(., id_cols = c("Year", "College", "Crew", "Gender"),
+              names_from = race_id, values_from = av_speed) %>%
+  #rename to tidy up
+  rename(NSC = `Newnham Short Course NA`,
+         Frbrn = `Fairbairns NA`,
+         WH2H1 = `Winter Head 2 Head leg1`,
+         WH2H2 = `Winter Head 2 Head leg2`,
+         Rbnsn = `Robinson Head NA`) %>%
+  #not much data for Robinson regatta so leave out
+  select(-Rbnsn)
+
+head(race_wide)
+```
+
+Then we simply join the data and calculate the implied speed differential between two crew who start a bumps race behind each other. 
+
+```{r join_data, warning=FALSE,message=FALSE}
+regression_data <- bumps_long %>%
+  ungroup() %>%
+  #join datasets
+  left_join(race_wide, by = c("Year", "College", "Crew", "Gender")) %>%
+  group_by(Competition, Year, Gender, Day) %>%
+  arrange(Competition, Year, Gender, Day, day_start) %>%
+  #calculate speed difference between boats starting bumps data behind each other
+  mutate(frbrn_diff = Frbrn - lag(Frbrn),
+         NSC_diff = NSC - lag(NSC),
+         WH2H1_diff = WH2H1 - lag(WH2H1),
+         WH2H2_diff = WH2H2 - lag(WH2H2)) %>%
+  select(-NSC, -Frbrn, -WH2H1, -WH2H2) %>%
+  #pivot longer for plotting
+  pivot_longer(., frbrn_diff:WH2H2_diff,
+               names_to = "race", values_to = "speed_difference") %>%
+  filter(!is.na(speed_difference)) %>%
+  #tidy up plotting data
+  filter(Bump %in% c(1, 0)) %>%
+  filter(Competition == "Lent")
+
+head(regression_data)
+```
+
+# Plotting Data
+
+We can then plot the data and see if the speed differential of races earlier in theyear is a useful predictor of bumping a boat ahead of you. We can model this as a logistic problem where bumping is either a 1 (to catch the boat ahead) or a 0 (did not catch). This does cut out some data in weird ways that I'll get onto in later posts, but will do for now.
+
+For the logistic regression I use geom_smooth and a binomial generalised linear model. Again, there's more we can explore here, but this is just a quick intro post so we won't worry about standrad error etc. I also split out by Male/Female crews as I imagine gender might play a role.
+
+Given that this week is the first race of the 2019/2020 calendar (Fairbairns) I first limited myself to only data from that race.
+
+```{r plot_fairbairns, warning=FALSE,message=FALSE}
+
+p1 <- regression_data %>%
+  #filter only Fairbairns results
+  filter(race == "frbrn_diff") %>%
+  ggplot(., aes(x = speed_difference, y = Bump)) +
+  geom_point() +
+  #model as a logistic event
+  geom_smooth(method = "glm", 
+    method.args = list(family = "binomial"), 
+    se = FALSE) +
+  facet_wrap(~Gender, scales = "free_x") +
+  theme_minimal()
+
+#plot
+p1
+```
+
+And it seems being faster than a boat ahead of you does increase your chance of bumping, but not a huge amount.
+
+There's good reason to beleive Fairbairns regatta might not be the best predictor of performance later in the year. It's the first race, where many collges are still testing out their crew. It also takes place during a weekday, so many students cannot take part, and is a 4.5km race, instead of the usual 2km of later races and bumps itself.
+
+If we look at how all races predict later bumps success we can see much nicer logistic curves:
+
+```{r plot_all_races, warning=FALSE,message=FALSE}
+#do the same but for all race data
+p2 <- regression_data %>%
+  ggplot(., aes(x = speed_difference, y = Bump)) +
+  geom_point() +
+  geom_smooth(method = "glm", 
+    method.args = list(family = "binomial"), 
+    se = FALSE) +
+  geom_vline(xintercept = 0, colour = "red", linetype = "dashed") +
+  facet_grid(race~Gender, scales = "free_x") +
+  theme_minimal()
+
+p2
+
+```
+
+Especially Newnham Short Course and the two legs of Winter Head 2 Head show nice curves where boats that are faster on these races have a greater chance of bumping later in the year.
+
+There's a lot more to do to properly model a bumps regatta, but the first step of validating our ideas and data seems to show promising results!
