@@ -11,6 +11,469 @@
     <atom:link href="/post/" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>R-inforcement Learning Part One- Tic Tac Toe</title>
+      <link>/post/r-inforcement_learning_one/</link>
+      <pubDate>Thu, 28 Nov 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/r-inforcement_learning_one/</guid>
+      <description>
+
+
+&lt;p&gt;I’m extremely biased, but to me, one of the real success* stories in neuroscience over the last (just over) two decades has been in studying reward signals. Since the &lt;a href=&#34;https://www.ncbi.nlm.nih.gov/pubmed/9054347&#34;&gt;seminal 1997 paper&lt;/a&gt;, a lot of work has gone into figuring out how the brain assigns value to outcomes.&lt;/p&gt;
+&lt;p&gt;*ugh, maybe. This isn’t a blog post about that&lt;/p&gt;
+&lt;p&gt;My PhD project looks at novel ways of eliciting valuation behaviour to study these signals, but as a key part of the modelling involved in this work, it’s important to get a handle on &lt;a href=&#34;https://en.wikipedia.org/wiki/Reinforcement_learning&#34;&gt;reinforcement learning&lt;/a&gt;. When originally working through the &lt;a href=&#34;http://incompleteideas.net/book/the-book.html&#34;&gt;Sutton and Barto books&lt;/a&gt;, I threw together some code a few years ago for the problem sets- mostly in python and MATLAB. As someone who runs a blog nominally about coding in R, however, I thought there might be some value in going through said code and refactoring into R. As R can struggle with the speed necessary for reinforcement learning (which typically relies on large numbers of iterating behaviour), it also provided a good chance to crack out some C++ code using the always excellent &lt;a href=&#34;http://adv-r.had.co.nz/Rcpp.html&#34;&gt;Rcpp package&lt;/a&gt;, which is always worth practicing.&lt;/p&gt;
+&lt;p&gt;In this first example of Reinforcement Learning in R (and C++), we’re going to train our computers to play Noughts and Crosses (or tic tac toe for Americans) to at least/super human level.&lt;/p&gt;
+&lt;p&gt;Let’s get started with the libraries we’ll need. I want to stick to base for speed here, as well as obviously Rcpp. In theory you can easily generalise all the code here to any size board, but I only have tested in with 3x3 boards so YMMV.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#will use ggplot
+#everything else Ive used base of listed packages
+library(ggplot2)
+#Rcpp for some vroom vroom
+library(Rcpp)
+
+#in theory this stuff should work for boards of any size
+#but I haven&amp;#39;t tested that
+board_cols = 3
+board_rows = 3
+squares &amp;lt;- board_cols * board_rows&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The very first thing we’ll want to do is find a way to store the information in a game state and convert between this, and a human readable form.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#function to plot boards in a human readable way
+#not generalised to all board sizes but easy enough to
+plot_board &amp;lt;- function(string) {
+  pieced &amp;lt;- rep(&amp;quot;&amp;quot;, length(string))
+  pieced[which(string == 1)] &amp;lt;- &amp;quot;x&amp;quot;
+  pieced[which(string == -1)] &amp;lt;- &amp;quot;o&amp;quot;
+  pieced[which(string == 0)] &amp;lt;- &amp;quot;*&amp;quot;
+  board &amp;lt;- gsub(&amp;quot; \\|$&amp;quot;, &amp;quot;&amp;quot;, paste(pieced, &amp;quot;|&amp;quot;, collapse = &amp;quot; &amp;quot;))
+  board_lines &amp;lt;- gsub(&amp;quot;(. \\| . \\| . )\\|( . \\| . \\| . )\\|( . \\| . \\| .)&amp;quot;, 
+                      &amp;quot;\n \\1\n-----------\n\\2\n-----------\n\\3&amp;quot;,
+                      board
+                      )
+  return(writeLines(board_lines))
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Next we’re going to want to find every possible state we might encounter so we can test for any exceptions. I’m storing strings as a list of 9 0s (unused), 1s (Xs) and -1s (Os) representing the squares 1-&amp;gt;9 from the top left corner.&lt;/p&gt;
+&lt;p&gt;It’s simple and fast enough to do this with a quick R function&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get all possible boards
+possible_boards &amp;lt;- gtools::permutations(
+  board_cols, squares,
+  c(-1,0,1),
+  repeats.allowed = TRUE
+  )
+
+#can only have a sum of 1 or 0
+possible_boards &amp;lt;- possible_boards[which(rowSums(possible_boards) %in% c(0,1)),]
+
+#plot a random example
+plot_board(c(1,0,0,-1,0,0,0,0,1))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 
+##  x | * | * 
+## -----------
+##  o | * | * 
+## -----------
+##  * | * | x&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we have the representations of any possible board, we want to find a way to store this is a more compressed format as a hash. I originally wrote a pretty quick function to do this in R and then threw up a quick one underneath compiled in Rcpp for comparison.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get a unique hash for each board
+calc_hash &amp;lt;- function(board) {
+  hash &amp;lt;- 0
+  for(piece in seq(squares)) {
+    hash &amp;lt;- (hash*board_cols) + board[piece] + 1
+  }
+  return(hash)
+}
+
+#and the equivalent in Cpp
+cppFunction(&amp;#39;int calc_hashCpp(NumericVector board, int squaresize) {
+    //need to init vals in C++
+    int hash = 0;
+    int boardsize = squaresize * squaresize;
+    
+    //C++ for loops have start, end, and by
+    for (int i=0; i &amp;lt;= boardsize - 1; ++i) {
+      hash = (hash * squaresize) + board[i] + 1;
+    }
+    
+    //always have to declare a return
+    return hash;
+}&amp;#39;)
+
+#get a list of all the possible hashes
+hashes &amp;lt;- lapply(purrr::array_tree(possible_boards, margin = 1),
+                 calc_hashCpp, squaresize = 3)
+
+#should all be unique
+which(duplicated(hashes))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## integer(0)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In order to play noughts and crosses, we then need some way for a game to end. An easy way to check this is when our board string (0s,1s,and-1s) add up to 3/-3 along any row, column or diagonal.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#first we need a function to check when a game has been won
+cppFunction(&amp;#39;int check_winnerCpp(NumericVector board) {
+  int winner = 0;
+
+  int vec_length = board.size();
+  int square_size = sqrt(vec_length);
+
+  //check rows and columns for a winner
+  for (int i=0; i &amp;lt;= square_size - 1; ++i) {
+    //check row i
+    NumericVector row_squares = NumericVector::create(0,1,2);
+    row_squares = row_squares + (square_size * i);
+    NumericVector row_elements = board[row_squares];
+    int row_sum = sum(row_elements);
+    if(abs(row_sum) == square_size) {
+      if(row_sum &amp;gt; 0) {
+        winner = 1;
+      } else {
+        winner = -1;
+      }
+    }
+    
+    //check col i
+    NumericVector col_squares = NumericVector::create(0,3,6);
+    col_squares = col_squares + i;
+    NumericVector col_elements = board[col_squares];
+    int col_sum = sum(col_elements);
+    if(abs(col_sum) == square_size) {
+      if(col_sum &amp;gt; 0) {
+        winner = 1;
+      } else {
+        winner = -1;
+      }
+    }
+  }
+  
+  //check the diagonalsNumericVector 
+  NumericVector rising_diag_squares = NumericVector::create();
+  NumericVector falling_diag_squares = NumericVector::create();
+  for (int i=0; i &amp;lt;= square_size - 1; ++i) {
+    int rising_diag_square = (square_size * i) + i;
+    rising_diag_squares.push_back(rising_diag_square);
+    
+    int falling_diag_square = (square_size - 1) * (i+1);
+    falling_diag_squares.push_back(falling_diag_square);
+  }
+  
+  NumericVector rising_diag_elements = board[rising_diag_squares];
+  NumericVector falling_diag_elements = board[falling_diag_squares];
+  int rising_sum = sum(rising_diag_elements);
+  int falling_sum = sum(falling_diag_elements);
+  
+  if(abs(falling_sum) == square_size) {
+    if(falling_sum &amp;gt; 0) {
+      winner = 1;
+    } else {
+      winner = -1;
+    }
+  }
+  if(abs(rising_sum) == square_size) {
+    if(rising_sum &amp;gt; 0) {
+      winner = 1;
+    } else {
+      winner = -1;
+    }
+  }
+    
+  //return the winner
+  //0 for no winner, 999 for draw
+  return winner;
+}&amp;#39;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then apply this function to every possible board and find the ones that indicate a winning state. We also init a data frame containing all possible boards, their hash, and their ‘value’ (0 for all for now, more on this later). Finally, I plot the first one in this set just because why not?&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find which boards are winning positions
+winning &amp;lt;- purrr::map(purrr::array_tree(possible_boards, margin = 1), check_winnerCpp)
+
+#going to create a df to store the values of all moves
+moves_df &amp;lt;- data.frame(hash = unlist(hashes),
+                       value = 0,
+                       winning = unlist(winning))
+
+#store all boards as a list
+#purrr::aray_tree is a really nice way to convert matrix to lists
+moves_df$board = purrr::array_tree(possible_boards, margin = 1)
+
+#plot the first board just why not
+plot_board(unlist(moves_df$board[1]))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 
+##  o | o | o 
+## -----------
+##  o | * | x 
+## -----------
+##  x | x | x&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;As we can see, we still have some impossible boards here. This particular board will never occur in actual play because X wins before O can make a move to complete the top row. It doesn’t matter, but useful to keep in mind for a plot later.&lt;/p&gt;
+&lt;p&gt;We then need a function telling the computer how to make a move. For this post we’re going to use what’s called ‘E (epsilon)-greedy’ selection. A computer has a parameter epsilon such that&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\begin{cases}
+    v &amp;amp;\text{if } \epsilon \leq \rho\\
+    V_{max} &amp;amp;\text{if } \epsilon &amp;gt; \rho\\
+\end{cases} \]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;if epsilon is greater than a random number rho, the computer makes the most valuable choice possible. It chooses whatever it thinks (rightly or wrongly) will lead to the best outcome. This is called &lt;em&gt;exploitation&lt;/em&gt;. If epsilon is less than or equal to rho, the computer randomly chooses any possible action v. This is known as &lt;em&gt;exploration&lt;/em&gt; to test any possibly rewarding but unvalued paths.&lt;/p&gt;
+&lt;p&gt;(I may have gotten epsilon the wrong way round here. It really doesn’t matter at all.)&lt;/p&gt;
+&lt;p&gt;Let’s implement this in C++&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;cppFunction(&amp;#39;int choose_moveCpp(NumericVector epsilon, NumericVector values) {
+  //random number to decide if computer should explore or exploit
+  NumericVector random_number = runif(1);
+  int move_choice = 0;
+  NumericVector choices = NumericVector::create();
+  
+  //exploit the best move
+  if(epsilon[0] &amp;gt; random_number[0]) {
+    double max = Rcpp::max(values);
+    std::vector&amp;lt; int &amp;gt; res;
+    
+    int i;
+    for(i = 0; i &amp;lt; values.size(); ++i) {
+      if(values[i] == max) { 
+        res.push_back(i);
+      }
+    }
+    IntegerVector max_indexes(res.begin(), res.end());
+    if(max_indexes.size() &amp;gt; 1) {
+      std::random_shuffle(max_indexes.begin(), max_indexes.end());
+      move_choice = max_indexes[0] + 1;
+    } else {
+      move_choice = max_indexes[0] + 1;
+    }
+   //explore all moves randomly
+  } else {
+    int potential_choices = values.size();
+    choices = seq(1, potential_choices);
+    std::random_shuffle(choices.begin(), choices.end());
+    move_choice = choices[0];
+  }
+  
+  return move_choice;
+}&amp;#39;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We also want a little helper func to find all the possible hashes so we can look up which moves a computer can make before choosing between them.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find all possible next moves
+get_next_hashes &amp;lt;- function(board, piece) {
+  unused &amp;lt;- which(board == 0)
+  
+  next_boards &amp;lt;- lapply(unused, function(x, piece) {
+    board[x] &amp;lt;- piece
+    return(board)
+  }, piece = piece)
+  #get the hashes of the next boards
+  hashes &amp;lt;- lapply(next_boards, calc_hashCpp, squaresize = 3)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Finally, we need to reward the computer for making good actions, and punish it for making bad ones. We’ll do this using Temporal Difference (TD) error learning.&lt;/p&gt;
+&lt;p&gt;The computer looks at how good an end point was (for noughts and crosses this can be a win, lose, or draw) and then decides if that outcome is better or worse than it was expecting. It then re-evaluates its beliefs about the choices it made to lead to that end state. It can be formulated as&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[V_{state} = V_{state} + TD  error \cdot scalar \]&lt;/span&gt;
+the scalar here is the &lt;em&gt;learning rate&lt;/em&gt; of the computer. Do we want it to forget everything it new about the world seconds earlier and take only the most recent information (1), or update it’s beliefs very slowly (~0). We’ll refer to this as lr in subsequent equations.&lt;/p&gt;
+&lt;p&gt;The TD error itself is calculated as&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[TD error = (\gamma \cdot reward - V_{state}) \]&lt;/span&gt;
+Where gamma acts to make sure we don’t overfit too far back into the past. It reduces the reward as you go further back and is set between 0 and 1. The reward here will (e.g.) be 1 if the computer has just won with it’s latest move, otherwise it will be the value of the state the computer might move into.&lt;/p&gt;
+&lt;p&gt;Putting these together we get&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ V_{state} = V_{state} + lr \cdot (\gamma \cdot V_{state+1} - V_{state}) \]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;Let’s implement this using Rcpp&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#function to feed reward back to the agent based on results
+cppFunction(&amp;#39;NumericVector backfeed_rewardCpp(NumericVector values, double reward, double learning_rate, double gamma) {
+  int states = values.size();
+  NumericVector new_values = NumericVector::create();
+  
+  //go from last state backwards
+  for( int state = states-1; state &amp;gt;= 0; state--) {
+    double new_value = values[state] + learning_rate * ((gamma * reward) - values[state]);
+    new_values.push_back(new_value);
+    //recurse the reward
+    reward = new_value;
+  }
+  return new_values;
+}&amp;#39;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we can start actually playing games! I wrote out a long function in R to play through the various bits. It surely could be refactored a little more concisely but it works for now and I was getting tired by this point.&lt;/p&gt;
+&lt;p&gt;We first add two functions (one to make moves/play the game, and one to update the values using the formula above) then put it all into to one uber-function&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#function to choose and implement computer moves
+computer_move &amp;lt;- function(piece, board, epsilon) {
+  #get potential moves
+  potential_move_hashes &amp;lt;- get_next_hashes(board, piece)
+  #get the values of the potential moves
+  potential_move_vals &amp;lt;- moves_df$value[
+    unlist(lapply(potential_move_hashes, function(x) which(moves_df$hash == x)))]
+  #choose move based on rewards
+  player_move &amp;lt;- choose_moveCpp(epsilon, potential_move_vals)
+  #update the board with the new move
+  updated_board &amp;lt;- unlist(moves_df$board[
+    moves_df$hash == unlist(potential_move_hashes)[player_move]])
+  return(updated_board)
+}
+
+#function to get the values for each state based on the reward
+update_move_vals &amp;lt;- function(player1_reward, player2_reward, 
+                             player1_hashes, player2_hashes,
+                             learning_rate,gamma) {
+  player1_newvals &amp;lt;- backfeed_rewardCpp(moves_df$value[
+    unlist(lapply(player1_hashes, function(x) which(moves_df$hash == x)))],
+    player1_reward, learning_rate, gamma)
+  player2_newvals &amp;lt;- backfeed_rewardCpp(moves_df$value[
+    unlist(lapply(player2_hashes, function(x) which(moves_df$hash == x)))],
+    player2_reward, learning_rate, gamma)
+  new_vals &amp;lt;- list(player1_newvals, player2_newvals)
+  return(new_vals)
+}
+
+#function to get two computers to play each other
+play_game_computers &amp;lt;- function(player1_epsilon, 
+                                player2_epsilon,
+                                learning_rate, gamma) {
+  #init board
+  board &amp;lt;- rep(0, squares)
+  winner &amp;lt;- 0
+  moves &amp;lt;- 0
+  #init hash storage
+  player1_hashes &amp;lt;- c()
+  player2_hashes &amp;lt;- c()
+  
+  #keep moving until game is over
+  while(winner == 0 &amp;amp; moves &amp;lt; 9) {
+    #iterate moves
+    moves &amp;lt;- moves + 1
+    #player 1 moves
+    board &amp;lt;- computer_move(1, board, player1_epsilon)
+    player1_hashes &amp;lt;- append(calc_hashCpp(board, board_cols), player1_hashes)
+    winner &amp;lt;- check_winnerCpp(board)
+    
+    #same for player 2
+    if(winner == 0  &amp;amp; moves &amp;lt; 9) {
+      moves &amp;lt;- moves + 1
+      board &amp;lt;- computer_move(-1, board, player1_epsilon)
+      player2_hashes &amp;lt;- append(calc_hashCpp(board, board_cols), player2_hashes)
+      winner &amp;lt;- check_winnerCpp(board)
+    }
+  }
+  
+  #update policies
+  if(winner == 1) {
+    message &amp;lt;- &amp;quot;x wins!&amp;quot;
+    new_vals &amp;lt;- update_move_vals(1, 0, player1_hashes, player2_hashes,
+                                 learning_rate, gamma)
+  } else if(winner == -1) {
+    message &amp;lt;- &amp;quot;o wins!&amp;quot;
+    new_vals &amp;lt;- update_move_vals(0, 1, player1_hashes, player2_hashes, 
+                                 learning_rate, gamma)
+  } else {
+    message &amp;lt;- &amp;quot;draw!&amp;quot;
+    new_vals &amp;lt;- update_move_vals(0.1, 0.5, player1_hashes, player2_hashes, learning_rate, gamma)
+  }
+  #push the values back into the dictionary data frame
+  moves_df$value[unlist(lapply(player1_hashes, function(x) which(moves_df$hash == x)))] &amp;lt;&amp;lt;- new_vals[[1]]
+  moves_df$value[unlist(lapply(player2_hashes, function(x) which(moves_df$hash == x)))] &amp;lt;&amp;lt;- new_vals[[2]]
+  return(message)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So that the computer can learn the value of moves, we first want to run this on a training epoch. We’ll get the computer to play 100000 games against itself with an epsilon &amp;lt; 1 so that it explores the game state and learns by reinforcement. We’ll then plot the values it’s learn for all moves based upon if they are winning or not.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#test on 10000 games with a little randomness thrown in
+train &amp;lt;- purrr::rerun(100000, play_game_computers(0.8, 0.8, 0.35, 0.9))
+
+#test how fast our function is
+microbenchmark::microbenchmark(play_game_computers(0.8, 0.8, 0.35, 0.9), times = 1000)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## Unit: microseconds
+##                                      expr   min      lq     mean median
+##  play_game_computers(0.8, 0.8, 0.35, 0.9) 838.7 1061.05 1352.258 1222.2
+##       uq    max neval
+##  1361.45 4548.4  1000&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot the updated values of moves
+p1 &amp;lt;- ggplot(moves_df, aes(x = value, group = as.character(winning))) +
+  geom_density(alpha = 0.5, aes(fill = as.character(winning))) +
+  scale_fill_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;green&amp;quot;), name = &amp;quot;winning move&amp;quot;) +
+  theme_minimal()
+p1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-11-28-Rinforcement_learning_part_1_files/figure-html/train_computer-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Thankfully the computer has learned that winning moves are more valuable than non-winning moves! The reason there are peaks at 0 is because these are ‘winning’ moves that are impossible as referenced nearer the top of the post.&lt;/p&gt;
+&lt;p&gt;We’ll then run 2500 testing games where the computer is trying to play optimally. Noughts and crosses is a &lt;a href=&#34;https://en.wikipedia.org/wiki/Solved_game&#34;&gt;solved&lt;/a&gt; game. Unless a play chooses a non-optimal move, the game should end in a draw. Let’s see what proportion actually do end in a draw by grouping every 500 games of the testing set.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#run on an extra 2500 games with no exploration (just exploit)
+test &amp;lt;- purrr::rerun(2500, play_game_computers(1, 1, 0.35, 0.9))
+
+#group by each 500 games
+test_df &amp;lt;- data.frame(result = unlist(test),
+                      group = rep(1:5, each = 500))
+
+#plot percentage of games that are drawn
+p2 &amp;lt;- ggplot(test_df, aes(x = group, fill = result)) +
+  geom_bar(stat = &amp;quot;count&amp;quot;) +
+  labs(x = &amp;quot;group (every 500 games)&amp;quot;) +
+  theme_minimal()
+p2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-11-28-Rinforcement_learning_part_1_files/figure-html/test_computer-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;And it seems like the computer learns after a final bit of optimisation to always draw! hooray!!&lt;/p&gt;
+&lt;p&gt;Finally, because obviously this post wouldn’t be complete without human testing, I wrote a quick and dirty function to play a game against the now proficient computer. Enjoy below!!&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;player_move &amp;lt;- function(board){
+  #find free spaces a move can be made into
+  free_spaces &amp;lt;- which(board == 0)
+  cat(&amp;quot;Please move to one of the following board spaces: [&amp;quot;, free_spaces,  &amp;quot;]\n&amp;quot;)
+  #user input
+  submitted_move &amp;lt;- as.integer(readline(prompt = &amp;quot;&amp;quot;))
+  #need valid input
+  while(!submitted_move %in% free_spaces) {
+    if(submitted_move == 0) {
+      break
+    } else {
+      cat(&amp;quot;Illegal Move! Please move to one of the following board spaces: [&amp;quot;, free_spaces,  &amp;quot;] or press 0 to quit\n&amp;quot;)
+      submitted_move &amp;lt;- as.integer(readline(prompt = &amp;quot;&amp;quot;))
+    }
+  }
+  #return move
+  return(submitted_move)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#only need a computer epsilon and which piece (turn order)
+play_game_human &amp;lt;- function(human_piece, computer_epsilon = 1) {
+  board &amp;lt;- rep(0, 9)
+  moves &amp;lt;- 0
+  winner &amp;lt;- 0
+  
+  #play the game as before but with a human player
+  if (human_piece == 1) {
+    while (winner == 0 &amp;amp; moves &amp;lt; 9) {
+      moves &amp;lt;- moves + 1
+      plot_board(board)
+      human_move &amp;lt;- player_move(board)
+      
+      if (human_move == 0) {
+        break
+      } else {
+        board[human_move] &amp;lt;- human_piece
+      }
+      i &amp;lt;&amp;lt;- board
+      j &amp;lt;&amp;lt;- board
+      winner &amp;lt;- check_winnerCpp(board)
+      if (winner == 0 &amp;amp; moves &amp;lt; 9) {
+        moves &amp;lt;- moves + 1
+        piece &amp;lt;- human_piece * -1
+
+        board &amp;lt;- computer_move(-1, board, computer_epsilon)
+        winner &amp;lt;- check_winnerCpp(board)
+      }
+    }
+  } else {
+    while (winner == 0 &amp;amp; moves &amp;lt; 9) {
+      moves &amp;lt;- moves + 1
+      piece &amp;lt;- human_piece * -1
+
+      board &amp;lt;- computer_move(-1, board, player1_epsilon)
+      winner &amp;lt;- check_winnerCpp(board)
+
+      if (winner == 0 &amp;amp; moves &amp;lt; 9) {
+        moves &amp;lt;- moves + 1
+        plot_board(board)
+        human_move &amp;lt;- player_move(board)
+        if (human_move == 0) {
+          break
+        } else {
+          board[human_move] &amp;lt;- human_piece
+        }
+        winner &amp;lt;- check_winnerCpp(board)
+      }
+    }
+  }
+  #little ending flavour
+  if (winner == human_piece) {
+    print(&amp;quot;you win!!&amp;quot;)
+  } else if(winner == -human_piece) {
+    print(&amp;quot;oh no! you lost!&amp;quot;)
+  } else {
+    print(&amp;quot;a draw..&amp;quot;)
+  }
+  plot_board(board)
+}
+
+#run like:
+play_game_human(1, 1)&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Predicting the Unpredictable- Analysing Rowing in Cambridge pt. 1</title>
       <link>/post/cam_rowing_1/</link>
       <pubDate>Sun, 24 Nov 2019 00:00:00 +0000</pubDate>
@@ -5547,352 +6010,6 @@ p &amp;lt;- ggplot() +
         plot.margin = margin(1, 1, 1, 1, &amp;quot;cm&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;../../img/south_africa.png&#34; alt=&#34;chlorodot map of South African languages&#34; /&gt;&lt;/p&gt;
 &lt;p&gt;Enjoy!&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>The Knowledge 4th August 2018</title>
-      <link>/post/the-knowledge-4th-august-2018/</link>
-      <pubDate>Sat, 04 Aug 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/the-knowledge-4th-august-2018/</guid>
-      <description>
-
-
-&lt;p&gt;The Guardian publish a weekly set of questions and answers on a variety of football minutiae at &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt;. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(rvest)
-library(dplyr)
-library(magrittr)
-library(data.table)
-library(zoo)
-library(ggplot2)
-library(rvest)
-library(stringr)
-
-#jalapic/engsoccerdata
-library(engsoccerdata)&lt;/code&gt;&lt;/pre&gt;
-&lt;div id=&#34;we-aint-going-to-the-town..&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;We Ain’t Going To The Town..&lt;/h1&gt;
-&lt;p&gt;&lt;a href=&#34;https://twitter.com/topes_lose/status/1023537060668473344?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E1023537060668473344&amp;amp;ref_url=https%3A%2F%2Fwww.theguardian.com%2Ffootball%2F2018%2Faug%2F01%2Ffootballers-who-have-backed-out-of-a-transfer-for-another-late-in-the-day&#34;&gt;‘This season, Tranmere Rovers return to contest League Two alongside eight teams with the suffix Town, including six successive fixtures against these clubs over the New Year. What is the record for successive fixtures versus clubs with the same (or no) prefix or suffix?’&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;For this question I decided to ignore prefixes as the dataset I’m using doesn’t have any that could be matches between teams except the ‘West’ in West Ham and West Bromwich Albion. That dataset is the excellent engsoccerdata from James Curley found at his github &lt;a href=&#34;https://github.com/jalapic/engsoccerdata&#34;&gt;here&lt;/a&gt; and on CRAN.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#take all of the english soccer data in the package and bind it together
-england_data &amp;lt;- bind_rows(
-    select(engsoccerdata::england,
-           .data$home, .data$visitor, date = .data$Date),
-    select(engsoccerdata::englandplayoffs,
-           .data$home, .data$visitor, date = .data$Date),
-    select(engsoccerdata::england1939,
-           .data$home, .data$visitor, date = .data$Date)) %&amp;gt;%
-  setDT() %&amp;gt;%
-  #convert the date to date class
-  .[, date := as.Date(date)]
-
-#get a list of each unique team in the dataset
-all_teams &amp;lt;- unique(c(as.character(england_data$home),
-                      as.character(england_data$visitor)))
-
-#melt the dataset by each teams matches
-find_chains &amp;lt;- rbindlist(lapply(all_teams, function(team) {
-  england_data %&amp;gt;%
-    .[home == team | visitor == team] %&amp;gt;%
-    .[, matching_team := team]
-  })) %&amp;gt;%
-  .[home == matching_team, other := visitor] %&amp;gt;%
-  .[visitor == matching_team, other := home] %&amp;gt;%
-  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;)] %&amp;gt;%
-  #get the suffixes and prefixes of the other team
-  .[, other_prefix := gsub(&amp;quot; .*&amp;quot;, &amp;quot;&amp;quot;, other)] %&amp;gt;%
-  .[, other_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, other)] %&amp;gt;%
-  #arrange by team and date
-  .[order(matching_team, date)] %&amp;gt;%
-  #convert to an id
-  .[, suffix_id := as.numeric(as.factor(other_suffix))] %&amp;gt;%
-  #if playing consecutively against the same suffix id (ignoring prefixes for now) put in same &amp;#39;chain&amp;#39;
-  .[, match := suffix_id - lead(suffix_id), by = &amp;quot;matching_team&amp;quot;] %&amp;gt;%
-  .[match == 0 &amp;amp; lead(match) != 0, chain_id := 1:.N] %&amp;gt;%
-  .[match == 0] %&amp;gt;%
-  .[, chain_id := na.locf(chain_id, fromLast = TRUE)] %&amp;gt;%
-  .[, chain_length := .N, by = chain_id] %&amp;gt;%
-  #take only chains at least as long as Tranmere&amp;#39;s run (6)
-  .[chain_length &amp;gt; 5] %&amp;gt;%
-  .[order(chain_length)] %&amp;gt;%
-  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;, &amp;quot;chain_length&amp;quot;)]
-
-#print the chains of equal length to Tranmere&amp;#39;s run
-print(find_chains)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##           date  matching_team               other chain_length
-##  1: 1950-12-30   Chesterfield      Leicester City            6
-##  2: 1951-01-13   Chesterfield     Manchester City            6
-##  3: 1951-01-20   Chesterfield       Coventry City            6
-##  4: 1951-02-03   Chesterfield        Cardiff City            6
-##  5: 1951-02-17   Chesterfield     Birmingham City            6
-##  6: 1951-02-24   Chesterfield        Swansea City            6
-##  7: 2009-03-21 Leicester City   Colchester United            6
-##  8: 2009-03-28 Leicester City Peterborough United            6
-##  9: 2009-04-04 Leicester City     Carlisle United            6
-## 10: 2009-04-11 Leicester City     Hereford United            6
-## 11: 2009-04-13 Leicester City        Leeds United            6
-## 12: 2009-04-18 Leicester City     Southend United            6
-## 13: 1921-05-02         Fulham           Hull City            7
-## 14: 1921-05-07         Fulham           Hull City            7
-## 15: 1921-08-27         Fulham       Coventry City            7
-## 16: 1921-08-29         Fulham      Leicester City            7
-## 17: 1921-09-03         Fulham       Coventry City            7
-## 18: 1921-09-05         Fulham      Leicester City            7
-## 19: 1921-09-10         Fulham           Hull City            7
-## 20: 1920-04-17  Leyton Orient     Birmingham City            7
-## 21: 1920-04-24  Leyton Orient     Birmingham City            7
-## 22: 1920-04-26  Leyton Orient      Leicester City            7
-## 23: 1920-05-01  Leyton Orient      Leicester City            7
-## 24: 1920-08-28  Leyton Orient      Leicester City            7
-## 25: 1920-08-30  Leyton Orient        Cardiff City            7
-## 26: 1920-09-04  Leyton Orient      Leicester City            7
-## 27: 1920-10-09   Notts County          Stoke City            7
-## 28: 1920-10-16   Notts County          Stoke City            7
-## 29: 1920-10-23   Notts County        Cardiff City            7
-## 30: 1920-10-30   Notts County        Cardiff City            7
-## 31: 1920-11-06   Notts County       Coventry City            7
-## 32: 1920-11-13   Notts County       Coventry City            7
-## 33: 1920-11-20   Notts County      Leicester City            7
-##           date  matching_team               other chain_length&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;so In fact an identical length chain on matching suffixes has occured twice, with Chesterfield playing a range of cities at the start of 1951 in League Two, and much more recently, Leicester playing 6 different Uniteds in a row at the tail end of the 2008/2009 season. This is also the season that saw them recover from being relegated from the Chmapionship and start moving towards winning the title in 2015-2016 season.&lt;/p&gt;
-&lt;p&gt;Some longer chains involving cities happened in the 1920-1921 seasons in the Second Division, but it seems like the scheduling worked differently then and teams played back to back more, so doesn’t really count.&lt;/p&gt;
-&lt;p&gt;Having originally misread the question, I also wanted to find out the longest chain of a team playing teams that matched &lt;em&gt;their own&lt;/em&gt; suffix. We can do this using a similar method&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;matching_fixtures &amp;lt;- england_data %&amp;gt;%
-  #get only matches between teams with matching prefix/suffixes
-  .[, home_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, home)] %&amp;gt;%
-  .[, away_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, visitor)] %&amp;gt;%
-  .[home_suffix == away_suffix, match := home_suffix] %&amp;gt;%
-  .[!is.na(match)] %&amp;gt;%
-  #remove matches where teams from the same city play each other
-  .[!match %in% c(&amp;quot;Bradford&amp;quot;, &amp;quot;Bristol&amp;quot;, &amp;quot;Burton&amp;quot;, &amp;quot;Manchester&amp;quot;, &amp;quot;Sheffield&amp;quot;)]
-
-#get all the teams that have played teams with matching suffixes
-matching_teams &amp;lt;- unique(c(as.character(matching_fixtures$home),
-                           as.character(matching_fixtures$visitor)))
-
-#elongate the data and look for chains
-find_chains &amp;lt;- rbindlist(lapply(matching_teams, function(team) {
-  england_data %&amp;gt;%
-    .[home == team | visitor == team] %&amp;gt;%
-    .[order(date)] %&amp;gt;%
-    .[, matching_team := team]
-  })) %&amp;gt;%
-  .[home == matching_team, other := visitor] %&amp;gt;%
-  .[visitor == matching_team, other := home] %&amp;gt;%
-  #id matches and remove matches not involving teams with identical suffixes
-  .[, match_id := 1:.N, by = matching_team] %&amp;gt;%
-  .[!is.na(match)] %&amp;gt;%
-  #find chains of identical suffixed matches
-  .[, chain := match_id - lag(match_id)] %&amp;gt;%
-  .[chain == 1 &amp;amp; lag(chain) != 1, chain_id := 1:.N] %&amp;gt;%
-  .[chain == 1] %&amp;gt;%
-  .[, chain_id := na.locf(chain_id)] %&amp;gt;%
-    .[, chain_length := .N, by = chain_id] %&amp;gt;%
-  #take only chains at least as long as Tranmere&amp;#39;s run (6)
-  .[chain_length &amp;gt; 4] %&amp;gt;%
-  .[order(chain_length)] %&amp;gt;%
-  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;, &amp;quot;chain_length&amp;quot;)]
-
-print(find_chains)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##           date   matching_team             other chain_length
-##  1: 1919-12-13      Stoke City   Birmingham City            5
-##  2: 1919-12-20      Stoke City    Leicester City            5
-##  3: 1919-12-25      Stoke City     Coventry City            5
-##  4: 1919-12-26      Stoke City     Coventry City            5
-##  5: 1919-12-27      Stoke City    Leicester City            5
-##  6: 1919-09-01       Hull City        Stoke City            5
-##  7: 1919-09-06       Hull City   Birmingham City            5
-##  8: 1919-09-08       Hull City        Stoke City            5
-##  9: 1919-09-13       Hull City        Leeds City            5
-## 10: 1919-09-20       Hull City        Leeds City            5
-## 11: 1988-09-24 Carlisle United  Rotherham United            5
-## 12: 1988-09-30 Carlisle United  Cambridge United            5
-## 13: 1988-10-04 Carlisle United Colchester United            5
-## 14: 1988-10-08 Carlisle United   Hereford United            5
-## 15: 1988-10-15 Carlisle United    Torquay United            5&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So the record for that is only slightly shorter! with Stoke and Hull City playing a range of cities in the 1919-1920 season (but see above for scheduling differences) and Carlisle United playing 5 other different Uniteds in a row in the old Fourth Division.&lt;/p&gt;
-&lt;div id=&#34;answer&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Answer&lt;/h2&gt;
-&lt;p&gt;The record is 7 matches set by Notts County, Leyton Orient, and Fulham in 1920/1921 playing 7 teams with the suffix ‘city’ in a row. The Leyton Orient and Fulham chains stretch over the end of one season and into the next, so only Notts County really satisifies the question. However, the scheduling in these years involved a lot of back to back matches and so is cheating a bit.&lt;/p&gt;
-&lt;p&gt;More recently Chesterfield played 6 different teams with the suffix ‘city’ in a row in 1950/1951, and Leceister played 6 different ’united’s in a row in their promotion season from League One in 2008/2009.&lt;/p&gt;
-&lt;p&gt;Even more bizarre, Carlisle United played 5 other different United’s at the start of the 1988/1989 old Fourth Division season.&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div id=&#34;youth-of-the-nation&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Youth Of The Nation&lt;/h1&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.theguardian.com/football/2018/aug/01/footballers-who-have-backed-out-of-a-transfer-for-another-late-in-the-day&#34;&gt;“If Lucas Hernández was born a year and a half later, his age would be a lower than his shirt number (21). Have any World Cup winners achieved this?” muses Edward Gibson.&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;The easiest way to check this is just to scrape all of the squads off of the wiki pages for the World Cups. I only did from 1954 onwards as before this the squad no and birthdate data is a bit patchy.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#links to the world cup squads pages
-wiki_cup_squads &amp;lt;- sprintf(&amp;quot;https://en.wikipedia.org/wiki/%s_FIFA_World_Cup_squads&amp;quot;,
-                           seq(1954, 2018, by = 4))
-
-#scrape all the player data we need
-world_cup_squads &amp;lt;- rbindlist(lapply(wiki_cup_squads[1:17], function(link) {
-  year &amp;lt;- gsub(&amp;quot;.*\\/wiki\\/&amp;quot;, &amp;quot;&amp;quot;, gsub(&amp;quot;_FIFA_World.*&amp;quot;, &amp;quot;&amp;quot;, link))
-  read &amp;lt;- read_html(link)
-  
-  sq_no &amp;lt;- read %&amp;gt;% 
-    html_nodes(&amp;quot;.plainrowheaders td:nth-child(1)&amp;quot;) %&amp;gt;%
-    html_text() %&amp;gt;%
-    as.numeric()
-  sq_names &amp;lt;- read %&amp;gt;%
-    html_nodes(&amp;quot;.plainrowheaders a:nth-child(1)&amp;quot;) %&amp;gt;% 
-    html_text() %&amp;gt;%
-    .[. != &amp;quot;&amp;quot;] %&amp;gt;%
-    .[!grepl(&amp;quot;^\\[&amp;quot;, .)] %&amp;gt;%
-    .[. != &amp;quot;Unattached&amp;quot;] %&amp;gt;% 
-    .[!grepl(&amp;quot;captain&amp;quot;, .)]
-  sq_dobs &amp;lt;- read %&amp;gt;% 
-    html_nodes(&amp;quot;.plainrowheaders td:nth-child(4)&amp;quot;) %&amp;gt;%
-    html_text() %&amp;gt;%
-    str_extract(., &amp;quot;[0-9]{4}-[0-9]{2}-[0-9]{2}&amp;quot;) %&amp;gt;% 
-    as.Date()
-  countries &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;h3 .mw-headline&amp;quot;) %&amp;gt;% 
-    html_text() %&amp;gt;% 
-    trimws()
-
-  if(year &amp;gt; 2006) countries &amp;lt;- countries[1:32]
-  
-  squad_data &amp;lt;- data.frame(name = sq_names,
-                           no = sq_no,
-                           dob = sq_dobs,
-                           year= year) %&amp;gt;%
-    setDT() %&amp;gt;%
-    .[!grepl(&amp;quot;Nery Pumpido&amp;quot;, name)] %&amp;gt;%
-    .[no == 1, country := countries] %&amp;gt;%
-    .[, country := na.locf(country)] %&amp;gt;%
-    .[, c(&amp;quot;name&amp;quot;, &amp;quot;no&amp;quot;, &amp;quot;dob&amp;quot;, &amp;quot;year&amp;quot;, &amp;quot;country&amp;quot;)]
-}))
-
-#find all world cup squad players with shirt numbers greater than their age in years
-young_players &amp;lt;- world_cup_squads %&amp;gt;%
-  .[, age := as.numeric(difftime(as.Date(paste0(year, &amp;quot;-07-01&amp;quot;)), dob)) / 365] %&amp;gt;%
-  .[age &amp;lt; no]
-
-print(young_players)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##                        name no        dob year    country      age
-##   1:   Aleksandar Petakovic 22 1932-08-06 1954 Yugoslavia 21.91507
-##   2:         Ranulfo Cortés 22 1934-07-09 1954     Mexico 19.99178
-##   3:             Coskun Tas 22 1935-04-23 1954     Turkey 19.20274
-##   4:            Omar Méndez 20 1934-08-07 1954    Uruguay 19.91233
-##   5:          Johnny Haynes 21 1934-10-17 1954    England 19.71781
-##  ---                                                              
-## 110: Trent Alexander-Arnold 22 1998-10-07 2018    England 19.74521
-## 111:    José Luis Rodríguez 21 1998-06-19 2018     Panama 20.04658
-## 112:       Dávinson Sánchez 23 1996-06-12 2018   Colombia 22.06575
-## 113:         Dawid Kownacki 23 1997-03-14 2018     Poland 21.31233
-## 114:           Moussa Wagué 22 1998-10-04 2018    Senegal 19.75342&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Overall 114 players are found. England actually have the most players with shirt numbers higher than their age with 9: Haynes, Hooper, Owen, Ferdinand, Carson, Walcott, Barkeley, Shaw, Alexander-Arnold. Surprisingly, most of these young English callups are pretty recent.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p &amp;lt;- ggplot(data = young_players, aes(year)) +
-  geom_bar() +
-  ggtitle(&amp;quot;Number of Players in World Cup Squads With Nos &amp;gt; Age&amp;quot;) +
-  xlab(&amp;quot;World Cup Year&amp;quot;) +
-  ylab(&amp;quot;Number&amp;quot;)
-
-print(p)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-08-05-The_Knowledge_1_files/figure-html/unnamed-chunk-4-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;It seems that the real high point for this was the turn of the century with young players being given a shot at the tail end of squads, which is returning to pre-1998 levels by 2018.&lt;/p&gt;
-&lt;p&gt;The data on these squad players is then merged with the data on the winning teams to find those who played for nations who went on to win the world cup.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;wc_winners &amp;lt;- data.frame(winner = c(&amp;quot;West Germany&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;England&amp;quot;,
-                                    &amp;quot;Brazil&amp;quot;,&amp;quot;West Germany&amp;quot;,&amp;quot;Argentina&amp;quot;,&amp;quot;Italy&amp;quot;,
-                                    &amp;quot;Argentina&amp;quot;,&amp;quot;West Germany&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;France&amp;quot;,
-                                    &amp;quot;Brazil&amp;quot;,&amp;quot;Italy&amp;quot;,&amp;quot;Spain&amp;quot;,&amp;quot;Germany&amp;quot;,&amp;quot;France&amp;quot;),
-                         year = seq(1954, 2018, 4))
-
-#merge data with winners and find matches
-young_players %&amp;lt;&amp;gt;% .[, year := as.numeric(as.character(year))] %&amp;gt;%
-  .[, country := gsub(&amp;quot;(^\\s+)|(\\s+$)&amp;quot;, &amp;quot;&amp;quot;, country)] %&amp;gt;%
-  merge(., wc_winners, by = &amp;quot;year&amp;quot;) %&amp;gt;%
-  .[winner == country]
-
-#kaka only one to have played as per https://en.wikipedia.org/wiki/List_of_FIFA_World_Cup_winners#By_year
-print(young_players)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##    year    name no        dob country      age winner
-## 1: 1970    Leão 22 1949-07-11  Brazil 20.98630 Brazil
-## 2: 1994 Ronaldo 20 1976-09-22  Brazil 17.78356 Brazil
-## 3: 2002    Kaká 23 1982-04-22  Brazil 20.20548 Brazil&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So only the great &lt;a href=&#34;https://en.wikipedia.org/wiki/%C3%89merson_Le%C3%A3o&#34;&gt;Émerson Leão&lt;/a&gt;, &lt;a href=&#34;https://en.wikipedia.org/wiki/Ronaldo_(Brazilian_footballer)&#34;&gt;Ronaldo&lt;/a&gt; and &lt;a href=&#34;https://en.wikipedia.org/wiki/Kak%C3%A1&#34;&gt;Kaka&lt;/a&gt; satisfy the question. However, of these only Kaka played any part during the tournament, which only amounted to 25 minutes vs Costa Rica.&lt;/p&gt;
-&lt;p&gt;Which players &lt;em&gt;could&lt;/em&gt; have satisfied this if they had a larger squad number?&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;youngest_players &amp;lt;- world_cup_squads %&amp;gt;%
-  .[, age := as.numeric(difftime(as.Date(paste0(year, &amp;quot;-07-01&amp;quot;)), dob)) / 365] %&amp;gt;%
-  .[age &amp;lt; 23] %&amp;gt;%
-  .[, country := gsub(&amp;quot;(^\\s+)|(\\s+$)&amp;quot;, &amp;quot;&amp;quot;, country)] %&amp;gt;%
-  .[, year := as.numeric(as.character(year))] %&amp;gt;%
-  merge(., wc_winners, by = &amp;quot;year&amp;quot;) %&amp;gt;%
-  .[winner == country] %&amp;gt;%
-  .[, dob := NULL]
-
-#gives 53 potential results with world cup winners under the age of 23
-print(youngest_players)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##     year                 name no      country      age       winner
-##  1: 1954          Horst Eckel  6 West Germany 22.40822 West Germany
-##  2: 1954     Ulrich Biesinger 18 West Germany 20.91507 West Germany
-##  3: 1958                 Pelé 10       Brazil 17.69863       Brazil
-##  4: 1958               Moacir 13       Brazil 22.13425       Brazil
-##  5: 1958              Orlando 15       Brazil 22.79452       Brazil
-##  6: 1958              Mazzola 18       Brazil 19.95068       Brazil
-##  7: 1962             Coutinho  9       Brazil 19.06849       Brazil
-##  8: 1962                 Pelé 10       Brazil 21.70137       Brazil
-##  9: 1962             Jurandir 14       Brazil 21.64658       Brazil
-## 10: 1962            Mengálvio 17       Brazil 22.55342       Brazil
-## 11: 1962        Jair da Costa 18       Brazil 21.99178       Brazil
-## 12: 1966            Alan Ball  7      England 21.15068      England
-## 13: 1966        Martin Peters 16      England 22.66027      England
-## 14: 1966        Norman Hunter 18      England 22.68767      England
-## 15: 1970            Clodoaldo  5       Brazil 20.77534       Brazil
-## 16: 1970        Marco Antônio  6       Brazil 19.41096       Brazil
-## 17: 1970          Paulo Cézar 18       Brazil 21.05479       Brazil
-## 18: 1970                  Edu 19       Brazil 20.91507       Brazil
-## 19: 1970             Zé Maria 21       Brazil 21.13425       Brazil
-## 20: 1970                 Leão 22       Brazil 20.98630       Brazil
-## 21: 1974        Paul Breitner  3 West Germany 22.83562 West Germany
-## 22: 1974           Uli Hoeneß 14 West Germany 22.50137 West Germany
-## 23: 1974        Rainer Bonhof 16 West Germany 22.27123 West Germany
-## 24: 1978    Alberto Tarantini 20    Argentina 22.59178    Argentina
-## 25: 1978 José Daniel Valencia 21    Argentina 22.75890    Argentina
-## 26: 1982        Franco Baresi  2        Italy 22.16164        Italy
-## 27: 1982     Giuseppe Bergomi  3        Italy 18.53699        Italy
-## 28: 1982      Daniele Massaro 17        Italy 21.12055        Italy
-## 29: 1986       Claudio Borghi  4    Argentina 21.76986    Argentina
-## 30: 1986           Luis Islas 15    Argentina 20.53699    Argentina
-## 31: 1990       Andreas Möller 17 West Germany 22.84384 West Germany
-## 32: 1994              Ronaldo 20       Brazil 17.78356       Brazil
-## 33: 1998       Patrick Vieira  4       France 22.03562       France
-## 34: 1998        Thierry Henry 12       France 20.88493       France
-## 35: 1998      David Trezeguet 20       France 20.72329       France
-## 36: 2002           Ronaldinho 11       Brazil 22.29315       Brazil
-## 37: 2002                 Kaká 23       Brazil 20.20548       Brazil
-## 38: 2006     Daniele De Rossi  4        Italy 22.95342        Italy
-## 39: 2010            Juan Mata 13        Spain 22.18904        Spain
-## 40: 2010      Sergio Busquets 16        Spain 21.97260        Spain
-## 41: 2010                Pedro 18        Spain 22.94247        Spain
-## 42: 2010        Javi Martínez 20        Spain 21.84110        Spain
-## 43: 2014      Matthias Ginter  3      Germany 20.46027      Germany
-## 44: 2014       Julian Draxler 14      Germany 20.79178      Germany
-## 45: 2014            Erik Durm 15      Germany 22.15068      Germany
-## 46: 2014          Mario Götze 19      Germany 22.09041      Germany
-## 47: 2014     Shkodran Mustafi 21      Germany 22.21918      Germany
-## 48: 2018      Benjamin Pavard  2       France 22.27397       France
-## 49: 2018     Presnel Kimpembe  3       France 22.89863       France
-## 50: 2018         Thomas Lemar  8       France 22.64932       France
-## 51: 2018        Kylian Mbappé 10       France 19.54247       France
-## 52: 2018      Ousmane Dembélé 11       France 21.14247       France
-## 53: 2018      Lucas Hernández 21       France 22.39178       France
-##     year                 name no      country      age       winner&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#most of these young players actually played at their world cups and many appeared in finals
-youngest_players_appeared &amp;lt;- youngest_players[c(1, 3:6, 8, 12:13, 15:18, 21:23, 24:25, 27, 29, 31, 33:35, 36:37, 38, 39:42, 44, 46:47, 48:53)]
-
-#find nearest matches
-youngest_players_appeared %&amp;lt;&amp;gt;% .[, diff := age - no]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The closest other players to make it are David Trezeguet (1998, 20.7years no 20), Shkodran Mustafi (2014, 22.2years, no 21) and then Lucas Hernandez (22.4years, no 21). Hernandez is the closest one to actually play in the World Cup final. Alberto Tarantini is his closest competition at 22.6 years old and wearing shirt number 20 in the 1978 final.&lt;/p&gt;
-&lt;div id=&#34;answer-1&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Answer&lt;/h2&gt;
-&lt;p&gt;Yes, three winners have appeared in World Cups with an age less than their shirt number. All Brazilians: Émerson Leão in 1970, Ronaldo in 1994, and Kaka in 2002. However only Kaka actually played (for 25 minutes vs. Costa Rica) in the finals.&lt;/p&gt;
-&lt;p&gt;Other close calls are David Trezeguet (20.7, no 20 in 1998) and Shkodran Mustafi (22.2, no 21 in 2014).&lt;/p&gt;
-&lt;p&gt;Hernandez &lt;em&gt;is&lt;/em&gt; the closest to acheiving this having played in the final itself, with only Alberto Tarantini (22.5, no 20 in 1978) and Mario Goetze (22.1, no 19 in 2014) in close competition.&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
 </description>
     </item>
     
