@@ -1,5 +1,63 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+    
+    
+    <url>
+    
+      <loc>/post/advent_calendar_trivia/</loc>
+      <lastmod>2019-12-01T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/</loc>
+      <lastmod>2019-12-01T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/</loc>
+      <lastmod>2019-12-01T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/football/</loc>
+      <lastmod>2019-12-01T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/rstats/</loc>
+      <lastmod>2019-12-01T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/the_knowledge/</loc>
+      <lastmod>2019-12-01T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
   
     
     
@@ -14,8 +72,48 @@
     
     <url>
     
+      <loc>/tags/rcpp/</loc>
+      <lastmod>2019-11-28T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/reinforcement_learning/</loc>
+      <lastmod>2019-11-28T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/cam_rowing_1/</loc>
       <lastmod>2019-11-24T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/machine_learning/</loc>
+      <lastmod>2019-11-24T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/rowing/</loc>
+      <lastmod>2019-11-24T00:00:00+00:00</lastmod>
+      <priority>0</priority>
     </url>
     
   
@@ -41,6 +139,16 @@
     
     <url>
     
+      <loc>/project/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/project/r_packages/</loc>
       <lastmod>2019-11-21T00:00:00+00:00</lastmod>
     </url>
@@ -59,8 +167,58 @@
     
     <url>
     
+      <loc>/tags/machine-learning/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/statsbomb/</loc>
+      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/r/</loc>
+      <lastmod>2019-11-17T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/racing_bar_charts/</loc>
       <lastmod>2019-11-17T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/bar_charts/</loc>
+      <lastmod>2019-11-17T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/data.table/</loc>
+      <lastmod>2019-11-17T00:00:00+00:00</lastmod>
+      <priority>0</priority>
     </url>
     
   
@@ -95,8 +253,58 @@
     
     <url>
     
+      <loc>/tags/javascript/</loc>
+      <lastmod>2019-07-06T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/scraping/</loc>
+      <lastmod>2019-07-06T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/dixon_coles_1/</loc>
       <lastmod>2019-05-30T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/models/</loc>
+      <lastmod>2019-05-30T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/publication_types/2/</loc>
+      <lastmod>2019-04-27T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/publication_types/</loc>
+      <lastmod>2019-04-27T00:00:00+00:00</lastmod>
+      <priority>0</priority>
     </url>
     
   
@@ -122,8 +330,38 @@
     
     <url>
     
+      <loc>/tags/behaviour/</loc>
+      <lastmod>2019-04-24T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/economics/</loc>
+      <lastmod>2019-04-24T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/the-knowledge-7th-february-2019/</loc>
       <lastmod>2019-02-07T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/rstas/</loc>
+      <lastmod>2019-02-07T00:00:00+00:00</lastmod>
+      <priority>0</priority>
     </url>
     
   
@@ -140,8 +378,38 @@
     
     <url>
     
+      <loc>/tags/riddler/</loc>
+      <lastmod>2019-02-03T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/counties_league_points/</loc>
       <lastmod>2019-01-21T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/maps/</loc>
+      <lastmod>2019-01-21T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/dixon-coles/</loc>
+      <lastmod>2019-01-04T00:00:00+00:00</lastmod>
+      <priority>0</priority>
     </url>
     
   
@@ -158,8 +426,48 @@
     
     <url>
     
+      <loc>/tags/xg/</loc>
+      <lastmod>2019-01-04T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/tidytuesday-2019-1/</loc>
       <lastmod>2019-01-02T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/clustering/</loc>
+      <lastmod>2019-01-02T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/tidytuesday/</loc>
+      <lastmod>2019-01-02T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/twitter/</loc>
+      <lastmod>2019-01-02T00:00:00+00:00</lastmod>
+      <priority>0</priority>
     </url>
     
   
@@ -176,8 +484,68 @@
     
     <url>
     
+      <loc>/tags/cambridge/</loc>
+      <lastmod>2018-11-22T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/pubs/</loc>
+      <lastmod>2018-11-22T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/getis-ord-heatmaps-tutorial/</loc>
       <lastmod>2018-10-04T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/buses/</loc>
+      <lastmod>2018-10-04T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/getis-ord/</loc>
+      <lastmod>2018-10-04T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/package/</loc>
+      <lastmod>2018-09-09T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/sf/</loc>
+      <lastmod>2018-09-09T00:00:00+00:00</lastmod>
+      <priority>0</priority>
     </url>
     
   
@@ -205,6 +573,16 @@
     
       <loc>/post/yorkshire_world_cup_6/</loc>
       <lastmod>2018-06-10T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/world-cup/</loc>
+      <lastmod>2018-06-10T00:00:00+00:00</lastmod>
+      <priority>0</priority>
     </url>
     
   
@@ -266,8 +644,28 @@
     
     <url>
     
+      <loc>/tags/chess/</loc>
+      <lastmod>2018-05-01T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/project/rinforcement_learning/</loc>
       <lastmod>2018-01-05T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/demo/</loc>
+      <lastmod>2018-01-05T00:00:00+00:00</lastmod>
+      <priority>0</priority>
     </url>
     
   
@@ -321,6 +719,7 @@
     <url>
     
       <loc>/post/elopage/</loc>
+      <priority>0</priority>
     </url>
     
   
@@ -329,15 +728,6 @@
     <url>
     
       <loc>/post/random_utility_stuff/</loc>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/publication_types/2/</loc>
-      <lastmod>2019-04-27T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -347,386 +737,6 @@
     <url>
     
       <loc>/categories/</loc>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/dixon-coles/</loc>
-      <lastmod>2019-01-04T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/project/</loc>
-      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/publication_types/</loc>
-      <lastmod>2019-04-27T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/r/</loc>
-      <lastmod>2019-11-17T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/</loc>
-      <lastmod>2018-01-05T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/</loc>
-      <lastmod>2017-01-01T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/bar_charts/</loc>
-      <lastmod>2019-11-17T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/behaviour/</loc>
-      <lastmod>2019-04-24T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/buses/</loc>
-      <lastmod>2018-10-04T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/cambridge/</loc>
-      <lastmod>2018-11-22T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/chess/</loc>
-      <lastmod>2018-05-01T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/clustering/</loc>
-      <lastmod>2019-01-02T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/data.table/</loc>
-      <lastmod>2019-11-17T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/demo/</loc>
-      <lastmod>2018-01-05T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/economics/</loc>
-      <lastmod>2019-04-24T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/football/</loc>
-      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/getis-ord/</loc>
-      <lastmod>2018-10-04T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/javascript/</loc>
-      <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/machine-learning/</loc>
-      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/machine_learning/</loc>
-      <lastmod>2019-11-24T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/maps/</loc>
-      <lastmod>2019-01-21T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/models/</loc>
-      <lastmod>2019-05-30T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/package/</loc>
-      <lastmod>2018-09-09T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/pubs/</loc>
-      <lastmod>2018-11-22T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/rcpp/</loc>
-      <lastmod>2019-11-28T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/reinforcement_learning/</loc>
-      <lastmod>2019-11-28T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/riddler/</loc>
-      <lastmod>2019-02-03T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/rowing/</loc>
-      <lastmod>2019-11-24T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/rstas/</loc>
-      <lastmod>2019-02-07T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/rstats/</loc>
-      <lastmod>2019-11-28T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/scraping/</loc>
-      <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/sf/</loc>
-      <lastmod>2018-09-09T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/statsbomb/</loc>
-      <lastmod>2019-11-21T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/the_knowledge/</loc>
-      <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/tidytuesday/</loc>
-      <lastmod>2019-01-02T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/twitter/</loc>
-      <lastmod>2019-01-02T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/world-cup/</loc>
-      <lastmod>2018-06-10T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/xg/</loc>
-      <lastmod>2019-01-04T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     

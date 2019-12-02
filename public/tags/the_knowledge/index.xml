@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>the_knowledge on Robert Hickman</title>
@@ -7,8 +6,363 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
-    <lastBuildDate>Sat, 06 Jul 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 01 Dec 2019 00:00:00 +0000</lastBuildDate>
     <atom:link href="/tags/the_knowledge/" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Advent Calendar of Football Trivia Analyses</title>
+      <link>/post/advent_calendar_trivia/</link>
+      <pubDate>Sun, 01 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/advent_calendar_trivia/</guid>
+      <description>
+
+
+&lt;p&gt;One of the most consistent &lt;a href=&#34;https://www.robert-hickman.eu/project/guardian_knowledge/&#34;&gt;fonts of posts on this blog&lt;/a&gt; is The Guardian’s football trivia page &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt;. A particular reason for this is that the small contained questions lend themselves to small blogposts that I can turn around in an hour or two, as opposed to being endlessly redrafted until I lose interest.&lt;/p&gt;
+&lt;p&gt;However, I still sometimes don’t quite get round to finishing some of these posts, or have trouble justifying a blog post on a very small and ‘trivial’ answer to a question. Therefore, as a sort of end-of-year round up, and a Christmas present to myself, I wanted to push out answers to questions I found particularly interesting over the last year and hadn’t quite got round to &lt;sup&gt;1&lt;/sup&gt;. I’ll probably add them all to this post as I finish them up.&lt;/p&gt;
+&lt;div id=&#34;nd-december---everything-in-its-right-place&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;2nd December - Everything in its right place&lt;/h1&gt;
+&lt;blockquote class=&#34;twitter-tweet&#34;&gt;
+&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
+I wonder if any of any sporting leagues have ever ended in alphabetical order? &lt;a href=&#34;https://t.co/you6u8Uzwz&#34;&gt;pic.twitter.com/you6u8Uzwz&lt;/a&gt;
+&lt;/p&gt;
+— P A Hunt (&lt;span class=&#34;citation&#34;&gt;@TeachFMaths&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/TeachFMaths/status/1139832761295024128?ref_src=twsrc%5Etfw&#34;&gt;June 15, 2019&lt;/a&gt;
+&lt;/blockquote&gt;
+&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
+&lt;div id=&#34;answer---yes-kind-of.-but-also-no.&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Answer - yes, kind of. But also no.&lt;/h2&gt;
+&lt;p&gt;This question has actually &lt;a href=&#34;https://www.theguardian.com/football/2011/mar/09/has-league-ever-finished-alphabetical-order&#34;&gt;been answered&lt;/a&gt; (as many of these will have been). For a league of 20 teams (like the English Premier League), we might imagine if would have happened over the last ~150 years, but it’s almost certain from some basic maths that it won’t have, and moreover, will never happen.&lt;/p&gt;
+&lt;p&gt;Let’s load some data and see why.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#as per usual, going to heavily rely on tidyverse 
+#and engsoccerdata throughout these posts
+library(tidyverse)
+library(engsoccerdata)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load English league data
+league_data &amp;lt;- engsoccerdata::england %&amp;gt;%
+  #select and gather match results
+  select(season = Season, division, home, visitor, hgoal, vgoal) %&amp;gt;%
+  gather(&amp;quot;location&amp;quot;, &amp;quot;team&amp;quot;, -season, -division, -hgoal, -vgoal) %&amp;gt;%
+  mutate(
+    g_for = case_when(
+      location == &amp;quot;home&amp;quot; ~ hgoal,
+      location == &amp;quot;visitor&amp;quot; ~ vgoal
+    ),
+    g_ag = case_when(
+      location == &amp;quot;home&amp;quot; ~ vgoal,
+      location == &amp;quot;visitor&amp;quot; ~ hgoal
+    )) %&amp;gt;%
+  #get correct point for a win/loss
+  mutate(
+    points = case_when(
+      g_for &amp;gt; g_ag &amp;amp; season &amp;lt; 1981 ~ 2,
+      g_for &amp;gt; g_ag &amp;amp; season &amp;gt; 1980 ~ 3,
+      g_for == g_ag ~ 1,
+      g_for &amp;lt; g_ag ~ 0
+    ),
+    gd = g_for - g_ag
+  ) %&amp;gt;%
+  #group by season and league and get final tables
+  group_by(season, division, team) %&amp;gt;%
+  summarise(points = sum(points),
+            gd = sum(gd),
+            g_for = sum(g_for)) %&amp;gt;%
+  arrange(-points, -gd, -g_for) %&amp;gt;%
+  #rank league order and alphabetical order
+  mutate(league_pos = rank(-points, ties.method = &amp;quot;first&amp;quot;),
+         alph_order = rank(team, ties.method = &amp;quot;first&amp;quot;)) %&amp;gt;%
+  select(season, division, team, league_pos, alph_order) %&amp;gt;%
+  #split by league and season
+  split(., f = list(.$season, .$division)) %&amp;gt;%
+  keep(function(x) nrow(x) &amp;gt; 0)
+
+#print the top of the first league table
+head(league_data[[1]])&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 5
+## # Groups:   season, division [1]
+##   season division team                    league_pos alph_order
+##    &amp;lt;int&amp;gt;    &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt;                        &amp;lt;int&amp;gt;      &amp;lt;int&amp;gt;
+## 1   1888        1 Preston North End                1          9
+## 2   1888        1 Aston Villa                      2          2
+## 3   1888        1 Wolverhampton Wanderers          3         12
+## 4   1888        1 Blackburn Rovers                 4          3
+## 5   1888        1 Bolton Wanderers                 5          4
+## 6   1888        1 West Bromwich Albion             6         11&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then run a load of Spearman’s rank correlation tests on the data to see which ones are perfectly correlated or anti-correlated in both league and alphabetical ranking. We’ll use the very handy &lt;a href=&#34;https://cran.r-project.org/web/packages/broom/vignettes/broom.html&#34;&gt;broom&lt;/a&gt; package to tidy the results of our many tests into one data.frame (remove the filter at the end of the pipe chain to see what gets output).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#use broom to tidily do stats
+library(broom)
+
+#correlate league and alphabetical order by year
+exact_correlations &amp;lt;- league_data %&amp;gt;%
+  map_df(., function(data) {
+    cor.test(
+      data$league_pos,
+      data$alph_order,
+      method = &amp;quot;spearman&amp;quot;
+    ) %&amp;gt;%
+      tidy() %&amp;gt;%
+      mutate(season = unique(data$season),
+             division = unique(data$division))
+  }) %&amp;gt;%
+  #take only significantly 
+  filter(abs(statistic) == 1)
+
+print(exact_correlations)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 0 x 7
+## # ... with 7 variables: estimate &amp;lt;dbl&amp;gt;, statistic &amp;lt;dbl&amp;gt;, p.value &amp;lt;dbl&amp;gt;,
+## #   method &amp;lt;chr&amp;gt;, alternative &amp;lt;chr&amp;gt;, season &amp;lt;int&amp;gt;, division &amp;lt;int&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And so we find no exact correlations. There are no instances in 363 separate seasons of English league football where teams line up in either alphabetical, or anti-alphabetical order.&lt;/p&gt;
+&lt;p&gt;Let’s see why this is. To make things simpler, I’m going to imagine a cutdown league of only 6 teams using teams starting with each of the first 6 letter of the alphabet:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;first_letter_names &amp;lt;- league_data %&amp;gt;%
+  bind_rows() %&amp;gt;%
+  ungroup() %&amp;gt;%
+  #get first letter of a team name
+  mutate(first_letter = gsub(&amp;quot;(^.)(.*)&amp;quot;, &amp;quot;\\1&amp;quot;, team)) %&amp;gt;%
+  filter(season &amp;gt; 1992 &amp;amp;
+           division == 1 &amp;amp;
+           first_letter %in% toupper(letters[1:6])
+         ) %&amp;gt;%
+  #get one team beginning with A, B, C...
+  filter(!duplicated(first_letter)) %&amp;gt;%
+  select(team) %&amp;gt;%
+  arrange(team) %&amp;gt;%
+  print()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 1
+##   team            
+##   &amp;lt;chr&amp;gt;           
+## 1 Arsenal         
+## 2 Blackburn Rovers
+## 3 Coventry City   
+## 4 Derby County    
+## 5 Everton         
+## 6 Fulham&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For the league to finish in alphabetical order, we first need the team that is first alphabetically (Arsenal) to finish in first position. Assuming all teams have an equal chance of winning the league, the chance of this is obviously&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ p(Arsenal = 1) =  \frac{1}{n}\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;Then we need the second team (Blackburn Rovers), to finish in second. This is predicated on Arsenal already finishing in first position, so the chance becomes&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ p(Blackburn = 2 | Arsenal = 1) = \frac{1}{n-1} \]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;and so on until the last team (Fulham) just have to slot into the only position left (n, 6th in our example)&lt;/p&gt;
+&lt;p&gt;Thus the total chance becomes&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ \frac{1}{n} \cdot \frac{1}{n-1} ... \cdot \frac{1}{1} \]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;which can also be written&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ p(ordered) = \prod_{n = 1}^{N} \frac{1}{n}\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;which multiplies out to&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ p(ordered) = \frac{1}{n!} \]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;so for our very small league the chance of n (assumed equally strong teams)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;factorial(nrow(first_letter_names))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 720&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;so we have a 1/720 chance that this league ends perfectly in alphabetical order. For bigger leagues (for reference most large European leagues contain 18-24 teams) this denominator grows &lt;em&gt;super-exponentially&lt;/em&gt; and becomes tiny.&lt;/p&gt;
+&lt;p&gt;For the English Premier League (20 teams) for instance the chance becomes&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;league_data %&amp;gt;%
+  bind_rows() %&amp;gt;%
+  ungroup() %&amp;gt;%
+  filter(season == max(season) &amp;amp; division == 1) %&amp;gt;% 
+  nrow() %&amp;gt;%
+  factorial()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 2.432902e+18&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;or 1 in 2.4 &lt;a href=&#34;https://en.wikipedia.org/wiki/Order_of_magnitude&#34;&gt;quintillion&lt;/a&gt;. In short, if it’s assumed that there’s no relation between order of names and team strength, we might expect the universe to end before all 20 teams finish in perfect order.&lt;/p&gt;
+&lt;p&gt;We can test if our predictions bear out by looking at tiny leagues with small numbers of teams, e.g. &lt;a href=&#34;https://en.wikipedia.org/wiki/2018%E2%80%9319_UEFA_Champions_League_group_stage&#34;&gt;the group stages of the Champions/Europa Leagues&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;First we need to scrape the final tables for the last 8 years of data from both competitions:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(rvest)
+
+#website to scrape group stage data from
+fb_data &amp;lt;- &amp;quot;https://footballdatabase.com&amp;quot;
+ucl_links &amp;lt;- sprintf(
+  &amp;quot;/league-scores-tables/uefa-champions-league-20%s-%s&amp;quot;,
+  10:18, 11:19
+)
+europa_links &amp;lt;- sprintf(
+  &amp;quot;/league-scores-tables/uefa-europa-league-20%s-%s&amp;quot;,
+  10:18, 11:19
+)
+#function to scrape the data from these links
+get_competition_data &amp;lt;- function(competition, links) {
+  data &amp;lt;- links %&amp;gt;%
+    paste0(fb_data, .) %&amp;gt;%
+    map_df(., function(year) {
+      page_read &amp;lt;- read_html(year)
+      
+      groups &amp;lt;- letters[1:8] %&amp;gt;%
+        map_df(., function(group) {
+          page_read %&amp;gt;% 
+            html_nodes(sprintf(&amp;quot;#total-group-%s &amp;gt; div &amp;gt; table&amp;quot;, group)) %&amp;gt;% 
+            html_table(fill = TRUE) %&amp;gt;% 
+            as.data.frame() %&amp;gt;%
+            mutate(group)
+        }) %&amp;gt;%
+        mutate(year = gsub(&amp;quot;(.*-)([0-9]{4}-[0-9]{2})&amp;quot;, &amp;quot;\\2&amp;quot;, year))
+    }) %&amp;gt;%
+    mutate(competition)
+}
+#scrape and bind the data
+uefa_data &amp;lt;- bind_rows(
+  get_competition_data(&amp;quot;champions&amp;quot;, ucl_links),
+  get_competition_data(&amp;quot;europa&amp;quot;, europa_links)
+)
+#print a cutdown version of the scraped data
+head(uefa_data %&amp;gt;% select(club = Club, points = P, year, competition))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##                club points    year competition
+## 1 Tottenham Hotspur     11 2010-11   champions
+## 2       Inter Milan     10 2010-11   champions
+## 3         FC Twente      6 2010-11   champions
+## 4     Werder Bremen      5 2010-11   champions
+## 5        Schalke 04     13 2010-11   champions
+## 6              Lyon     10 2010-11   champions&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So now we have 128 (8 groups x 8 years x 2 competitions) ‘mini-leagues’ each of 4 teams.&lt;/p&gt;
+&lt;p&gt;We can then munge this data to find all the groups where the teams finish in alphabetical order. We’d expect 128/4! leagues to finish in alphabetical order (or 5.33 to be exact).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;ordered_groups &amp;lt;- uefa_data %&amp;gt;%
+  #select relevant informatiob
+  select(team = Club, league_pos = X., group, year, competition) %&amp;gt;%
+  #by group find where teams finish in alphabetical order
+  group_by(year, group, competition) %&amp;gt;%
+  mutate(alph_order = rank(team, ties.method = &amp;quot;first&amp;quot;)) %&amp;gt;%
+  filter(league_pos == alph_order) %&amp;gt;%
+  #keep only group where all (4) teams finish in order
+  summarise(n = n()) %&amp;gt;%
+  filter(n == 4) %&amp;gt;%
+  #join and filter back data
+  left_join(uefa_data, ., by = c(&amp;quot;group&amp;quot;, &amp;quot;year&amp;quot;, &amp;quot;competition&amp;quot;)) %&amp;gt;%
+  filter(!is.na(n)) %&amp;gt;%
+  #select useful information
+  select(team = Club, points = P, gd = X..., league_pos = X.,
+         group, year, competition) %&amp;gt;%
+  #split groups up
+  split(., list(.$year, .$group, .$competition)) %&amp;gt;%
+  keep(function(x) nrow(x) &amp;gt; 0)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;which leaves us with 5 leagues that have finished in order! almost exactly what we’d predict by chance if the first letter of a teams name had no effect on the outcome.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;ordered_groups&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## $`2011-12.c.champions`
+##                team points gd league_pos group    year competition
+## 5           Benfica     12  4          1     c 2011-12   champions
+## 6          FC Basel     11  1          2     c 2011-12   champions
+## 7 Manchester United      9  3          3     c 2011-12   champions
+## 8     Otelul Galati      0 -8          4     c 2011-12   champions
+## 
+## $`2015-16.c.champions`
+##                team points gd league_pos group    year competition
+## 9   Atlético Madrid     13  8          1     c 2015-16   champions
+## 10          Benfica     10  2          2     c 2015-16   champions
+## 11      Galatasaray      5 -4          3     c 2015-16   champions
+## 12 Lokomotiv Astana      4 -6          4     c 2015-16   champions
+## 
+## $`2010-11.f.champions`
+##             team points  gd league_pos group    year competition
+## 1     Chelsea FC     15  10          1     f 2010-11   champions
+## 2      Marseille     12   9          2     f 2010-11   champions
+## 3 Spartak Moskva      9  -3          3     f 2010-11   champions
+## 4         Žilina      0 -16          4     f 2010-11   champions
+## 
+## $`2015-16.g.champions`
+##                   team points  gd league_pos group    year competition
+## 13          Chelsea FC     13  10          1     g 2015-16   champions
+## 14         Dynamo Kyiv     11   4          2     g 2015-16   champions
+## 15            FC Porto     10   1          3     g 2015-16   champions
+## 16 Maccabi Tel Aviv FC      0 -15          4     g 2015-16   champions
+## 
+## $`2018-19.h.champions`
+##                 team points gd league_pos group    year competition
+## 17          Juventus     12  5          1     h 2018-19   champions
+## 18 Manchester United     10  3          2     h 2018-19   champions
+## 19          Valencia      8  0          3     h 2018-19   champions
+## 20        Young Boys      4 -8          4     h 2018-19   champions&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can also do a larger test by randomly selecting teams out of the English league data we looked at earlier. To do this I need two quick functions: one to sample randomly from the data, and another to carry out the correlation test.&lt;/p&gt;
+&lt;p&gt;The first takes a number of samples (how many tests to run) and then selects a number of teams from each league sample. For instance, if I chose 3 teams, it might select Liverpool, Manchester United, and Watford, from the &lt;a href=&#34;https://en.wikipedia.org/wiki/2018%E2%80%9319_Premier_League&#34;&gt;last season of the Premier League&lt;/a&gt;. These teams finished 2nd, 6th, and 11th respectively, so this ‘sampled league’ would fulfill the criteria of finishing in alphabetical order.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;set.seed(3459)
+
+#take a random sample of leagues and teams withing those leagues
+sample_cutdown_leagues &amp;lt;- function(nteams, nsamples, data) {
+  samples &amp;lt;- sample(length(data), nsamples, replace = TRUE)
+  
+  sampled_league_data &amp;lt;- data[samples]
+  
+  league_team_serials &amp;lt;- sampled_league_data %&amp;gt;%
+    lapply(., nrow) %&amp;gt;%
+    lapply(., sample, size = nteams)
+  
+  #carry out the correlation test
+  league_cor_test &amp;lt;- map2_df(
+    .x = sampled_league_data,
+    .y = league_team_serials,
+    .f = cor_test_data
+  )
+}
+  
+#function for correlation test
+cor_test_data &amp;lt;- function(full_league_data, sampled_teams) {
+  sampled_league &amp;lt;- full_league_data[sampled_teams,] %&amp;gt;%
+    arrange(league_pos)
+  cor_test &amp;lt;- cor.test(
+    sampled_league$league_pos,
+    sampled_league$alph_order,
+    method = &amp;quot;spearman&amp;quot;
+  ) %&amp;gt;%
+    tidy() %&amp;gt;%
+    #mutate on information about that season and teams chosen
+    mutate(teams = paste(sampled_league$team, collapse = &amp;quot;, &amp;quot;),
+           season = unique(sampled_league$season),
+           division = unique(sampled_league$division))
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So for instance if I just run it once, randomly selecting 4 teams:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;test &amp;lt;- sample_cutdown_leagues(4, 1, league_data)
+#print the teams selected
+test$teams&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] &amp;quot;Brentford, Bristol Rovers, Brighton &amp;amp; Hove Albion, Chester&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;test&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 1 x 8
+##   estimate statistic p.value method   alternative teams     season division
+##      &amp;lt;dbl&amp;gt;     &amp;lt;dbl&amp;gt;   &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;    &amp;lt;chr&amp;gt;       &amp;lt;chr&amp;gt;      &amp;lt;int&amp;gt;    &amp;lt;int&amp;gt;
+## 1      0.8      2.00   0.333 Spearma~ two.sided   Brentfor~   1994        3&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;It gives me 4 teams from the 1994 division 3 who didn’t finish in alphabetical order (though, amusingly, all have a very similar starting letter).&lt;/p&gt;
+&lt;p&gt;We can then carry this out with 10000 samples for n_team numbers of 2:6 to see if we get roughly the expected numbers of exactly correlated league finish positions (this will take 1-2mins) by finding out how many tests give an estimate of 1 (finished exactly correlated with alphabetical order) or -1 (finished exactly anti-correlated with alphabetical order).&lt;/p&gt;
+&lt;p&gt;Both these numbers should be roughly equal to the number of samples (10000) divided by the factorial of the number of teams selected.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;test_n_numbers &amp;lt;- function(nteams) {
+  #run sampling function n times
+  #10k should do
+  sampling &amp;lt;- sample_cutdown_leagues(nteams, 10000, league_data)
+  
+  #find exactly correlated and anti-correlated examples
+  #where teams are in exact alphabetical order ascending or descending
+  correlated &amp;lt;- length(which(sampling$estimate == max(sampling$estimate)))
+  anti_correlated &amp;lt;- length(which(sampling$estimate == min(sampling$estimate)))
+  expected &amp;lt;- nrow(sampling) / factorial(nteams)
+  
+  df &amp;lt;- data.frame(n = nteams,
+                   sample_cor = correlated,
+                   sample_anticor = anti_correlated,
+                   sample_expected = expected)
+}
+#run the function
+testing &amp;lt;- map_df(2:6, test_n_numbers)
+#print results
+print(testing)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##   n sample_cor sample_anticor sample_expected
+## 1 2       5010           4990      5000.00000
+## 2 3       1676           1665      1666.66667
+## 3 4        367            398       416.66667
+## 4 5        101             81        83.33333
+## 5 6         14             15        13.88889&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And the numbers line up, as we would expect if there is no effect of the first letter of a team’s name upon final league position.&lt;/p&gt;
+&lt;p&gt;Finally, we can do a Kendall’s correlation test to really see if there is any relationship between alphabetical team name order and final league finish for all out our English league data. We use Kendall instead of a Spearman test here because we grouping all the data together we’re going to have a lot of ties (one team has to finish 1st in every league each year).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;all_data &amp;lt;- league_data %&amp;gt;%
+  bind_rows()
+
+#do a big correlation test
+kendall_test &amp;lt;- cor.test(all_data$alph_order,
+                         all_data$league_pos,
+                         alternative = &amp;quot;two.sided&amp;quot;,
+                         method = &amp;quot;kendall&amp;quot;) %&amp;gt;%
+  tidy() %&amp;gt;%
+  print()&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 1 x 5
+##   estimate statistic p.value method                         alternative
+##      &amp;lt;dbl&amp;gt;     &amp;lt;dbl&amp;gt;   &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;                          &amp;lt;chr&amp;gt;      
+## 1   0.0135      1.74  0.0826 Kendall&amp;#39;s rank correlation tau two.sided&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And we can see that, even though our p-value is &lt;a href=&#34;https://mchankins.wordpress.com/2013/04/21/still-not-significant-2/&#34;&gt;‘approaching significance’&lt;/a&gt;, it’s not significant at our fairly liberal threshold of 0.05. Even then, the effect size (0.013) is tiny, so there’s no need for Watford to start worrying &lt;a href=&#34;https://www.bbc.co.uk/sport/football/50619972&#34;&gt;just yet&lt;/a&gt;.&lt;/p&gt;
+&lt;ol style=&#34;list-style-type: decimal&#34;&gt;
+&lt;li&gt;SMALL DIGRESSION: I love blogging on this site and it also has been a great help to me in numerous ways (practice coding/writing, feeling like a “programmer”, for job interviews), but quite a lot of the time feel posts are not quite where I want them (I’m sure this feeling isn’t restricted to me) and so won’t put them up and so that time (sometimes quite a few hours!) I put into them in my spare time feels wasted and makes me feel worse about myself. I’m hoping that pushing out fairly rushed/half formed ideas like this will help with this.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>The Guardian Knowledge June 2019</title>
