@@ -1,0 +1,344 @@
+---
+title: Advent Calendar of Football Trivia Analyses
+author: Robert Hickman
+date: '2019-12-01'
+slug: advent_calendar_trivia
+output: pdf_document
+categories: []
+tags:
+  - the_knowledge
+  - football
+  - rstats
+header:
+  caption: ''
+  image: ''
+---
+
+One of the most consistent [fonts of posts on this blog](https://www.robert-hickman.eu/project/guardian_knowledge/) is The Guardian's football trivia page [The Knowledge](https://www.theguardian.com/football/series/theknowledge). A particular reason for this is that the small contained questions lend themselves to small blogposts that I can turn around in an hour or two, as opposed to being endlessly redrafted until I lose interest.
+
+However, I still sometimes don't quite get round to finishing some of these posts, or have trouble justifying a blog post on a very small and 'trivial' answer to a question. Therefore, as a sort of end-of-year round up, and a Christmas present to myself, I wanted to push out answers to questions I found particularly interesting over the last year and hadn't quite got round to ^1^. I'll probably add them all to this post as I finish them up.
+
+# 2nd December - Everything in its right place
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">I wonder if any of any sporting leagues have ever ended in alphabetical order? <a href="https://t.co/you6u8Uzwz">pic.twitter.com/you6u8Uzwz</a></p>&mdash; P A Hunt (@TeachFMaths) <a href="https://twitter.com/TeachFMaths/status/1139832761295024128?ref_src=twsrc%5Etfw">June 15, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+## Answer - yes, kind of. But also no.
+
+This question has actually [been answered](https://www.theguardian.com/football/2011/mar/09/has-league-ever-finished-alphabetical-order) (as many of these will have been). For a league of 20 teams (like the English Premier League), we might imagine if would have happened over the last ~150 years, but it's almost certain from some basic maths that it won't have, and moreover, will never happen.
+
+Let's load some data and see why.
+
+```{r libraries, warning=FALSE,message=FALSE}
+#as per usual, going to heavily rely on tidyverse 
+#and engsoccerdata throughout these posts
+library(tidyverse)
+library(engsoccerdata)
+```
+
+```{r load_leagues, warning=FALSE,message=FALSE}
+#load English league data
+league_data <- engsoccerdata::england %>%
+  #select and gather match results
+  select(season = Season, division, home, visitor, hgoal, vgoal) %>%
+  gather("location", "team", -season, -division, -hgoal, -vgoal) %>%
+  mutate(
+    g_for = case_when(
+      location == "home" ~ hgoal,
+      location == "visitor" ~ vgoal
+    ),
+    g_ag = case_when(
+      location == "home" ~ vgoal,
+      location == "visitor" ~ hgoal
+    )) %>%
+  #get correct point for a win/loss
+  mutate(
+    points = case_when(
+      g_for > g_ag & season < 1981 ~ 2,
+      g_for > g_ag & season > 1980 ~ 3,
+      g_for == g_ag ~ 1,
+      g_for < g_ag ~ 0
+    ),
+    gd = g_for - g_ag
+  ) %>%
+  #group by season and league and get final tables
+  group_by(season, division, team) %>%
+  summarise(points = sum(points),
+            gd = sum(gd),
+            g_for = sum(g_for)) %>%
+  arrange(-points, -gd, -g_for) %>%
+  #rank league order and alphabetical order
+  mutate(league_pos = rank(-points, ties.method = "first"),
+         alph_order = rank(team, ties.method = "first")) %>%
+  select(season, division, team, league_pos, alph_order) %>%
+  #split by league and season
+  split(., f = list(.$season, .$division)) %>%
+  keep(function(x) nrow(x) > 0)
+
+#print the top of the first league table
+head(league_data[[1]])
+```
+
+We can then run a load of Spearman's rank correlation tests on the data to see which ones are perfectly correlated or anti-correlated in both league and alphabetical ranking. We'll use the very handy [broom](https://cran.r-project.org/web/packages/broom/vignettes/broom.html) package to tidy the results of our many tests into one data.frame (remove the filter at the end of the pipe chain to see what gets output).
+
+```{r find_correlations, warning=FALSE,message=FALSE}
+#use broom to tidily do stats
+library(broom)
+
+#correlate league and alphabetical order by year
+exact_correlations <- league_data %>%
+  map_df(., function(data) {
+    cor.test(
+      data$league_pos,
+      data$alph_order,
+      method = "spearman"
+    ) %>%
+      tidy() %>%
+      mutate(season = unique(data$season),
+             division = unique(data$division))
+  }) %>%
+  #take only significantly 
+  filter(abs(statistic) == 1)
+
+print(exact_correlations)
+```
+
+And so we find no exact correlations. There are no instances in 363 separate seasons of English league football where teams line up in either alphabetical, or anti-alphabetical order. 
+
+Let's see why this is. To make things simpler, I'm going to imagine a cutdown league of only 6 teams using teams starting with each of the first 6 letter of the alphabet:
+
+```{r get_6_teams, warning=FALSE,message=FALSE}
+first_letter_names <- league_data %>%
+  bind_rows() %>%
+  ungroup() %>%
+  #get first letter of a team name
+  mutate(first_letter = gsub("(^.)(.*)", "\\1", team)) %>%
+  filter(season > 1992 &
+           division == 1 &
+           first_letter %in% toupper(letters[1:6])
+         ) %>%
+  #get one team beginning with A, B, C...
+  filter(!duplicated(first_letter)) %>%
+  select(team) %>%
+  arrange(team) %>%
+  print()
+```
+
+For the league to finish in alphabetical order, we first need the team that is first alphabetically (Arsenal) to finish in first position. Assuming all teams have an equal chance of winning the league, the chance of this is obviously
+
+$$ p(Arsenal = 1) =  \frac{1}{n}$$
+
+Then we need the second team (Blackburn Rovers), to finish in second. This is predicated on Arsenal already finishing in first position, so the chance becomes
+
+$$ p(Blackburn = 2 | Arsenal = 1) = \frac{1}{n-1} $$
+
+and so on until the last team (Fulham) just have to slot into the only position left (n, 6th in our example)
+
+Thus the total chance becomes
+
+$$ \frac{1}{n} \cdot \frac{1}{n-1} ... \cdot \frac{1}{1} $$
+
+which can also be written
+
+$$ p(ordered) = \prod_{n = 1}^{N} \frac{1}{n}$$
+
+which multiplies out to
+
+$$ p(ordered) = \frac{1}{n!} $$
+
+so for our very small league the chance of n (assumed equally strong teams) 
+
+```{r get_minileague_chance, warning=FALSE,message=FALSE}
+factorial(nrow(first_letter_names))
+```
+
+so we have a 1/720 chance that this league ends perfectly in alphabetical order. For bigger leagues (for reference most large European leagues contain 18-24 teams) this denominator grows _super-exponentially_ and becomes tiny.
+
+For the English Premier League (20 teams) for instance the chance becomes
+
+```{r calculate_epl_chance, warning=FALSE,message=FALSE}
+league_data %>%
+  bind_rows() %>%
+  ungroup() %>%
+  filter(season == max(season) & division == 1) %>% 
+  nrow() %>%
+  factorial()
+```
+or 1 in 2.4 [quintillion](https://en.wikipedia.org/wiki/Order_of_magnitude). In short, if it's assumed that there's no relation between order of names and team strength, we might expect the universe to end before all 20 teams finish in perfect order.
+
+We can test if our predictions bear out by looking at tiny leagues with small numbers of teams, e.g. [the group stages of the Champions/Europa Leagues](https://en.wikipedia.org/wiki/2018%E2%80%9319_UEFA_Champions_League_group_stage).
+
+First we need to scrape the final tables for the last 8 years of data from both competitions:
+
+```{r get_uefa_data, warning=FALSE,message=FALSE}
+library(rvest)
+
+#website to scrape group stage data from
+fb_data <- "https://footballdatabase.com"
+ucl_links <- sprintf(
+  "/league-scores-tables/uefa-champions-league-20%s-%s",
+  10:18, 11:19
+)
+europa_links <- sprintf(
+  "/league-scores-tables/uefa-europa-league-20%s-%s",
+  10:18, 11:19
+)
+#function to scrape the data from these links
+get_competition_data <- function(competition, links) {
+  data <- links %>%
+    paste0(fb_data, .) %>%
+    map_df(., function(year) {
+      page_read <- read_html(year)
+      
+      groups <- letters[1:8] %>%
+        map_df(., function(group) {
+          page_read %>% 
+            html_nodes(sprintf("#total-group-%s > div > table", group)) %>% 
+            html_table(fill = TRUE) %>% 
+            as.data.frame() %>%
+            mutate(group)
+        }) %>%
+        mutate(year = gsub("(.*-)([0-9]{4}-[0-9]{2})", "\\2", year))
+    }) %>%
+    mutate(competition)
+}
+#scrape and bind the data
+uefa_data <- bind_rows(
+  get_competition_data("champions", ucl_links),
+  get_competition_data("europa", europa_links)
+)
+#print a cutdown version of the scraped data
+head(uefa_data %>% select(club = Club, points = P, year, competition))
+  
+```
+
+So now we have 128 (8 groups x 8 years x 2 competitions) 'mini-leagues' each of 4 teams.
+
+We can then munge this data to find all the groups where the teams finish in alphabetical order. We'd expect 128/4! leagues to finish in alphabetical order (or 5.33 to be exact).
+
+```{r get_ordered_groups, warning=FALSE,message=FALSE}
+ordered_groups <- uefa_data %>%
+  #select relevant informatiob
+  select(team = Club, league_pos = X., group, year, competition) %>%
+  #by group find where teams finish in alphabetical order
+  group_by(year, group, competition) %>%
+  mutate(alph_order = rank(team, ties.method = "first")) %>%
+  filter(league_pos == alph_order) %>%
+  #keep only group where all (4) teams finish in order
+  summarise(n = n()) %>%
+  filter(n == 4) %>%
+  #join and filter back data
+  left_join(uefa_data, ., by = c("group", "year", "competition")) %>%
+  filter(!is.na(n)) %>%
+  #select useful information
+  select(team = Club, points = P, gd = X..., league_pos = X.,
+         group, year, competition) %>%
+  #split groups up
+  split(., list(.$year, .$group, .$competition)) %>%
+  keep(function(x) nrow(x) > 0)
+```
+
+which leaves us with 5 leagues that have finished in order! almost exactly what we'd predict by chance if the first letter of a teams name had no effect on the outcome.
+
+```{r print_ordered_groups, warning=FALSE,message=FALSE}
+ordered_groups
+```
+
+We can also do a larger test by randomly selecting teams out of the English league data we looked at earlier. To do this I need two quick functions: one to sample randomly from the data, and another to carry out the correlation test.
+
+The first takes a number of samples (how many tests to run) and then selects a number of teams from each league sample. For instance, if I chose 3 teams, it might select Liverpool, Manchester United, and Watford, from the [last season of the Premier League](https://en.wikipedia.org/wiki/2018%E2%80%9319_Premier_League). These teams finished 2nd, 6th, and 11th respectively, so this 'sampled league' would fulfill the criteria of finishing in alphabetical order.
+
+```{r test_cutdown_leagues, warning=FALSE,message=FALSE}
+set.seed(3459)
+
+#take a random sample of leagues and teams withing those leagues
+sample_cutdown_leagues <- function(nteams, nsamples, data) {
+  samples <- sample(length(data), nsamples, replace = TRUE)
+  
+  sampled_league_data <- data[samples]
+  
+  league_team_serials <- sampled_league_data %>%
+    lapply(., nrow) %>%
+    lapply(., sample, size = nteams)
+  
+  #carry out the correlation test
+  league_cor_test <- map2_df(
+    .x = sampled_league_data,
+    .y = league_team_serials,
+    .f = cor_test_data
+  )
+}
+  
+#function for correlation test
+cor_test_data <- function(full_league_data, sampled_teams) {
+  sampled_league <- full_league_data[sampled_teams,] %>%
+    arrange(league_pos)
+  cor_test <- cor.test(
+    sampled_league$league_pos,
+    sampled_league$alph_order,
+    method = "spearman"
+  ) %>%
+    tidy() %>%
+    #mutate on information about that season and teams chosen
+    mutate(teams = paste(sampled_league$team, collapse = ", "),
+           season = unique(sampled_league$season),
+           division = unique(sampled_league$division))
+}
+```
+  
+So for instance if I just run it once, randomly selecting 4 teams:
+
+```{r show_example, warning=FALSE,message=FALSE}
+test <- sample_cutdown_leagues(4, 1, league_data)
+#print the teams selected
+test$teams
+test
+```
+
+It gives me 4 teams from the 1994 division 3 who didn't finish in alphabetical order (though, amusingly, all have a very similar starting letter). 
+
+We can then carry this out with 10000 samples for n_team numbers of 2:6 to see if we get roughly the expected numbers of exactly correlated league finish positions (this will take 1-2mins) by finding out how many tests give an estimate of 1 (finished exactly correlated with alphabetical order) or -1 (finished exactly anti-correlated with alphabetical order).
+
+Both these numbers should be roughly equal to the number of samples (10000) divided by the factorial of the number of teams selected.
+
+```{r test_different_n, warning=FALSE,message=FALSE}
+test_n_numbers <- function(nteams) {
+  #run sampling function n times
+  #10k should do
+  sampling <- sample_cutdown_leagues(nteams, 10000, league_data)
+  
+  #find exactly correlated and anti-correlated examples
+  #where teams are in exact alphabetical order ascending or descending
+  correlated <- length(which(sampling$estimate == max(sampling$estimate)))
+  anti_correlated <- length(which(sampling$estimate == min(sampling$estimate)))
+  expected <- nrow(sampling) / factorial(nteams)
+  
+  df <- data.frame(n = nteams,
+                   sample_cor = correlated,
+                   sample_anticor = anti_correlated,
+                   sample_expected = expected)
+}
+#run the function
+testing <- map_df(2:6, test_n_numbers)
+#print results
+print(testing)
+```
+
+And the numbers line up, as we would expect if there is no effect of the first letter of a team's name upon final league position.
+
+Finally, we can do a Kendall's correlation test to really see if there is any relationship between alphabetical team name order and final league finish for all out our English league data. We use Kendall instead of a Spearman test here because we grouping all the data together we're going to have a lot of ties (one team has to finish 1st in every league each year).
+
+```{r kendall_test, warning=FALSE,message=FALSE}
+all_data <- league_data %>%
+  bind_rows()
+
+#do a big correlation test
+kendall_test <- cor.test(all_data$alph_order,
+                         all_data$league_pos,
+                         alternative = "two.sided",
+                         method = "kendall") %>%
+  tidy() %>%
+  print()
+```
+And we can see that, even though our p-value is ['approaching significance'](https://mchankins.wordpress.com/2013/04/21/still-not-significant-2/), it's not significant at our fairly liberal threshold of 0.05. Even then, the effect size (0.013) is tiny, so there's no need for Watford to start worrying [just yet](https://www.bbc.co.uk/sport/football/50619972).
+
+1) SMALL DIGRESSION: I love blogging on this site and it also has been a great help to me in numerous ways (practice coding/writing, feeling like a "programmer", for job interviews), but quite a lot of the time feel posts are not quite where I want them (I'm sure this feeling isn't restricted to me) and so won't put them up and so that time (sometimes quite a few hours!) I put into them in my spare time feels wasted and makes me feel worse about myself. I'm hoping that pushing out fairly rushed/half formed ideas like this will help with this.
