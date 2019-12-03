@@ -342,3 +342,105 @@ kendall_test <- cor.test(all_data$alph_order,
 And we can see that, even though our p-value is ['approaching significance'](https://mchankins.wordpress.com/2013/04/21/still-not-significant-2/), it's not significant at our fairly liberal threshold of 0.05. Even then, the effect size (0.013) is tiny, so there's no need for Watford to start worrying [just yet](https://www.bbc.co.uk/sport/football/50619972).
 
 1) SMALL DIGRESSION: I love blogging on this site and it also has been a great help to me in numerous ways (practice coding/writing, feeling like a "programmer", for job interviews), but quite a lot of the time feel posts are not quite where I want them (I'm sure this feeling isn't restricted to me) and so won't put them up and so that time (sometimes quite a few hours!) I put into them in my spare time feels wasted and makes me feel worse about myself. I'm hoping that pushing out fairly rushed/half formed ideas like this will help with this.
+
+# 3rd December - Groan Rangers
+
+[“Berwick Rangers have conceded 42 goals in competitive matches – Scottish League 2, relegation play-off, Scottish League – since last scoring themselves, against Peterhead, on March 19th. Is this a record for a league club (I know they’ve now lost that status, but all of these matches are league level competition)?” asks Huw Richards.](https://www.theguardian.com/football/2019/jul/24/which-teams-were-managed-by-their-all-time-leading-goalscorer)
+
+```{r load_league_cup_hidden, warning=FALSE,message=FALSE,echo=FALSE}
+league_cup <- readRDS("../../static/full_league_cup_data.rds") %>%
+  select(date = Date, home, visitor, hgoal, vgoal)
+```
+
+
+```{r load_league_cup_public, warning=FALSE,message=FALSE,eval=FALSE}
+#load league cup data from local data
+league_cup <- readRDS("../../static/full_league_cup_data.rds") %>%
+  select(date = Date, home, visitor, hgoal, vgoal)
+```
+
+```{r munge_data, warning=FALSE,message=FALSE}
+#bind all the match data together with relevant variables
+scoring_data <- bind_rows(
+  engsoccerdata::england %>%
+    select(date = Date, tier, home, visitor, hgoal, vgoal) %>%
+    mutate(date = as.Date(date),
+           competition = "league"),
+  engsoccerdata::facup %>%
+    select(date = Date, home, visitor, hgoal, vgoal) %>%
+    mutate(date = as.Date(date),
+           tier = NA, 
+           competition = "fa_cup"),
+  engsoccerdata::englandplayoffs %>%
+    select(date = Date, home, visitor, hgoal, vgoal, htier, vtier) %>%
+    mutate(date = as.Date(date), 
+           tier = (htier+vtier)/2, 
+           competition = "league_playoffs") %>%
+    select(-htier, -vtier),
+  league_cup %>%
+    mutate(tier = NA, competition = "league_cup")
+) %>%
+  #gather and find matches for each team
+  gather("location", "team", -date, -hgoal, -vgoal, -competition, -tier) %>%
+  split(f = .$location) %>%
+  map2_df(., rev(.), function(df, vs_data) 
+    mutate(df, opponent = vs_data$team)
+  ) %>%
+  #add in goals for and against
+  mutate(goals_for = case_when(
+    location == "home" ~ hgoal,
+    TRUE ~ vgoal
+  )) %>%
+  mutate(goals_against = case_when(
+    location == "visitor" ~ hgoal,
+    TRUE ~ vgoal
+  )) %>%
+  arrange(team, date) %>%
+  group_by(team)
+```
+
+```{r find_dry_runs, warning=FALSE,message=FALSE}
+dry_runs <- scoring_data %>%
+  mutate(run_start = case_when(
+    goals_for == 0 & lag(goals_for, default = 1) != 0 ~ 1:n()
+  )) %>%
+  filter(goals_for == 0) %>%
+  mutate(run_id = na.locf(run_start, na.rm = FALSE)) 
+longest_dry_runs <- dry_runs %>%
+  group_by(run_id, team) %>%
+  mutate(total_conceeded = sum(goals_against),
+         run_start_date = min(date)) %>%
+  filter(!duplicated(run_id, fromLast = TRUE)) %>%
+  select(run_start_date, run_end_date = date, team, run_id, total_conceeded) %>%
+  filter(total_conceeded > 15) %>%
+  arrange(-total_conceeded)
+dry_run_matches <- dry_runs %>%
+  left_join(longest_dry_runs, by = c("team", "run_id")) %>%
+  filter(!is.na(total_conceeded)) %>%
+  select(date, team, opponent, goals_for, goals_against,
+         competition, tier, total_conceeded) %>%
+  arrange(-total_conceeded)
+```
+
+```{r find_dry_runs, warning=FALSE,message=FALSE}
+scoring_runs <- scoring_data %>%
+  mutate(run_start = case_when(
+    goals_against == 0 & lag(goals_against, default = 1) != 0 ~ 1:n()
+  )) %>%
+  filter(goals_against == 0) %>%
+  mutate(run_id = na.locf(run_start, na.rm = FALSE)) 
+longest_scoring_runs <- scoring_runs %>%
+  group_by(run_id, team) %>%
+  mutate(total_scored = sum(goals_for),
+         run_start_date = min(date)) %>%
+  filter(!duplicated(run_id, fromLast = TRUE)) %>%
+  select(run_start_date, run_end_date = date, team, run_id, total_scored) %>%
+  filter(total_scored > 15) %>%
+  arrange(-total_scored)
+scoring_run_matches <- scoring_runs %>%
+  left_join(longest_scoring_runs, by = c("team", "run_id")) %>%
+  filter(!is.na(total_scored)) %>%
+  select(date, team, opponent, goals_for, goals_against,
+         competition, tier, total_scored) %>%
+  arrange(-total_scored)
+```
