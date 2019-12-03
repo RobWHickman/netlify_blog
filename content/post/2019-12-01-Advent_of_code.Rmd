@@ -1,0 +1,56 @@
+---
+title: "Untitled"
+output: html_document
+---
+```{r}
+library(Rcpp)
+```
+
+# Day 1, part 1
+
+```{r}
+data1_1 <- read.table("../../static/files/code_advent/day1_inputs.txt")
+```
+
+```{r}
+cppFunction('int rounds_massCpp(int mass) {
+  //c++ always rounds down as converts to int but still
+  int leftover = mass % 3;
+  int mass_divisible = mass - leftover;
+  int thrice_divided = mass_divisible / 3;
+  int sub_two = thrice_divided - 2;
+  
+  return sub_two;
+}')
+
+fuel_per_object <- lapply(data1_1[[1]], rounds_massCpp)
+total_fuel <- do.call(sum, fuel_per_object)
+```
+
+# Day 1, part 2
+
+```{r}
+cppFunction('int find_total_fuelCpp(int mass) {
+  //c++ always rounds down as converts to int but still
+  int leftover = mass % 3;
+  int mass_divisible = mass - leftover;
+  int thrice_divided = mass_divisible / 3;
+  int mass_fuel = thrice_divided - 2;
+
+  //part two
+  int fuel_fuel = (mass_fuel / 3) - 2;
+  if(fuel_fuel < 0) fuel_fuel = 0;
+  while (fuel_fuel > 2*3 ) {
+    mass_fuel = mass_fuel + fuel_fuel;
+    fuel_fuel = (fuel_fuel / 3) - 2;
+  }
+  if(fuel_fuel < 0) fuel_fuel = 0;
+  mass_fuel = mass_fuel + fuel_fuel;
+
+  return mass_fuel;
+}')
+
+actual_fuel_per_object <- lapply(data1_1[[1]], find_total_fuelCpp)
+actual_total_fuel <- do.call(sum, actual_fuel_per_object)
+
+```
