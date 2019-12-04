@@ -512,3 +512,106 @@ scoring_run_matches <- scoring_runs %>%
 print(filter(scoring_run_matches, run_id == 5194))
 
 ```
+
+# Question 3
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">Which team has had to travel the shortest combined distance in a cup run? (excluding regional competitions, just to make it interesting)</p>&mdash; Chris van Thomas (@chrisvanthomas) <a href="https://twitter.com/chrisvanthomas/status/1148879896430731266?ref_src=twsrc%5Etfw">July 10, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+
+There's some ambiguity in the question as to how the distance of a cup run should be measured. There's really two ways we can do this, which I will henforth refer to as a 'routing' as ''. To illustrate the two different approaches, I'll use Brighton & Hove Albion's 2018/2019 FA cup run
+
+```{r}
+library(engsoccerdata)
+library(tidyverse)
+library(sf)
+```
+
+```{r}
+grounds <- engsoccerdata::england_locations %>% 
+  st_as_sf()
+matches <- engsoccerdata::facup
+```
+
+
+```{r brighton_hove_run, warning=FALSE,message=FALSE}
+brighton <- matches %>%
+    filter(Season == 2018 & 
+             (home == "Brighton & Hove Albion" | 
+                visitor == "Brighton & Hove Albion")
+           ) %>%
+  select(Venue, Date, home, visitor, neutral) %>%
+  gather("location", "team", -Venue, -Date, -neutral) %>%
+  filter(location == "home" | neutral == "yes") %>%
+  filter(!duplicated(Date)) %>%
+  mutate(location = case_when(
+    neutral == "yes" ~ Venue,
+    TRUE ~ team
+  ))
+brighton
+```
+
+```{r brighton_path, warning=FALSE,message=FALSE}
+brighton_home <- grounds %>%
+  filter(location == "Brighton & Hove Albion")
+routing <- brighton %>%
+  left_join(., select(grounds, location, geometry), by = "location")
+```
+
+
+```{r find_distanaces, warning=FALSE,message=FALSE}
+long_campaigns <- matches %>%
+  filter(!is.na(Date)) %>%
+  select(Season, home, visitor) %>%
+  gather("location", "team", -Season) %>%
+  filter(!is.na(team)) %>%
+  group_by(team, Season) %>%
+  summarise(matches = n()) %>%
+  filter(matches > 4) %>%
+  filter(Season > 1920) %>%
+  ungroup() %>%
+  arrange(Season) %>%
+  mutate(id = 1:n())
+melted_data <- matches %>%
+  select(., Season, Date, round, neutral, Venue, team = home, opponent = visitor) %>%
+  mutate(location = "home") %>%
+  bind_rows(., mutate(select(., Season, Date, round, neutral, Venue, team = opponent, opponent = team), location = "away")) %>%
+  filter(!is.na(team)) %>%
+  left_join(., long_campaigns, by = c("Season", "team")) %>%
+  filter(!is.na(matches)) %>%
+  mutate(home_ground = case_when(
+    neutral == "yes" ~ Venue,
+    location == "home" ~ team,
+    location == "away" ~ opponent,
+  )) 
+located_home_matches <- melted_data %>%
+  filter(is.na(neutral)) %>%
+  select(id, Date, ground = home_ground) %>%
+  left_join(rename(team_locations, ground = team), by = "ground")
+located_neutral_matches <- melted_data %>%
+  filter(neutral == "yes") %>%
+  select(id, Date, ground = home_ground) %>%
+  left_join(ground_locations, by = "ground")
+located_run_matches <- rbind(located_home_matches, located_neutral_matches)
+```
+
+```{r find_run_distances, warning=FALSE,message=FALSE}
+#https://github.com/r-spatial/sf/issues/799
+empty <- st_as_sfc("POINT(EMPTY)")
+run_distances <- located_run_matches %>%
+  arrange(id, Date) %>%
+  filter(!is.na(Date)) %>%
+  group_by(id) %>%
+  mutate(
+    distance_to_next = sf::st_distance(
+      geometry, 
+      lag(geometry, default = empty), 
+      by_element = TRUE)
+    ) 
+grouped_run_distances <- run_distances %>%
+  summarise(travel_distance = sum(distance_to_next, na.rm = TRUE)) %>%
+  merge(long_campaigns, by = "id") %>%
+  mutate(total_route = travel_distance / 1000) %>%
+  select(id, team, matches, season = Season, total_route) %>%
+  mutate(av_distance = total_route / matches) %>%
+  arrange(-total_route)
+```
