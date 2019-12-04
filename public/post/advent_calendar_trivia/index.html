@@ -250,7 +250,7 @@ MathJax.Hub.Config({
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    12 min read
+    19 min read
   </span>
   
 
@@ -557,7 +557,14 @@ head(uefa_data %&gt;% select(club = Club, points = P, year, competition))</code>
 ## 17          Juventus     12  5          1     h 2018-19   champions
 ## 18 Manchester United     10  3          2     h 2018-19   champions
 ## 19          Valencia      8  0          3     h 2018-19   champions
-## 20        Young Boys      4 -8          4     h 2018-19   champions</code></pre>
+## 20        Young Boys      4 -8          4     h 2018-19   champions
+## 
+## $`2012-13.h.europa`
+##                      team points gd league_pos group    year competition
+## 21         FC Rubin Kazan     14  7          1     h 2012-13      europa
+## 22            Inter Milan     11  2          2     h 2012-13      europa
+## 23                 Neftçi      3 -4          3     h 2012-13      europa
+## 24 Partizan Beograd (SRB)      3 -5          4     h 2012-13      europa</code></pre>
 <p>We can also do a larger test by randomly selecting teams out of the English league data we looked at earlier. To do this I need two quick functions: one to sample randomly from the data, and another to carry out the correlation test.</p>
 <p>The first takes a number of samples (how many tests to run) and then selects a number of teams from each league sample. For instance, if I chose 3 teams, it might select Liverpool, Manchester United, and Watford, from the <a href="https://en.wikipedia.org/wiki/2018%E2%80%9319_Premier_League">last season of the Premier League</a>. These teams finished 2nd, 6th, and 11th respectively, so this ‘sampled league’ would fulfill the criteria of finishing in alphabetical order.</p>
 <pre class="r"><code>set.seed(3459)
@@ -654,6 +661,191 @@ kendall_test &lt;- cor.test(all_data$alph_order,
 <ol style="list-style-type: decimal">
 <li>SMALL DIGRESSION: I love blogging on this site and it also has been a great help to me in numerous ways (practice coding/writing, feeling like a “programmer”, for job interviews), but quite a lot of the time feel posts are not quite where I want them (I’m sure this feeling isn’t restricted to me) and so won’t put them up and so that time (sometimes quite a few hours!) I put into them in my spare time feels wasted and makes me feel worse about myself. I’m hoping that pushing out fairly rushed/half formed ideas like this will help with this.</li>
 </ol>
+</div>
+</div>
+<div id="rd-december---groan-rangers" class="section level1">
+<h1>3rd December - Groan Rangers</h1>
+<p><a href="https://www.theguardian.com/football/2019/jul/24/which-teams-were-managed-by-their-all-time-leading-goalscorer">“Berwick Rangers have conceded 42 goals in competitive matches – Scottish League 2, relegation play-off, Scottish League – since last scoring themselves, against Peterhead, on March 19th. Is this a record for a league club (I know they’ve now lost that status, but all of these matches are league level competition)?” asks Huw Richards.</a></p>
+<div id="answer---it-beats-any-team-in-the-english-league.-reproducible-code-below-if-you-want-to-check-for-other-leagues." class="section level2">
+<h2>Answer - It beats any team in the English league. Reproducible code below if you want to check for other leagues.</h2>
+<p>(I did check for most of them in the dataset, although this doesn’t include foreign cup competitions. Nothing seems to get close)</p>
+<p>This is quite a nice question from a data munging point of view. It’s extremely quantifiable and only involves a little grouping by.</p>
+<p>First we’ll load the libraries we’re relying on in this little project:</p>
+<pre class="r"><code>library(engsoccerdata)
+library(tidyverse)</code></pre>
+<p>I’m going to focus on the English league as it has the most data and also has data on the concurrent cup competitions. It’s super easy to sub in whichever competitions in the engsoccerdata package you want.</p>
+<p>We want to first bind the data from the league, league cup, fa cup, and league playoffs together with a little munging. Then we want to gather the data to get the goals scored and goals conceded in each game for each team.</p>
+<pre class="r"><code>#bind all the match data together with relevant variables
+scoring_data &lt;- bind_rows(
+  engsoccerdata::england %&gt;%
+    select(date = Date, tier, home, visitor, hgoal, vgoal) %&gt;%
+    mutate(date = as.Date(date),
+           competition = &quot;league&quot;),
+  engsoccerdata::facup %&gt;%
+    select(date = Date, home, visitor, hgoal, vgoal) %&gt;%
+    mutate(date = as.Date(date),
+           tier = NA, 
+           competition = &quot;fa_cup&quot;),
+  engsoccerdata::leaguecup %&gt;%
+    select(date = Date, home, visitor, hgoal, vgoal) %&gt;%
+    mutate(date = as.Date(date),
+           tier = NA,
+           competition = &quot;league_cup&quot;),
+  engsoccerdata::englandplayoffs %&gt;%
+    select(date = Date, home, visitor, hgoal, vgoal, htier, vtier) %&gt;%
+    mutate(date = as.Date(date), 
+           tier = (htier+vtier)/2, 
+           competition = &quot;league_playoffs&quot;) %&gt;%
+    select(-htier, -vtier),
+) %&gt;%
+  #gather and find matches for each team
+  gather(&quot;location&quot;, &quot;team&quot;, -date, -hgoal, -vgoal, -competition, -tier) %&gt;%
+  split(f = .$location) %&gt;%
+  map2_df(., rev(.), function(df, vs_data) 
+    mutate(df, opponent = vs_data$team)
+  ) %&gt;%
+  #add in goals for and against
+  mutate(goals_for = case_when(
+    location == &quot;home&quot; ~ hgoal,
+    TRUE ~ vgoal
+  )) %&gt;%
+  mutate(goals_against = case_when(
+    location == &quot;visitor&quot; ~ hgoal,
+    TRUE ~ vgoal
+  )) %&gt;%
+  arrange(team, date) %&gt;%
+  group_by(team)
+
+head(scoring_data)</code></pre>
+<pre><code>## # A tibble: 6 x 10
+## # Groups:   team [1]
+##   date        tier hgoal vgoal competition location team  opponent
+##   &lt;date&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;       &lt;chr&gt;    &lt;chr&gt; &lt;chr&gt;   
+## 1 1875-11-06    NA     0     0 fa_cup      home     105t~ Crystal~
+## 2 1875-11-20    NA     3     0 fa_cup      visitor  105t~ Crystal~
+## 3 1876-11-11    NA     3     0 fa_cup      home     105t~ 1st Sur~
+## 4 1876-12-14    NA     6     1 fa_cup      visitor  105t~ Oxford ~
+## 5 1877-11-07    NA     0     2 fa_cup      home     105t~ Old Har~
+## 6 NA            NA    NA    NA fa_cup      visitor  105t~ Minerva 
+## # ... with 2 more variables: goals_for &lt;dbl&gt;, goals_against &lt;dbl&gt;</code></pre>
+<p>Next we need to find the start of each run of games where a team has failed to score. We can do this by finding the first instance of 0 goals scored using lag(). We’ll then give an id to each ‘run’ of finishing games without scoring.</p>
+<p>(I’m aware that teams can also concede goals in a run having scored first in a match but there’s no way to factor that in with the data)</p>
+<p>We then use the na.locf() function from the very useful <a href="https://cran.r-project.org/web/packages/zoo/zoo.pdf">zoo</a> package to fill in the runs where no goals have been scored.</p>
+<p>We can then finish answering the question (already!) by grouping by run and summing the total number of goals conceded in that time.</p>
+<pre class="r"><code>#load the zoo library for helping filling NA values
+library(zoo)
+
+dry_runs &lt;- scoring_data %&gt;%
+  #find the start of runs
+  mutate(run_start = case_when(
+    goals_for == 0 &amp; lag(goals_for, default = 1) != 0 ~ 1:n()
+  )) %&gt;%
+  #only care about games where didn&#39;t score
+  filter(goals_for == 0) %&gt;%
+  #fill in NAs to get full runs
+  mutate(run_id = na.locf(run_start, na.rm = FALSE)) 
+
+longest_dry_runs &lt;- dry_runs %&gt;%
+  #group runs by id
+  group_by(run_id, team) %&gt;%
+  #find total conceeded over n games
+  mutate(total_conceeded = sum(goals_against),
+         run_start_date = min(date),
+         matches = n()) %&gt;%
+  #take only the last instance
+  filter(!duplicated(run_id, fromLast = TRUE)) %&gt;%
+  select(run_start_date, run_end_date = date, team, run_id, total_conceeded, matches) %&gt;%
+  #find the most &#39;impressive&#39; runs
+  filter(total_conceeded &gt; 15) %&gt;%
+  arrange(-total_conceeded)
+
+head(longest_dry_runs)</code></pre>
+<pre><code>## # A tibble: 6 x 6
+## # Groups:   run_id, team [6]
+##   run_start_date run_end_date team           run_id total_conceeded matches
+##   &lt;date&gt;         &lt;date&gt;       &lt;chr&gt;           &lt;int&gt;           &lt;dbl&gt;   &lt;int&gt;
+## 1 1899-01-14     1899-03-11   Darwen            273              38       7
+## 2 1898-11-12     1898-12-26   Darwen            263              35       7
+## 3 1891-12-12     1892-01-09   Darwen             60              31       5
+## 4 2019-04-09     2019-08-31   Bolton Wander~   5447              29      11
+## 5 1877-12-22     1886-10-23   1st Surrey Ri~      8              27       3
+## 6 1880-12-18     1894-01-27   Reading             6              27       3</code></pre>
+<p>And can see that two 7 game runs from the (now-defunct) <a href="https://en.wikipedia.org/wiki/Darwen_F.C.">Darwen FC</a> are top of the list. Around 1898/1899 the team conceded 35 and 38 goals without scoring themselves.</p>
+<p>Manually <a href="https://www.11v11.com/teams/darwen/tab/matches/season/1899/">looking at the data</a>, we can see that these two streaks are broken only by a few losses over Christmas 1898, a losing run of 18 games! Indeed, Darwen only won 2 games that season and set the record for most goals conceded (141).</p>
+<p>7 Years earlier, the same team managed an impressive run of letting in 31 goals in just 5 matches, without scoring. If we want to check out the game in this, we can do by left_join() ing our data together</p>
+<pre class="r"><code>#joni data to inspect individual games
+dry_run_matches &lt;- dry_runs %&gt;%
+  left_join(longest_dry_runs, by = c(&quot;team&quot;, &quot;run_id&quot;)) %&gt;%
+  filter(!is.na(total_conceeded)) %&gt;%
+  select(date, team, opponent, goals_for, goals_against,
+         competition, tier, total_conceeded, run_id) %&gt;%
+  arrange(-total_conceeded)
+
+#print this
+print(filter(dry_run_matches, run_id == 60))</code></pre>
+<pre><code>## # A tibble: 5 x 9
+## # Groups:   team [1]
+##   date       team  opponent goals_for goals_against competition  tier
+##   &lt;date&gt;     &lt;chr&gt; &lt;chr&gt;        &lt;dbl&gt;         &lt;dbl&gt; &lt;chr&gt;       &lt;dbl&gt;
+## 1 1891-12-12 Darw~ Sunderl~         0             7 league          1
+## 2 1891-12-25 Darw~ Blackbu~         0             4 league          1
+## 3 1891-12-26 Darw~ Aston V~         0             7 league          1
+## 4 1892-01-01 Darw~ Preston~         0             4 league          1
+## 5 1892-01-09 Darw~ Burnley          0             9 league          1
+## # ... with 2 more variables: total_conceeded &lt;dbl&gt;, run_id &lt;int&gt;</code></pre>
+<p>Also, congratulations to the <a href="https://www.boltonwanderers.news/news/efl-discinplinary-panels-decision-on-wanderers-delayed-again/">oft-trouble Bolton Wanderers</a> who have got closest to this in modern times, failing to score in 11 straight matches, while conceding 29 goals in the process.</p>
+<p>I also wanted to find out the opposite: the team that has scored the most goals without conceding any. It’s super easy with our pipeline- just switch goals_against and goals_for in the chain.</p>
+<pre class="r"><code>#do the inverse
+scoring_runs &lt;- scoring_data %&gt;%
+  mutate(run_start = case_when(
+    goals_against == 0 &amp; lag(goals_against, default = 1) != 0 ~ 1:n()
+  )) %&gt;%
+  filter(goals_against == 0) %&gt;%
+  mutate(run_id = na.locf(run_start, na.rm = FALSE)) 
+
+longest_scoring_runs &lt;- scoring_runs %&gt;%
+  group_by(run_id, team) %&gt;%
+  mutate(total_scored = sum(goals_for),
+         run_start_date = min(date),
+         matches = n()) %&gt;%
+  filter(!duplicated(run_id, fromLast = TRUE)) %&gt;%
+  select(run_start_date, run_end_date = date, team, run_id, total_scored, matches) %&gt;%
+  filter(total_scored &gt; 15) %&gt;%
+  arrange(-total_scored)
+
+head(longest_scoring_runs)</code></pre>
+<pre><code>## # A tibble: 6 x 6
+## # Groups:   run_id, team [6]
+##   run_start_date run_end_date team            run_id total_scored matches
+##   &lt;date&gt;         &lt;date&gt;       &lt;chr&gt;            &lt;int&gt;        &lt;dbl&gt;   &lt;int&gt;
+## 1 2010-04-25     2010-08-28   Chelsea           4372           32       7
+## 2 1929-03-06     1929-03-30   Bradford City      919           29       5
+## 3 2019-01-06     2019-01-26   Manchester City   5194           28       6
+## 4 1903-04-10     1903-10-03   Arsenal            328           26       8
+## 5 1880-01-17     1880-11-13   Clapham Rovers      25           26       5
+## 6 1885-10-24     1885-12-12   Notts County        32           26       3</code></pre>
+<p>Where we can see that Chelsea’s impressive end to the 2009-2010 season puts them top, having scored 32 goals without reply. Almost all the other top examples are from pre-war football, except Manchester City coming close last year with 28 goals scored without conceding.</p>
+<p>When we look at this run we can see it was greatly helped along by some demolitions in the cups, winning 5-0, 9-0 and 7-0 against Burnley, Burton Albion, and Rotherham United.</p>
+<pre class="r"><code>scoring_run_matches &lt;- scoring_runs %&gt;%
+  left_join(longest_scoring_runs, by = c(&quot;team&quot;, &quot;run_id&quot;)) %&gt;%
+  filter(!is.na(total_scored)) %&gt;%
+  select(date, team, opponent, goals_for, goals_against,
+         competition, tier, total_scored, run_id) %&gt;%
+  arrange(-total_scored)
+
+#print this
+print(filter(scoring_run_matches, run_id == 5194))</code></pre>
+<pre><code>## # A tibble: 6 x 9
+## # Groups:   team [1]
+##   date       team  opponent goals_for goals_against competition  tier
+##   &lt;date&gt;     &lt;chr&gt; &lt;chr&gt;        &lt;dbl&gt;         &lt;dbl&gt; &lt;chr&gt;       &lt;dbl&gt;
+## 1 2019-01-06 Manc~ Rotherh~         7             0 fa_cup         NA
+## 2 2019-01-09 Manc~ Burton ~         9             0 league_cup     NA
+## 3 2019-01-14 Manc~ Wolverh~         3             0 league          1
+## 4 2019-01-20 Manc~ Hudders~         3             0 league          1
+## 5 2019-01-23 Manc~ Burton ~         1             0 league_cup     NA
+## 6 2019-01-26 Manc~ Burnley          5             0 fa_cup         NA
+## # ... with 2 more variables: total_scored &lt;dbl&gt;, run_id &lt;int&gt;</code></pre>
 </div>
 </div>
 
