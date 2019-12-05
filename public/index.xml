@@ -553,8 +553,8 @@ print(filter(scoring_run_matches, run_id == 5194))&lt;/code&gt;&lt;/pre&gt;
 ## # ... with 2 more variables: total_scored &amp;lt;dbl&amp;gt;, run_id &amp;lt;int&amp;gt;&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
-&lt;div id=&#34;question-3&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Question 3&lt;/h1&gt;
+&lt;div id=&#34;th-december---were-going-to-wembley&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;5th December - We’re going to Wembley&lt;/h1&gt;
 &lt;blockquote class=&#34;twitter-tweet&#34;&gt;
 &lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
 Which team has had to travel the shortest combined distance in a cup run? (excluding regional competitions, just to make it interesting)
@@ -562,11 +562,16 @@ Which team has had to travel the shortest combined distance in a cup run? (exclu
 — Chris van Thomas (&lt;span class=&#34;citation&#34;&gt;@chrisvanthomas&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/chrisvanthomas/status/1148879896430731266?ref_src=twsrc%5Etfw&#34;&gt;July 10, 2019&lt;/a&gt;
 &lt;/blockquote&gt;
 &lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
-&lt;p&gt;There’s some ambiguity in the question as to how the distance of a cup run should be measured. There’s really two ways we can do this, which I will henforth refer to as a ‘routing’ as ’’. To illustrate the two different approaches, I’ll use Brighton &amp;amp; Hove Albion’s 2018/2019 FA cup run&lt;/p&gt;
+&lt;div id=&#34;answer---multiple-teams-have-played-5-fa-cup-matches-all-at-home.-to-answer-the-inverse-question-queens-park-in-18831884-and-18841885-have-had-the-farthest-to-travel&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Answer - Multiple teams have played 5 FA cup matches all at home. To answer the inverse question, Queen’s Park in 1883/1884 and 1884/1885 have had the farthest to travel&lt;/h2&gt;
+&lt;p&gt;For this question, I’m actually going to answer the opposite topic- which team have traveled the farthest in a cup run? The reason being is that multiple teams have had cup runs (of 5 matches in the FA cup) without travelling away from home at all. The code below could easily be changed to analyse other cup competitions, for simplicity, I’m sticking with the FA cup which has the most complete data in the engsoccerdata set.&lt;/p&gt;
+&lt;p&gt;Once again, we’ll start by loading libraries. We also want the &lt;a href=&#34;https://r-spatial.github.io/sf/articles/sf1.html&#34;&gt;sf&lt;/a&gt; package that makes working with spatial data a bit cleaner.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(engsoccerdata)
 library(tidyverse)
 #also want sf to manipulate spatial features
 library(sf)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then we want to grab the data. In a &lt;a href=&#34;https://github.com/jalapic/engsoccerdata/commit/6133cf9f6fd77574a5a03097a6d2db4d213c508c&#34;&gt;recent update of the engsoccerdata package&lt;/a&gt; I added the location of grounds for teams in England which will let us find the distances teams have traveled to matches.&lt;/p&gt;
+&lt;p&gt;I also download a shapefile of the UK from &lt;a href=&#34;https://gadm.org/&#34;&gt;GADM&lt;/a&gt; for plotting and to filter out any bad data in ground location (which still is very much in beta).&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#download a map of the uk to plot with
 shape_url &amp;lt;- &amp;quot;https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_GBR_0_sf.rds&amp;quot;
 temp_dir &amp;lt;- tempdir()
@@ -581,6 +586,7 @@ grounds &amp;lt;- engsoccerdata::england_locations %&amp;gt;%
   .[seq(nrow(.)) %in% unlist(st_contains(uk, .)),]
 #get the fa cup match data
 matches &amp;lt;- engsoccerdata::facup&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;There’s some ambiguity in the question as to how the distance of a cup run should be measured. There’s really two ways we can do this, which I will henceforth refer to as a ‘routing’ as ‘spoking’. To illustrate the two different approaches, I’ll use Southampton’s 2017/2018 FA cup run&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#e.g. with Southampton&amp;#39;s semi final run in 2017/2018
 Southampton &amp;lt;- matches %&amp;gt;%
     filter(Season == 2017 &amp;amp; 
@@ -606,14 +612,16 @@ Southampton&lt;/code&gt;&lt;/pre&gt;
 ## 3 The Hawthorns    2018-02-17 &amp;lt;NA&amp;gt;    West Bromwich Alb~ West Bromwich Alb~
 ## 4 DW Stadium       2018-03-18 &amp;lt;NA&amp;gt;    Wigan Athletic     Wigan Athletic    
 ## 5 Wembley Stadium  2018-04-22 yes     Wembley Stadium    Chelsea&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We’ll join the ground geography data to this to figure out distances traveled&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#will need the location of southamptons ground
 Southampton_home &amp;lt;- grounds %&amp;gt;%
   filter(location == &amp;quot;Southampton&amp;quot;)
 #and the locations of all their matches
-routing &amp;lt;- Southampton %&amp;gt;%
+match_locations &amp;lt;- Southampton %&amp;gt;%
   left_join(., select(grounds, location, geometry), by = &amp;quot;location&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The first method of calculating distance traveled per match (‘spoking’) takes the location of each match, and finds the distance from that team’s home ground. E.g. for Southampton:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the line from southampton&amp;#39;s ground to the match location
-spoke_lines &amp;lt;- st_coordinates(routing$geometry) %&amp;gt;%
+spoke_lines &amp;lt;- st_coordinates(match_locations$geometry) %&amp;gt;%
   split(f = rownames(.)) %&amp;gt;%
   #create line from geometry1 to geometry2
   lapply(function(x) {
@@ -636,8 +644,10 @@ plot(p)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the total length in metres
 st_length(spoke_lines)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## 698614.6 [m]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For any home games, the distance traveled is taken to be 0m.&lt;/p&gt;
+&lt;p&gt;The second method of calculating distance traveled takes the distance from each match &lt;em&gt;to&lt;/em&gt; the next match in run. I.e. it assumes a team stays in their past location until the next round (obviously not true in real life) and finds the distance to the ground for the next round game:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#need coords separate
-coords &amp;lt;- st_coordinates(routing$geometry) %&amp;gt;%
+coords &amp;lt;- st_coordinates(match_locations$geometry) %&amp;gt;%
   split(f = rownames(.))
 
 #find distance from one coords to next
@@ -667,6 +677,8 @@ plot(p)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the length
 st_length(travel_lines)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## 684586.7 [m]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So Southampton here begin in London away to Fulham, before travelling to their home in Southampton, then on to Birmingham (West Brom), Wigan, and back to London to play at Wembley.&lt;/p&gt;
+&lt;p&gt;Now we have the two methods, we need to prep the data we’re going to analyse. As before, this is done by gathering a df of match data so we have one row per match per team in the FA cup. We then group by team-season’s and find how many matches they played in the cup that year. For a ‘cup run’ we assume more than 3 matches have to played.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#gather each match per team into a separate row
 long_campaigns &amp;lt;- matches %&amp;gt;%
   filter(!is.na(Date)) %&amp;gt;%
@@ -677,8 +689,8 @@ long_campaigns &amp;lt;- matches %&amp;gt;%
   #get the number of fa cup matches per season per team
   group_by(team, Season) %&amp;gt;%
   summarise(matches = n()) %&amp;gt;%
-  #assume you need at least 4 matches to be considered one of the longest
-  filter(matches &amp;gt; 4) %&amp;gt;%
+  #assume you need at least 3 matches for a &amp;#39;run&amp;#39;
+  filter(matches &amp;gt; 3) %&amp;gt;%
   ungroup() %&amp;gt;%
   arrange(Season) %&amp;gt;%
   mutate(id = 1:n())
@@ -717,17 +729,19 @@ head(long_campaign_matches)&lt;/code&gt;&lt;/pre&gt;
 ##   season date       round neutral team  opponent location matches    id
 ##    &amp;lt;dbl&amp;gt; &amp;lt;date&amp;gt;     &amp;lt;chr&amp;gt; &amp;lt;chr&amp;gt;   &amp;lt;chr&amp;gt; &amp;lt;chr&amp;gt;    &amp;lt;chr&amp;gt;      &amp;lt;int&amp;gt; &amp;lt;int&amp;gt;
 ## 1   1871 1871-12-16 2     &amp;lt;NA&amp;gt;    Crys~ Maidenh~ Crystal~       5     1
-## 2   1871 1872-01-27 3     &amp;lt;NA&amp;gt;    Roya~ Hampste~ Royal E~       5     2
-## 3   1871 1872-02-17 s     yes     Crys~ Royal E~ Kenning~       5     1
-## 4   1871 1872-03-09 s     yes     Roya~ Crystal~ Kenning~       5     2
-## 5   1871 NA         1     &amp;lt;NA&amp;gt;    Roya~ Reigate~ Royal E~       5     2
-## 6   1872 1872-12-09 3     &amp;lt;NA&amp;gt;    Oxfo~ Royal E~ Oxford ~       5     3
+## 2   1871 1871-12-16 2     &amp;lt;NA&amp;gt;    Wand~ Clapham~ Wandere~       4     3
+## 3   1871 1872-01-20 3     &amp;lt;NA&amp;gt;    Wand~ Crystal~ Wandere~       4     3
+## 4   1871 1872-01-27 3     &amp;lt;NA&amp;gt;    Roya~ Hampste~ Royal E~       5     2
+## 5   1871 1872-02-17 s     yes     Crys~ Royal E~ Kenning~       5     1
+## 6   1871 1872-03-09 s     yes     Roya~ Crystal~ Kenning~       5     2
 ## # ... with 1 more variable: geometry &amp;lt;POINT [°]&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then find the routing distance using a nice trick I found on &lt;a href=&#34;https://github.com/r-spatial/sf/issues/799&#34;&gt;Stack Overflow&lt;/a&gt; to find the distance between each location and the next in the data.frame.&lt;/p&gt;
+&lt;p&gt;Finally, this is grouped by id and summed to get the total distance traveled in that cup campaign (when judging by the ‘routing’ metric).&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#taken from
 #https://github.com/r-spatial/sf/issues/799
 #init an empty sfc
 empty &amp;lt;- st_as_sfc(&amp;quot;POINT(EMPTY)&amp;quot;)
-run_distances &amp;lt;- long_campaign_matches %&amp;gt;%
+routing_distances &amp;lt;- long_campaign_matches %&amp;gt;%
   arrange(id, date) %&amp;gt;%
   filter(!is.na(date)) %&amp;gt;%
   group_by(id) %&amp;gt;%
@@ -740,7 +754,7 @@ run_distances &amp;lt;- long_campaign_matches %&amp;gt;%
     ) 
 
 #sum the distances
-grouped_run_distances &amp;lt;- run_distances %&amp;gt;%
+grouped_routing_distances &amp;lt;- routing_distances %&amp;gt;%
   summarise(travel_distance = sum(distance_to_next, na.rm = TRUE)) %&amp;gt;%
   merge(long_campaigns, by = &amp;quot;id&amp;quot;) %&amp;gt;%
   #conver to km
@@ -749,14 +763,15 @@ grouped_run_distances &amp;lt;- run_distances %&amp;gt;%
   mutate(av_distance = total_distance / matches) %&amp;gt;%
   arrange(-total_distance)
 
-head(grouped_run_distances)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##    id             team matches season total_distance av_distance
-## 1  65      Queens Park       8   1884       2684.363    335.5454
-## 2 396      Exeter City       8   1930       2362.073    295.2592
-## 3 171 Newcastle United       8   1904       2316.524    289.5655
-## 4 305 Newcastle United       9   1923       2112.232    234.6924
-## 5 685 Newcastle United      10   1954       2017.824    201.7824
-## 6 622        Gateshead       8   1951       2015.698    251.9623&lt;/code&gt;&lt;/pre&gt;
+head(grouped_routing_distances)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##     id             team matches season total_distance av_distance
+## 1  111      Queens Park       8   1884       2684.363    335.5454
+## 2  668      Exeter City       8   1930       2362.073    295.2592
+## 3  293 Newcastle United       8   1904       2316.524    289.5655
+## 4  512 Newcastle United       9   1923       2112.232    234.6924
+## 5 1182 Newcastle United      10   1954       2017.824    201.7824
+## 6 1090        Gateshead       8   1951       2015.698    251.9623&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;By functionalising our code from earlier, we can easily plot these well-traveled runs. Using the recently-added-to-CRAN &lt;a href=&#34;https://github.com/thomasp85/patchwork&#34;&gt;patchwork&lt;/a&gt; package, we can make multiple plots and stitch them together, e.g. for the 6 FA cup runs with the longest distances traveled we get:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#functionalise our code from earlier to plot travel routes easier
 plot_travel_lines &amp;lt;- function(run_team_year, plot_type) {
   run_matches &amp;lt;- long_campaign_matches %&amp;gt;%
@@ -801,21 +816,27 @@ plot_travel_lines &amp;lt;- function(run_team_year, plot_type) {
 
 #plot the top six
 library(patchwork)
-paste(grouped_run_distances$team[1:6],
-      grouped_run_distances$season[1:6]) %&amp;gt;%
+paste(grouped_routing_distances$team[1:6],
+      grouped_routing_distances$season[1:6]) %&amp;gt;%
   lapply(., plot_travel_lines, plot_type = &amp;quot;travel&amp;quot;) %&amp;gt;%
   wrap_plots(.)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;/post/2019-12-01-advent_calendar_knowledge_files/figure-html/plot_run_travel-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;We then need to check this against our other method of evaluating distances in a cup run- the ‘spoking’ method. This is much easier to calculate- all we have to do is left_join() in the location for each team’s home ground, and find the distance between this and the match location.&lt;/p&gt;
+&lt;p&gt;Then we simply sum the total distances per campaign and plot the longest of these:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;spoke_distances &amp;lt;- long_campaign_matches %&amp;gt;%
+  #left join in location data for each team
   left_join(grounds, by = c(&amp;quot;team&amp;quot; = &amp;quot;location&amp;quot;)) %&amp;gt;%
+  #calculate distance between each teams home ground and the match location
   mutate(distance = st_distance(geometry.x, geometry.y, by_element = TRUE))
 
+#group by and sum the cup run distances
 grouped_spoke_distances &amp;lt;- spoke_distances %&amp;gt;%
   group_by(team, season) %&amp;gt;%
   summarise(total_distance = sum(distance/1000, na.rm = TRUE),
             av_distance = mean(distance/1000, na.rm = TRUE)) %&amp;gt;%
   arrange(-total_distance)
 
+#print
 head(grouped_spoke_distances)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 4
 ## # Groups:   team [3]
@@ -827,11 +848,13 @@ head(grouped_spoke_distances)&lt;/code&gt;&lt;/pre&gt;
 ## 4 Fulham             1974       1810.676    150.8897
 ## 5 Newcastle United   1973       1781.279    178.1279
 ## 6 Queens Park        1884       1702.166    170.2166&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;paste(grouped_run_distances$team[1:6],
-      grouped_run_distances$season[1:6]) %&amp;gt;%
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot
+paste(grouped_spoke_distances$team[1:6],
+      grouped_spoke_distances$season[1:6]) %&amp;gt;%
   lapply(., plot_travel_lines, plot_type = &amp;quot;spokes&amp;quot;) %&amp;gt;%
   wrap_plots(.)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;/post/2019-12-01-advent_calendar_knowledge_files/figure-html/find_spoke_distances-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;/div&gt;
 &lt;/div&gt;
 </description>
     </item>

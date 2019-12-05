@@ -513,12 +513,15 @@ print(filter(scoring_run_matches, run_id == 5194))
 
 ```
 
-# Question 3
+# 5th December - We're going to Wembley
 
 <blockquote class="twitter-tweet"><p lang="en" dir="ltr">Which team has had to travel the shortest combined distance in a cup run? (excluding regional competitions, just to make it interesting)</p>&mdash; Chris van Thomas (@chrisvanthomas) <a href="https://twitter.com/chrisvanthomas/status/1148879896430731266?ref_src=twsrc%5Etfw">July 10, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
+## Answer - Multiple teams have played 5 FA cup matches all at home. To answer the inverse question, Queen's Park in 1883/1884 and 1884/1885 have had the farthest to travel
 
-There's some ambiguity in the question as to how the distance of a cup run should be measured. There's really two ways we can do this, which I will henforth refer to as a 'routing' as ''. To illustrate the two different approaches, I'll use Brighton & Hove Albion's 2018/2019 FA cup run
+For this question, I'm actually going to answer the opposite topic- which team have traveled the farthest in a cup run? The reason being is that multiple teams have had cup runs (of 5 matches in the FA cup) without travelling away from home at all. The code below could easily be changed to analyse other cup competitions, for simplicity, I'm sticking with the FA cup which has the most complete data in the engsoccerdata set.
+
+Once again, we'll start by loading libraries. We also want the [sf](https://r-spatial.github.io/sf/articles/sf1.html) package that makes working with spatial data a bit cleaner.
 
 ```{r libraries3, warning=FALSE,message=FALSE}
 library(engsoccerdata)
@@ -526,6 +529,10 @@ library(tidyverse)
 #also want sf to manipulate spatial features
 library(sf)
 ```
+
+Then we want to grab the data. In a [recent update of the engsoccerdata package](https://github.com/jalapic/engsoccerdata/commit/6133cf9f6fd77574a5a03097a6d2db4d213c508c) I added the location of grounds for teams in England which will let us find the distances teams have traveled to matches.
+
+I also download a shapefile of the UK from [GADM](https://gadm.org/) for plotting and to filter out any bad data in ground location (which still is very much in beta).
 
 ```{r get_data, warning=FALSE,message=FALSE}
 #download a map of the uk to plot with
@@ -545,6 +552,7 @@ matches <- engsoccerdata::facup
 
 ```
 
+There's some ambiguity in the question as to how the distance of a cup run should be measured. There's really two ways we can do this, which I will henceforth refer to as a 'routing' as 'spoking'. To illustrate the two different approaches, I'll use Southampton's 2017/2018 FA cup run
 
 ```{r southampton_run, warning=FALSE,message=FALSE}
 #e.g. with Southampton's semi final run in 2017/2018
@@ -567,19 +575,23 @@ Southampton
 
 ```
 
+We'll join the ground geography data to this to figure out distances traveled
+
 ```{r southampton_path, warning=FALSE,message=FALSE}
 #will need the location of southamptons ground
 Southampton_home <- grounds %>%
   filter(location == "Southampton")
 #and the locations of all their matches
-routing <- Southampton %>%
+match_locations <- Southampton %>%
   left_join(., select(grounds, location, geometry), by = "location")
 
 ```
 
+The first method of calculating distance traveled per match ('spoking') takes the location of each match, and finds the distance from that team's home ground. E.g. for Southampton:
+
 ```{r southampton_spokes, warning=FALSE,message=FALSE}
 #find the line from southampton's ground to the match location
-spoke_lines <- st_coordinates(routing$geometry) %>%
+spoke_lines <- st_coordinates(match_locations$geometry) %>%
   split(f = rownames(.)) %>%
   #create line from geometry1 to geometry2
   lapply(function(x) {
@@ -604,9 +616,13 @@ st_length(spoke_lines)
 
 ```
 
+For any home games, the distance traveled is taken to be 0m.
+
+The second method of calculating distance traveled takes the distance from each match _to_ the next match in run. I.e. it assumes a team stays in their past location until the next round (obviously not true in real life) and finds the distance to the ground for the next round game:
+
 ```{r southampton_travel, warning=FALSE,message=FALSE}
 #need coords separate
-coords <- st_coordinates(routing$geometry) %>%
+coords <- st_coordinates(match_locations$geometry) %>%
   split(f = rownames(.))
 
 #find distance from one coords to next
@@ -637,7 +653,9 @@ plot(p)
 st_length(travel_lines)
 
 ```
+So Southampton here begin in London away to Fulham, before travelling to their home in Southampton, then on to Birmingham (West Brom), Wigan, and back to London to play at Wembley.
 
+Now we have the two methods, we need to prep the data we're going to analyse. As before, this is done by gathering a df of match data so we have one row per match per team in the FA cup. We then group by team-season's and find how many matches they played in the cup that year. For a 'cup run' we assume more than 3 matches have to played.
 
 ```{r find_runs, warning=FALSE,message=FALSE}
 #gather each match per team into a separate row
@@ -650,8 +668,8 @@ long_campaigns <- matches %>%
   #get the number of fa cup matches per season per team
   group_by(team, Season) %>%
   summarise(matches = n()) %>%
-  #assume you need at least 4 matches to be considered one of the longest
-  filter(matches > 4) %>%
+  #assume you need at least 3 matches for a 'run'
+  filter(matches > 3) %>%
   ungroup() %>%
   arrange(Season) %>%
   mutate(id = 1:n())
@@ -687,13 +705,16 @@ long_campaign_matches <- matches %>%
 #print 
 head(long_campaign_matches)
 ```
+We can then find the routing distance using a nice trick I found on [Stack Overflow](https://github.com/r-spatial/sf/issues/799) to find the distance between each location and the next in the data.frame.
 
-```{r find_run_travel_distances, warning=FALSE,message=FALSE}
+Finally, this is grouped by id and summed to get the total distance traveled in that cup campaign (when judging by the 'routing' metric).
+
+```{r find_run_routing_distances, warning=FALSE,message=FALSE}
 #taken from
 #https://github.com/r-spatial/sf/issues/799
 #init an empty sfc
 empty <- st_as_sfc("POINT(EMPTY)")
-run_distances <- long_campaign_matches %>%
+routing_distances <- long_campaign_matches %>%
   arrange(id, date) %>%
   filter(!is.na(date)) %>%
   group_by(id) %>%
@@ -706,7 +727,7 @@ run_distances <- long_campaign_matches %>%
     ) 
 
 #sum the distances
-grouped_run_distances <- run_distances %>%
+grouped_routing_distances <- routing_distances %>%
   summarise(travel_distance = sum(distance_to_next, na.rm = TRUE)) %>%
   merge(long_campaigns, by = "id") %>%
   #conver to km
@@ -715,8 +736,10 @@ grouped_run_distances <- run_distances %>%
   mutate(av_distance = total_distance / matches) %>%
   arrange(-total_distance)
 
-head(grouped_run_distances)
+head(grouped_routing_distances)
 ```
+
+By functionalising our code from earlier, we can easily plot these well-traveled runs. Using the recently-added-to-CRAN [patchwork](https://github.com/thomasp85/patchwork) package, we can make multiple plots and stitch them together, e.g. for the 6 FA cup runs with the longest distances traveled we get:
 
 ```{r plot_run_travel, warning=FALSE,message=FALSE}
 #functionalise our code from earlier to plot travel routes easier
@@ -763,27 +786,37 @@ plot_travel_lines <- function(run_team_year, plot_type) {
 
 #plot the top six
 library(patchwork)
-paste(grouped_run_distances$team[1:6],
-      grouped_run_distances$season[1:6]) %>%
+paste(grouped_routing_distances$team[1:6],
+      grouped_routing_distances$season[1:6]) %>%
   lapply(., plot_travel_lines, plot_type = "travel") %>%
   wrap_plots(.)
+
 ```
+
+We then need to check this against our other method of evaluating distances in a cup run- the 'spoking' method. This is much easier to calculate- all we have to do is left_join() in the location for each team's home ground, and find the distance between this and the match location.
+
+Then we simply sum the total distances per campaign and plot the longest of these:
 
 ```{r find_spoke_distances, warning=FALSE,message=FALSE}
 spoke_distances <- long_campaign_matches %>%
+  #left join in location data for each team
   left_join(grounds, by = c("team" = "location")) %>%
+  #calculate distance between each teams home ground and the match location
   mutate(distance = st_distance(geometry.x, geometry.y, by_element = TRUE))
 
+#group by and sum the cup run distances
 grouped_spoke_distances <- spoke_distances %>%
   group_by(team, season) %>%
   summarise(total_distance = sum(distance/1000, na.rm = TRUE),
             av_distance = mean(distance/1000, na.rm = TRUE)) %>%
   arrange(-total_distance)
 
+#print
 head(grouped_spoke_distances)
 
-paste(grouped_run_distances$team[1:6],
-      grouped_run_distances$season[1:6]) %>%
+#plot
+paste(grouped_spoke_distances$team[1:6],
+      grouped_spoke_distances$season[1:6]) %>%
   lapply(., plot_travel_lines, plot_type = "spokes") %>%
   wrap_plots(.)
 
