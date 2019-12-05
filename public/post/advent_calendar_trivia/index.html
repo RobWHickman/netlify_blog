@@ -250,7 +250,7 @@ MathJax.Hub.Config({
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    19 min read
+    25 min read
   </span>
   
 
@@ -847,6 +847,286 @@ print(filter(scoring_run_matches, run_id == 5194))</code></pre>
 ## 6 2019-01-26 Manc~ Burnley          5             0 fa_cup         NA
 ## # ... with 2 more variables: total_scored &lt;dbl&gt;, run_id &lt;int&gt;</code></pre>
 </div>
+</div>
+<div id="question-3" class="section level1">
+<h1>Question 3</h1>
+<blockquote class="twitter-tweet">
+<p lang="en" dir="ltr">
+Which team has had to travel the shortest combined distance in a cup run? (excluding regional competitions, just to make it interesting)
+</p>
+— Chris van Thomas (<span class="citation">@chrisvanthomas</span>) <a href="https://twitter.com/chrisvanthomas/status/1148879896430731266?ref_src=twsrc%5Etfw">July 10, 2019</a>
+</blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<p>There’s some ambiguity in the question as to how the distance of a cup run should be measured. There’s really two ways we can do this, which I will henforth refer to as a ‘routing’ as ’’. To illustrate the two different approaches, I’ll use Brighton &amp; Hove Albion’s 2018/2019 FA cup run</p>
+<pre class="r"><code>library(engsoccerdata)
+library(tidyverse)
+#also want sf to manipulate spatial features
+library(sf)</code></pre>
+<pre class="r"><code>#download a map of the uk to plot with
+shape_url &lt;- &quot;https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_GBR_0_sf.rds&quot;
+temp_dir &lt;- tempdir()
+download.file(shape_url, destfile = file.path(temp_dir, &quot;shapefiles.rds&quot;), mode = &quot;wb&quot;)
+uk &lt;- st_as_sf(readRDS(file.path(temp_dir, &quot;shapefiles.rds&quot;)))
+
+#the location of football grounds in the dataset
+grounds &lt;- engsoccerdata::england_locations %&gt;%
+  st_as_sf(coords = c(&quot;lon&quot;, &quot;lat&quot;), crs = st_crs(&quot;+init=epsg:4326&quot;)) %&gt;%
+  st_transform(crs = st_crs(uk)) %&gt;%
+  #remove those that are bad data-outside the uk
+  .[seq(nrow(.)) %in% unlist(st_contains(uk, .)),]
+#get the fa cup match data
+matches &lt;- engsoccerdata::facup</code></pre>
+<pre class="r"><code>#e.g. with Southampton&#39;s semi final run in 2017/2018
+Southampton &lt;- matches %&gt;%
+    filter(Season == 2017 &amp; 
+             (home == &quot;Southampton&quot; | 
+                visitor == &quot;Southampton&quot;)
+           ) %&gt;%
+  select(Venue, Date, home, visitor, neutral) %&gt;%
+  gather(&quot;location&quot;, &quot;team&quot;, -Venue, -Date, -neutral) %&gt;%
+  filter(location == &quot;home&quot; | neutral == &quot;yes&quot;) %&gt;%
+  filter(!duplicated(Date)) %&gt;%
+  mutate(location = case_when(
+    neutral == &quot;yes&quot; ~ Venue,
+    TRUE ~ team
+  ))
+
+#print matches
+Southampton</code></pre>
+<pre><code>## # A tibble: 5 x 5
+##   Venue            Date       neutral location           team              
+##   &lt;chr&gt;            &lt;date&gt;     &lt;chr&gt;   &lt;chr&gt;              &lt;chr&gt;             
+## 1 Craven Cottage   2018-01-06 &lt;NA&gt;    Fulham             Fulham            
+## 2 St Mary&#39;s Stadi~ 2018-01-27 &lt;NA&gt;    Southampton        Southampton       
+## 3 The Hawthorns    2018-02-17 &lt;NA&gt;    West Bromwich Alb~ West Bromwich Alb~
+## 4 DW Stadium       2018-03-18 &lt;NA&gt;    Wigan Athletic     Wigan Athletic    
+## 5 Wembley Stadium  2018-04-22 yes     Wembley Stadium    Chelsea</code></pre>
+<pre class="r"><code>#will need the location of southamptons ground
+Southampton_home &lt;- grounds %&gt;%
+  filter(location == &quot;Southampton&quot;)
+#and the locations of all their matches
+routing &lt;- Southampton %&gt;%
+  left_join(., select(grounds, location, geometry), by = &quot;location&quot;)</code></pre>
+<pre class="r"><code>#find the line from southampton&#39;s ground to the match location
+spoke_lines &lt;- st_coordinates(routing$geometry) %&gt;%
+  split(f = rownames(.)) %&gt;%
+  #create line from geometry1 to geometry2
+  lapply(function(x) {
+    mat &lt;- rbind(x, st_coordinates(Southampton_home$geometry))
+    line &lt;- st_linestring(mat)
+    return(line)
+  }) %&gt;%
+  #cast to multiline and add projection
+  st_multilinestring() %&gt;%
+  st_sfc(crs = st_crs(&quot;+init=epsg:4326&quot;))
+
+#plot over uk
+p &lt;- ggplot() +
+  geom_sf(data = uk) +
+  geom_sf(data = spoke_lines, colour = &quot;blue&quot;, size = 1.5) +
+  theme_minimal()
+
+plot(p)</code></pre>
+<p><img src="/post/2019-12-01-advent_calendar_knowledge_files/figure-html/southampton_spokes-1.png" width="672" /></p>
+<pre class="r"><code>#get the total length in metres
+st_length(spoke_lines)</code></pre>
+<pre><code>## 698614.6 [m]</code></pre>
+<pre class="r"><code>#need coords separate
+coords &lt;- st_coordinates(routing$geometry) %&gt;%
+  split(f = rownames(.))
+
+#find distance from one coords to next
+travel_lines &lt;- mapply(coords, lead(coords), FUN = function(x, y) {
+  #for last match no further path
+  if(is.na(y)) {
+    return(NULL)
+  } else {
+    mat &lt;- rbind(x, y)
+    line &lt;- st_linestring(mat)
+    return(line)
+  }
+}) %&gt;%
+  #filter null last element
+  .[-which(lengths(.) == 0)] %&gt;%
+  st_multilinestring() %&gt;%
+  st_sfc(crs = st_crs(&quot;+init=epsg:4326&quot;))
+
+#plot over uk
+p &lt;- ggplot() +
+  geom_sf(data = uk) +
+  geom_sf(data = travel_lines, colour = &quot;blue&quot;, size = 1.5) +
+  theme_minimal()
+
+plot(p)</code></pre>
+<p><img src="/post/2019-12-01-advent_calendar_knowledge_files/figure-html/southampton_travel-1.png" width="672" /></p>
+<pre class="r"><code>#get the length
+st_length(travel_lines)</code></pre>
+<pre><code>## 684586.7 [m]</code></pre>
+<pre class="r"><code>#gather each match per team into a separate row
+long_campaigns &lt;- matches %&gt;%
+  filter(!is.na(Date)) %&gt;%
+  select(Season, home, visitor) %&gt;%
+  gather(&quot;location&quot;, &quot;team&quot;, -Season) %&gt;%
+  #remove rows with missing teams
+  filter(!is.na(team)) %&gt;%
+  #get the number of fa cup matches per season per team
+  group_by(team, Season) %&gt;%
+  summarise(matches = n()) %&gt;%
+  #assume you need at least 4 matches to be considered one of the longest
+  filter(matches &gt; 4) %&gt;%
+  ungroup() %&gt;%
+  arrange(Season) %&gt;%
+  mutate(id = 1:n())
+
+long_campaign_matches &lt;- matches %&gt;%
+  select(., Season, Date, round, 
+         neutral, Venue,
+         team = home, opponent = visitor) %&gt;%
+  mutate(location = &quot;home&quot;) %&gt;%
+  #bind in the opposite data for away teams
+  bind_rows(., mutate(select(., Season, Date, round,
+                             neutral, Venue,
+                             team = opponent, opponent = team),
+                      location = &quot;away&quot;)) %&gt;%
+  filter(!is.na(team)) %&gt;%
+  #left join the data for long campaigns
+  left_join(., long_campaigns, by = c(&quot;Season&quot;, &quot;team&quot;)) %&gt;%
+  #remove non-long campaigns
+  filter(!is.na(matches)) %&gt;%
+  #get the location of the match
+  mutate(location = case_when(
+    neutral == &quot;yes&quot; ~ Venue,
+    location == &quot;home&quot; ~ team,
+    location == &quot;away&quot; ~ opponent,
+  )) %&gt;%
+  #left join in the location for the corresponding ground
+  left_join(grounds, c(&quot;location&quot;)) %&gt;%
+  #select columns
+  select(season = Season, date = Date, round, 
+         neutral, team, opponent, 
+         location, matches, id, geometry)
+
+#print 
+head(long_campaign_matches)</code></pre>
+<pre><code>## # A tibble: 6 x 10
+##   season date       round neutral team  opponent location matches    id
+##    &lt;dbl&gt; &lt;date&gt;     &lt;chr&gt; &lt;chr&gt;   &lt;chr&gt; &lt;chr&gt;    &lt;chr&gt;      &lt;int&gt; &lt;int&gt;
+## 1   1871 1871-12-16 2     &lt;NA&gt;    Crys~ Maidenh~ Crystal~       5     1
+## 2   1871 1872-01-27 3     &lt;NA&gt;    Roya~ Hampste~ Royal E~       5     2
+## 3   1871 1872-02-17 s     yes     Crys~ Royal E~ Kenning~       5     1
+## 4   1871 1872-03-09 s     yes     Roya~ Crystal~ Kenning~       5     2
+## 5   1871 NA         1     &lt;NA&gt;    Roya~ Reigate~ Royal E~       5     2
+## 6   1872 1872-12-09 3     &lt;NA&gt;    Oxfo~ Royal E~ Oxford ~       5     3
+## # ... with 1 more variable: geometry &lt;POINT [°]&gt;</code></pre>
+<pre class="r"><code>#taken from
+#https://github.com/r-spatial/sf/issues/799
+#init an empty sfc
+empty &lt;- st_as_sfc(&quot;POINT(EMPTY)&quot;)
+run_distances &lt;- long_campaign_matches %&gt;%
+  arrange(id, date) %&gt;%
+  filter(!is.na(date)) %&gt;%
+  group_by(id) %&gt;%
+  #find the distance from one game to the next
+  mutate(
+    distance_to_next = sf::st_distance(
+      geometry, 
+      lag(geometry, default = empty), 
+      by_element = TRUE)
+    ) 
+
+#sum the distances
+grouped_run_distances &lt;- run_distances %&gt;%
+  summarise(travel_distance = sum(distance_to_next, na.rm = TRUE)) %&gt;%
+  merge(long_campaigns, by = &quot;id&quot;) %&gt;%
+  #conver to km
+  mutate(total_distance = travel_distance / 1000) %&gt;%
+  select(id, team, matches, season = Season, total_distance) %&gt;%
+  mutate(av_distance = total_distance / matches) %&gt;%
+  arrange(-total_distance)
+
+head(grouped_run_distances)</code></pre>
+<pre><code>##    id             team matches season total_distance av_distance
+## 1  65      Queens Park       8   1884       2684.363    335.5454
+## 2 396      Exeter City       8   1930       2362.073    295.2592
+## 3 171 Newcastle United       8   1904       2316.524    289.5655
+## 4 305 Newcastle United       9   1923       2112.232    234.6924
+## 5 685 Newcastle United      10   1954       2017.824    201.7824
+## 6 622        Gateshead       8   1951       2015.698    251.9623</code></pre>
+<pre class="r"><code>#functionalise our code from earlier to plot travel routes easier
+plot_travel_lines &lt;- function(run_team_year, plot_type) {
+  run_matches &lt;- long_campaign_matches %&gt;%
+    mutate(id = paste(team, season)) %&gt;%
+    filter(id == run_team_year) %&gt;%
+    arrange(date)
+  coords &lt;- st_coordinates(run_matches$geometry) %&gt;%
+    split(f = rownames(.))
+  if(plot_type == &quot;travel&quot;) {
+    lines &lt;- mapply(coords, lead(coords), FUN = function(x, y) {
+    if(is.na(y)) {
+      return(NULL)
+    } else {
+      mat &lt;- rbind(x, y)
+      line &lt;- st_linestring(mat)
+      return(line)
+    }
+    }) %&gt;%
+    .[-which(lengths(.) == 0)] %&gt;%
+    st_multilinestring() %&gt;%
+    st_sfc(crs = st_crs(&quot;+init=epsg:4326&quot;))
+  } else if(plot_type == &quot;spokes&quot;) {
+    home &lt;- grounds %&gt;%
+      filter(location == unique(run_matches$team)) %&gt;%
+      st_coordinates()
+    lines &lt;- lapply(coords, function(x) {
+      mat &lt;- rbind(x, home)
+      line &lt;- st_linestring(mat)
+      return(line)
+    }) %&gt;%
+      #cast to multiline and add projection
+      st_multilinestring() %&gt;%
+      st_sfc(crs = st_crs(&quot;+init=epsg:4326&quot;))
+  }
+  plot &lt;- ggplot() +
+    geom_sf(data = uk) +
+    geom_sf(data = lines, colour = &quot;blue&quot;, size = 1.5) +
+    labs(title = paste(run_team_year)) +
+    theme_minimal()
+  return(plot)
+}
+
+#plot the top six
+library(patchwork)
+paste(grouped_run_distances$team[1:6],
+      grouped_run_distances$season[1:6]) %&gt;%
+  lapply(., plot_travel_lines, plot_type = &quot;travel&quot;) %&gt;%
+  wrap_plots(.)</code></pre>
+<p><img src="/post/2019-12-01-advent_calendar_knowledge_files/figure-html/plot_run_travel-1.png" width="672" /></p>
+<pre class="r"><code>spoke_distances &lt;- long_campaign_matches %&gt;%
+  left_join(grounds, by = c(&quot;team&quot; = &quot;location&quot;)) %&gt;%
+  mutate(distance = st_distance(geometry.x, geometry.y, by_element = TRUE))
+
+grouped_spoke_distances &lt;- spoke_distances %&gt;%
+  group_by(team, season) %&gt;%
+  summarise(total_distance = sum(distance/1000, na.rm = TRUE),
+            av_distance = mean(distance/1000, na.rm = TRUE)) %&gt;%
+  arrange(-total_distance)
+
+head(grouped_spoke_distances)</code></pre>
+<pre><code>## # A tibble: 6 x 4
+## # Groups:   team [3]
+##   team             season total_distance av_distance
+##   &lt;chr&gt;             &lt;dbl&gt;            [m]         [m]
+## 1 Queens Park        1883       2150.504    307.2149
+## 2 Newcastle United   1923       1974.430    219.3811
+## 3 Newcastle United   1951       1957.196    279.5994
+## 4 Fulham             1974       1810.676    150.8897
+## 5 Newcastle United   1973       1781.279    178.1279
+## 6 Queens Park        1884       1702.166    170.2166</code></pre>
+<pre class="r"><code>paste(grouped_run_distances$team[1:6],
+      grouped_run_distances$season[1:6]) %&gt;%
+  lapply(., plot_travel_lines, plot_type = &quot;spokes&quot;) %&gt;%
+  wrap_plots(.)</code></pre>
+<p><img src="/post/2019-12-01-advent_calendar_knowledge_files/figure-html/find_spoke_distances-1.png" width="672" /></p>
 </div>
 
       </div>

@@ -520,24 +520,38 @@ print(filter(scoring_run_matches, run_id == 5194))
 
 There's some ambiguity in the question as to how the distance of a cup run should be measured. There's really two ways we can do this, which I will henforth refer to as a 'routing' as ''. To illustrate the two different approaches, I'll use Brighton & Hove Albion's 2018/2019 FA cup run
 
-```{r}
+```{r libraries3, warning=FALSE,message=FALSE}
 library(engsoccerdata)
 library(tidyverse)
+#also want sf to manipulate spatial features
 library(sf)
 ```
 
-```{r}
-grounds <- engsoccerdata::england_locations %>% 
-  st_as_sf()
+```{r get_data, warning=FALSE,message=FALSE}
+#download a map of the uk to plot with
+shape_url <- "https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_GBR_0_sf.rds"
+temp_dir <- tempdir()
+download.file(shape_url, destfile = file.path(temp_dir, "shapefiles.rds"), mode = "wb")
+uk <- st_as_sf(readRDS(file.path(temp_dir, "shapefiles.rds")))
+
+#the location of football grounds in the dataset
+grounds <- engsoccerdata::england_locations %>%
+  st_as_sf(coords = c("lon", "lat"), crs = st_crs("+init=epsg:4326")) %>%
+  st_transform(crs = st_crs(uk)) %>%
+  #remove those that are bad data-outside the uk
+  .[seq(nrow(.)) %in% unlist(st_contains(uk, .)),]
+#get the fa cup match data
 matches <- engsoccerdata::facup
+
 ```
 
 
-```{r brighton_hove_run, warning=FALSE,message=FALSE}
-brighton <- matches %>%
-    filter(Season == 2018 & 
-             (home == "Brighton & Hove Albion" | 
-                visitor == "Brighton & Hove Albion")
+```{r southampton_run, warning=FALSE,message=FALSE}
+#e.g. with Southampton's semi final run in 2017/2018
+Southampton <- matches %>%
+    filter(Season == 2017 & 
+             (home == "Southampton" | 
+                visitor == "Southampton")
            ) %>%
   select(Venue, Date, home, visitor, neutral) %>%
   gather("location", "team", -Venue, -Date, -neutral) %>%
@@ -547,71 +561,231 @@ brighton <- matches %>%
     neutral == "yes" ~ Venue,
     TRUE ~ team
   ))
-brighton
+
+#print matches
+Southampton
+
 ```
 
-```{r brighton_path, warning=FALSE,message=FALSE}
-brighton_home <- grounds %>%
-  filter(location == "Brighton & Hove Albion")
-routing <- brighton %>%
+```{r southampton_path, warning=FALSE,message=FALSE}
+#will need the location of southamptons ground
+Southampton_home <- grounds %>%
+  filter(location == "Southampton")
+#and the locations of all their matches
+routing <- Southampton %>%
   left_join(., select(grounds, location, geometry), by = "location")
+
+```
+
+```{r southampton_spokes, warning=FALSE,message=FALSE}
+#find the line from southampton's ground to the match location
+spoke_lines <- st_coordinates(routing$geometry) %>%
+  split(f = rownames(.)) %>%
+  #create line from geometry1 to geometry2
+  lapply(function(x) {
+    mat <- rbind(x, st_coordinates(Southampton_home$geometry))
+    line <- st_linestring(mat)
+    return(line)
+  }) %>%
+  #cast to multiline and add projection
+  st_multilinestring() %>%
+  st_sfc(crs = st_crs("+init=epsg:4326"))
+
+#plot over uk
+p <- ggplot() +
+  geom_sf(data = uk) +
+  geom_sf(data = spoke_lines, colour = "blue", size = 1.5) +
+  theme_minimal()
+
+plot(p)
+
+#get the total length in metres
+st_length(spoke_lines)
+
+```
+
+```{r southampton_travel, warning=FALSE,message=FALSE}
+#need coords separate
+coords <- st_coordinates(routing$geometry) %>%
+  split(f = rownames(.))
+
+#find distance from one coords to next
+travel_lines <- mapply(coords, lead(coords), FUN = function(x, y) {
+  #for last match no further path
+  if(is.na(y)) {
+    return(NULL)
+  } else {
+    mat <- rbind(x, y)
+    line <- st_linestring(mat)
+    return(line)
+  }
+}) %>%
+  #filter null last element
+  .[-which(lengths(.) == 0)] %>%
+  st_multilinestring() %>%
+  st_sfc(crs = st_crs("+init=epsg:4326"))
+
+#plot over uk
+p <- ggplot() +
+  geom_sf(data = uk) +
+  geom_sf(data = travel_lines, colour = "blue", size = 1.5) +
+  theme_minimal()
+
+plot(p)
+
+#get the length
+st_length(travel_lines)
+
 ```
 
 
-```{r find_distanaces, warning=FALSE,message=FALSE}
+```{r find_runs, warning=FALSE,message=FALSE}
+#gather each match per team into a separate row
 long_campaigns <- matches %>%
   filter(!is.na(Date)) %>%
   select(Season, home, visitor) %>%
   gather("location", "team", -Season) %>%
+  #remove rows with missing teams
   filter(!is.na(team)) %>%
+  #get the number of fa cup matches per season per team
   group_by(team, Season) %>%
   summarise(matches = n()) %>%
+  #assume you need at least 4 matches to be considered one of the longest
   filter(matches > 4) %>%
-  filter(Season > 1920) %>%
   ungroup() %>%
   arrange(Season) %>%
   mutate(id = 1:n())
-melted_data <- matches %>%
-  select(., Season, Date, round, neutral, Venue, team = home, opponent = visitor) %>%
+
+long_campaign_matches <- matches %>%
+  select(., Season, Date, round, 
+         neutral, Venue,
+         team = home, opponent = visitor) %>%
   mutate(location = "home") %>%
-  bind_rows(., mutate(select(., Season, Date, round, neutral, Venue, team = opponent, opponent = team), location = "away")) %>%
+  #bind in the opposite data for away teams
+  bind_rows(., mutate(select(., Season, Date, round,
+                             neutral, Venue,
+                             team = opponent, opponent = team),
+                      location = "away")) %>%
   filter(!is.na(team)) %>%
+  #left join the data for long campaigns
   left_join(., long_campaigns, by = c("Season", "team")) %>%
+  #remove non-long campaigns
   filter(!is.na(matches)) %>%
-  mutate(home_ground = case_when(
+  #get the location of the match
+  mutate(location = case_when(
     neutral == "yes" ~ Venue,
     location == "home" ~ team,
     location == "away" ~ opponent,
-  )) 
-located_home_matches <- melted_data %>%
-  filter(is.na(neutral)) %>%
-  select(id, Date, ground = home_ground) %>%
-  left_join(rename(team_locations, ground = team), by = "ground")
-located_neutral_matches <- melted_data %>%
-  filter(neutral == "yes") %>%
-  select(id, Date, ground = home_ground) %>%
-  left_join(ground_locations, by = "ground")
-located_run_matches <- rbind(located_home_matches, located_neutral_matches)
+  )) %>%
+  #left join in the location for the corresponding ground
+  left_join(grounds, c("location")) %>%
+  #select columns
+  select(season = Season, date = Date, round, 
+         neutral, team, opponent, 
+         location, matches, id, geometry)
+
+#print 
+head(long_campaign_matches)
 ```
 
-```{r find_run_distances, warning=FALSE,message=FALSE}
+```{r find_run_travel_distances, warning=FALSE,message=FALSE}
+#taken from
 #https://github.com/r-spatial/sf/issues/799
+#init an empty sfc
 empty <- st_as_sfc("POINT(EMPTY)")
-run_distances <- located_run_matches %>%
-  arrange(id, Date) %>%
-  filter(!is.na(Date)) %>%
+run_distances <- long_campaign_matches %>%
+  arrange(id, date) %>%
+  filter(!is.na(date)) %>%
   group_by(id) %>%
+  #find the distance from one game to the next
   mutate(
     distance_to_next = sf::st_distance(
       geometry, 
       lag(geometry, default = empty), 
       by_element = TRUE)
     ) 
+
+#sum the distances
 grouped_run_distances <- run_distances %>%
   summarise(travel_distance = sum(distance_to_next, na.rm = TRUE)) %>%
   merge(long_campaigns, by = "id") %>%
-  mutate(total_route = travel_distance / 1000) %>%
-  select(id, team, matches, season = Season, total_route) %>%
-  mutate(av_distance = total_route / matches) %>%
-  arrange(-total_route)
+  #conver to km
+  mutate(total_distance = travel_distance / 1000) %>%
+  select(id, team, matches, season = Season, total_distance) %>%
+  mutate(av_distance = total_distance / matches) %>%
+  arrange(-total_distance)
+
+head(grouped_run_distances)
 ```
+
+```{r plot_run_travel, warning=FALSE,message=FALSE}
+#functionalise our code from earlier to plot travel routes easier
+plot_travel_lines <- function(run_team_year, plot_type) {
+  run_matches <- long_campaign_matches %>%
+    mutate(id = paste(team, season)) %>%
+    filter(id == run_team_year) %>%
+    arrange(date)
+  coords <- st_coordinates(run_matches$geometry) %>%
+    split(f = rownames(.))
+  if(plot_type == "travel") {
+    lines <- mapply(coords, lead(coords), FUN = function(x, y) {
+    if(is.na(y)) {
+      return(NULL)
+    } else {
+      mat <- rbind(x, y)
+      line <- st_linestring(mat)
+      return(line)
+    }
+    }) %>%
+    .[-which(lengths(.) == 0)] %>%
+    st_multilinestring() %>%
+    st_sfc(crs = st_crs("+init=epsg:4326"))
+  } else if(plot_type == "spokes") {
+    home <- grounds %>%
+      filter(location == unique(run_matches$team)) %>%
+      st_coordinates()
+    lines <- lapply(coords, function(x) {
+      mat <- rbind(x, home)
+      line <- st_linestring(mat)
+      return(line)
+    }) %>%
+      #cast to multiline and add projection
+      st_multilinestring() %>%
+      st_sfc(crs = st_crs("+init=epsg:4326"))
+  }
+  plot <- ggplot() +
+    geom_sf(data = uk) +
+    geom_sf(data = lines, colour = "blue", size = 1.5) +
+    labs(title = paste(run_team_year)) +
+    theme_minimal()
+  return(plot)
+}
+
+#plot the top six
+library(patchwork)
+paste(grouped_run_distances$team[1:6],
+      grouped_run_distances$season[1:6]) %>%
+  lapply(., plot_travel_lines, plot_type = "travel") %>%
+  wrap_plots(.)
+```
+
+```{r find_spoke_distances, warning=FALSE,message=FALSE}
+spoke_distances <- long_campaign_matches %>%
+  left_join(grounds, by = c("team" = "location")) %>%
+  mutate(distance = st_distance(geometry.x, geometry.y, by_element = TRUE))
+
+grouped_spoke_distances <- spoke_distances %>%
+  group_by(team, season) %>%
+  summarise(total_distance = sum(distance/1000, na.rm = TRUE),
+            av_distance = mean(distance/1000, na.rm = TRUE)) %>%
+  arrange(-total_distance)
+
+head(grouped_spoke_distances)
+
+paste(grouped_run_distances$team[1:6],
+      grouped_run_distances$season[1:6]) %>%
+  lapply(., plot_travel_lines, plot_type = "spokes") %>%
+  wrap_plots(.)
+
+```
+
