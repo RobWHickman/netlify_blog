@@ -822,3 +822,142 @@ paste(grouped_spoke_distances$team[1:6],
 
 ```
 
+
+# 10th December - This Town Ain't Big Enough For a League Football Team
+
+["What's the largest town/city without a League club? I reckon Maidstone takes some beating (population 139,000 - about the same as Blackburn). Unlike Blackburn Rovers, Maidstone United play in the Kent League (of course Blackburn would not actually be eligible) which is some way below the Conference and Dr Martins Leagues. But being Maidstone United of course they play all their fixtures 12 miles away in Sittingbourne," writes Peter Driver. IN 2003](https://www.theguardian.com/football/2003/may/29/theknowledge.sport)
+
+
+```{r town_populations, warning=FALSE,message=FALSE}
+#scrape data on town/city ppulations in UK
+pops <- "http://lovemytown.co.uk/populations/TownsTable1.asp" %>%
+  read_html() %>%
+  html_nodes("#mainContent > table:nth-child(3)") %>%
+  html_table(fill = TRUE, header = TRUE) %>%
+  as.data.frame() %>%
+  #some munging to match datasets later
+  mutate(tcity15nm = case_when(
+    grepl("^St\\. ", Town) ~ gsub("^St\\. ", "St ", Town),
+    grepl("^Hull$", Town) ~ "Kingston upon Hull",
+    grepl("^Burton$", Town) ~ "Burton upon Trent",
+    grepl("^Newcastle$", Town) ~ "Newcastle upon Tyne",
+    grepl("^Southend$", Town) ~ "Southend-on-Sea",
+    grepl("^Stoke$", Town) ~ "Stoke-on-Trent",
+    TRUE ~ Town
+  )) %>%
+  #convert population to numeric
+  mutate(population = as.numeric(gsub(",", "", Population))) %>%
+  select(tcity15nm, population, status = Status)
+
+```
+
+```{r town_libraries, warning=FALSE,message=FALSE,echo=FALSE}
+#to read in geojson data as an sf file
+library(geojsonsf)
+
+file <- "C:/Users/robwh/Downloads/Major_Towns_and_Cities_December_2015_Boundaries.geojson"
+towns <- geojson_sf(file) %>%
+  left_join(., pops, by = "tcity15nm") %>%
+  st_transform(st_crs(27700)) %>%
+  st_buffer(., 2500)
+
+```
+
+```{r fake_town_libraries, warning=FALSE,message=FALSE,eval = FALSE}
+#to read in geojson data as an sf file
+library(geojsonsf)
+
+#download the shapefile from
+#https://data.gov.uk/dataset/7879ab82-2863-401e-8a29-a56e264d2182/major-towns-and-cities-december-2015-boundaries
+file <- "path/to/downloaded/file.geojson"
+#load data
+towns <- geojson_sf(file) %>%
+  left_join(., pops, by = "tcity15nm") %>%
+  st_transform(st_crs(27700)) %>%
+  st_buffer(., 2500)
+
+```
+
+```{r towns_get_clubs, warning=FALSE,message=FALSE}
+#get all league and non-league clubs
+#non league clubs in new release of engsoccerdata
+clubs <- rbind(
+  select(england, home, Season, tier), 
+  select(england_nonleague, home, Season, tier)) %>%
+  #no 2019 data for non league yet
+  filter(Season == 2018) %>%
+  select(home, tier) %>%
+  unique()
+
+#get the locations of each of these clubs in
+club_locations <- england_club_data %>%
+  st_as_sf(coords = c("lon", "lat"), crs = st_crs(4326)) %>%
+  #on uk grid projection
+  st_transform(st_crs(27700)) %>%
+  left_join(., clubs, by = c("team" = "home")) %>%
+  select(team, tier) %>%
+  filter(!is.na(tier))
+
+#plot these clubs over major towns in uk
+p_town_clubs <- ggplot() +
+  geom_sf(data = uk) +
+  geom_sf(data = towns, fill = "red") +
+  geom_sf(data = club_locations, alpha = 0.5, colour = "blue") +
+  labs(title = "location of English football teams relative to major towns") +
+  theme_minimal()
+
+p_town_clubs
+
+```
+
+```{r find_town_clubs, warning=FALSE,message=FALSE}
+#function to find which towns contain clubs
+town_data <- st_contains(towns, club_locations) %>%
+  map_df(., function(x) {
+    n_clubs <- length(x)
+    if(n_clubs == 0) {
+      max_tier <- NA
+      tiers <- NA
+    } else {
+      #get the tiers of the english footballing pyramid that clubs play in
+      tiers <- I(list(club_locations$tier[x]))
+      max_tier <- min(club_locations$tier[x])
+    }
+    return(data.frame(n_clubs,
+                      max_tier,
+                      tiers))
+  }) %>%
+  #bind to the town data
+  bind_cols(towns, .) %>%
+  select(town = tcity15nm, pop = population, n_clubs, max_tier) %>%
+  #arrange to answer question
+  arrange(n_clubs, -max_tier, -pop)
+
+#get rid of unnessecary geometry
+st_geometry(town_data) <- NULL
+
+#print answer
+head(town_data)
+
+```
+
+```{r town_clubs_by_tier, warning=FALSE,message=FALSE}
+#find the largest town without a club above tiers 5:8
+by_tier <- lapply(4:7, function(x) {
+    data <- town_data %>%
+      filter(!is.na(max_tier) & max_tier > x) %>%
+      arrange(-pop)
+  })
+
+#print by max tier
+lapply(by_tier, head, n = 5)
+
+```
+
+```{r smallest_town, warning=FALSE,message=FALSE}
+#can also answer the inverse
+town_data %>%
+  filter(max_tier < 5) %>%
+  arrange(pop)
+```
+
