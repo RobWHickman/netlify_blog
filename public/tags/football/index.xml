@@ -856,6 +856,200 @@ paste(grouped_spoke_distances$team[1:6],
 &lt;p&gt;&lt;img src=&#34;/post/2019-12-01-advent_calendar_knowledge_files/figure-html/find_spoke_distances-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
+&lt;div id=&#34;th-december---this-town-aint-big-enough-for-a-league-football-team&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;10th December - This Town Ain’t Big Enough For a League Football Team&lt;/h1&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.theguardian.com/football/2003/may/29/theknowledge.sport&#34;&gt;“What’s the largest town/city without a League club? I reckon Maidstone takes some beating (population 139,000 - about the same as Blackburn). Unlike Blackburn Rovers, Maidstone United play in the Kent League (of course Blackburn would not actually be eligible) which is some way below the Conference and Dr Martins Leagues. But being Maidstone United of course they play all their fixtures 12 miles away in Sittingbourne,” writes Peter Driver. IN 2003&lt;/a&gt;&lt;/p&gt;
+&lt;div id=&#34;answer--&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Answer -&lt;/h2&gt;
+&lt;p&gt;To answer this question, first we need data on towns and cities in England. We’re going to rank by population so can download the population table found &lt;a href=&#34;http://lovemytown.co.uk/populations/TownsTable1.asp&#34;&gt;here&lt;/a&gt; to start with&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#scrape data on town/city ppulations in UK
+pops &amp;lt;- &amp;quot;http://lovemytown.co.uk/populations/TownsTable1.asp&amp;quot; %&amp;gt;%
+  read_html() %&amp;gt;%
+  html_nodes(&amp;quot;#mainContent &amp;gt; table:nth-child(3)&amp;quot;) %&amp;gt;%
+  html_table(fill = TRUE, header = TRUE) %&amp;gt;%
+  as.data.frame() %&amp;gt;%
+  #some munging to match datasets later
+  mutate(tcity15nm = case_when(
+    grepl(&amp;quot;^St\\. &amp;quot;, Town) ~ gsub(&amp;quot;^St\\. &amp;quot;, &amp;quot;St &amp;quot;, Town),
+    grepl(&amp;quot;^Hull$&amp;quot;, Town) ~ &amp;quot;Kingston upon Hull&amp;quot;,
+    grepl(&amp;quot;^Burton$&amp;quot;, Town) ~ &amp;quot;Burton upon Trent&amp;quot;,
+    grepl(&amp;quot;^Newcastle$&amp;quot;, Town) ~ &amp;quot;Newcastle upon Tyne&amp;quot;,
+    grepl(&amp;quot;^Southend$&amp;quot;, Town) ~ &amp;quot;Southend-on-Sea&amp;quot;,
+    grepl(&amp;quot;^Stoke$&amp;quot;, Town) ~ &amp;quot;Stoke-on-Trent&amp;quot;,
+    TRUE ~ Town
+  )) %&amp;gt;%
+  #convert population to numeric
+  mutate(population = as.numeric(gsub(&amp;quot;,&amp;quot;, &amp;quot;&amp;quot;, Population))) %&amp;gt;%
+  select(tcity15nm, population, status = Status)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We’re then going to want the geographic data on these towns. The UK government provides shapefiles for the outlines of ‘Major Towns and Cities’ from a few years ago which should be sufficient for the question. They’re provided as geoJSON files so I’m going to use the geojsonsf package to load them straight as sf objects.&lt;/p&gt;
+&lt;p&gt;To reproduce this script, you’ll need to download the data from the &lt;a href=&#34;https://data.gov.uk/dataset/7879ab82-2863-401e-8a29-a56e264d2182/major-towns-and-cities-december-2015-boundaries&#34;&gt;UK government achives&lt;/a&gt; and point the file object towards it&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#to read in geojson data as an sf file
+library(geojsonsf)
+
+#download the shapefile from
+#https://data.gov.uk/dataset/7879ab82-2863-401e-8a29-a56e264d2182/major-towns-and-cities-december-2015-boundaries
+file &amp;lt;- &amp;quot;path/to/downloaded/file.geojson&amp;quot;
+#load data
+towns &amp;lt;- geojson_sf(file) %&amp;gt;%
+  left_join(., pops, by = &amp;quot;tcity15nm&amp;quot;) %&amp;gt;%
+  st_transform(st_crs(27700)) %&amp;gt;%
+  #buff the town shapefiles by 2.5km to catch all clubs within
+  #reasonable distance of the town
+  st_buffer(., 2500)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then we want the club data. In the latest release of &lt;a href=&#34;https://github.com/jalapic/engsoccerdata/pull/61&#34;&gt;engsoccer data&lt;/a&gt; I added some (very beta) non-league data so we have a greater number of teams to pick from. We’ll take the league the team played in in 2018 as this on league data hasn’t been updated to 2019 (the current season) yet.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get all league and non-league clubs
+#non league clubs in new release of engsoccerdata
+clubs &amp;lt;- rbind(
+  select(england, home, Season, tier), 
+  select(england_nonleague, home, Season, tier)) %&amp;gt;%
+  #no 2019 data for non league yet
+  filter(Season == 2018) %&amp;gt;%
+  select(home, tier) %&amp;gt;%
+  unique()
+
+#get the locations of each of these clubs in
+club_locations &amp;lt;- england_club_data %&amp;gt;%
+  st_as_sf(coords = c(&amp;quot;lon&amp;quot;, &amp;quot;lat&amp;quot;), crs = st_crs(4326)) %&amp;gt;%
+  #on uk grid projection
+  st_transform(st_crs(27700)) %&amp;gt;%
+  left_join(., clubs, by = c(&amp;quot;team&amp;quot; = &amp;quot;home&amp;quot;)) %&amp;gt;%
+  select(team, tier) %&amp;gt;%
+  filter(!is.na(tier))
+
+#plot these clubs over major towns in uk
+p_town_clubs &amp;lt;- ggplot() +
+  geom_sf(data = uk) +
+  geom_sf(data = towns, fill = &amp;quot;red&amp;quot;) +
+  geom_sf(data = club_locations, alpha = 0.15, colour = &amp;quot;blue&amp;quot;) +
+  labs(title = &amp;quot;location of English football teams relative to major towns&amp;quot;) +
+  theme_minimal()
+
+p_town_clubs&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-12-01-advent_calendar_knowledge_files/figure-html/towns_get_clubs-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;We can then run a very quick function to find the clubs that are location within each town using sf::st_contains and arrange by our parameters to answer the question!&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#function to find which towns contain clubs
+town_data &amp;lt;- st_contains(towns, club_locations) %&amp;gt;%
+  map_df(., function(x) {
+    n_clubs &amp;lt;- length(x)
+    if(n_clubs == 0) {
+      max_tier &amp;lt;- NA
+      tiers &amp;lt;- NA
+    } else {
+      #get the tiers of the english footballing pyramid that clubs play in
+      tiers &amp;lt;- I(list(club_locations$tier[x]))
+      max_tier &amp;lt;- min(club_locations$tier[x])
+    }
+    return(data.frame(n_clubs,
+                      max_tier,
+                      tiers))
+  }) %&amp;gt;%
+  #bind to the town data
+  bind_cols(towns, .) %&amp;gt;%
+  select(town = tcity15nm, pop = population, n_clubs, max_tier) %&amp;gt;%
+  #arrange to answer question
+  arrange(n_clubs, -max_tier, -pop)
+
+#get rid of unnessecary geometry
+st_geometry(town_data) &amp;lt;- NULL
+
+#print answer
+head(town_data)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##               town    pop n_clubs max_tier
+## 1       Gloucester 136362       0       NA
+## 2      Basingstoke 107355       0       NA
+## 3        Worcester 100153       0       NA
+## 4 Stockton-on-Tees  82729       0       NA
+## 5        Guildford  77057       0       NA
+## 6 Sutton Coldfield 109015       1        8&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So it appears Gloucester, Worcester and Basingstoke are the largest towns without a football club in their city limits. We can double check this using a quick grep function for the clubs (it’s possible this could miss some clubs but is probably accurate enough)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;empty_towns &amp;lt;- c(&amp;quot;Gloucester&amp;quot;, &amp;quot;Basingstoke&amp;quot;, &amp;quot;Worcester&amp;quot;, &amp;quot;Stockton&amp;quot;, &amp;quot;Guildford&amp;quot;)
+
+lapply(empty_towns, grep, x = clubs$home) %&amp;gt;%
+  unlist() %&amp;gt;%
+  clubs$home[.]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] &amp;quot;Gloucester City&amp;quot;  &amp;quot;Basingstoke Town&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So we can see that Gloucester and Basingstoke &lt;em&gt;do&lt;/em&gt; in fact have football teams, however a quick Wikipedia search shows that &lt;a href=&#34;https://en.wikipedia.org/wiki/Gloucester_City_A.F.C.&#34;&gt;they&lt;/a&gt; &lt;a href=&#34;https://en.wikipedia.org/wiki/Basingstoke_Town_F.C.&#34;&gt;both&lt;/a&gt; play outside their town (so I’m not sure if these count). The largest town* without a football team, down to the 8th tier of English football, is therefore Worcester with 100,000 people, but a team only in the &lt;a href=&#34;https://en.wikipedia.org/wiki/Worcester_City_F.C.&#34;&gt;9th tier&lt;/a&gt; of the football pyramid.&lt;/p&gt;
+&lt;p&gt;The question actually does specify &lt;em&gt;‘League’&lt;/em&gt; teams, which generally only refers to the top 4 flights on English football. We can then run the function for each tier, finding the largest town without a team in that tier or above.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the largest town without a club above tiers 5:8
+by_tier &amp;lt;- lapply(4:7, function(x) {
+    data &amp;lt;- town_data %&amp;gt;%
+      filter(!is.na(max_tier) &amp;amp; max_tier &amp;gt; x) %&amp;gt;%
+      arrange(-pop)
+  })
+
+#print by max tier
+lapply(by_tier, head, n = 5)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [[1]]
+##         town    pop n_clubs max_tier
+## 1   Coventry 325949       1        7
+## 2 Warrington 165456       1        7
+## 3     Slough 155298       2        5
+## 4      Poole 154718       2        7
+## 5       York 152841       1        6
+## 
+## [[2]]
+##         town    pop n_clubs max_tier
+## 1   Coventry 325949       1        7
+## 2 Warrington 165456       1        7
+## 3      Poole 154718       2        7
+## 4       York 152841       1        6
+## 5    Telford 142723       1        6
+## 
+## [[3]]
+##               town    pop n_clubs max_tier
+## 1         Coventry 325949       1        7
+## 2       Warrington 165456       1        7
+## 3            Poole 154718       2        7
+## 4         Worthing 109120       1        7
+## 5 Sutton Coldfield 109015       1        8
+## 
+## [[4]]
+##               town    pop n_clubs max_tier
+## 1 Sutton Coldfield 109015       1        8
+## 2         Basildon 107123       2        8
+## 3        St Helens 102885       1        8
+## 4        Wakefield  99251       1        8
+## 5         Hastings  91053       1        8&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And the City of Coventry takes it, having a population of 325,000 and a team only in the 7th tier (&lt;a href=&#34;https://en.wikipedia.org/wiki/Bedworth_United_F.C.&#34;&gt;Bedworth United, who play just outside the city&lt;/a&gt;). This is only because the city’s main team &lt;a href=&#34;https://en.wikipedia.org/wiki/Coventry_City_F.C.&#34;&gt;Coventry City&lt;/a&gt; are playing in Birmingham due to &lt;a href=&#34;https://en.wikipedia.org/wiki/Coventry_City_F.C.#St_Andrew&amp;#39;s&#34;&gt;ongoing difficulties finding a stadium within their own city&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I think in the spirit of the question, the true answer is one of Warrington (165k), Poole (154k), York (152k), of Telford (142k). Of which York is probably the most major and independent as a town/city.&lt;/p&gt;
+&lt;p&gt;Finally the article in which the question was shared posted the follow-up: what is the smallest town to hold a league club?&lt;/p&gt;
+&lt;p&gt;We can answer this using the directory of population places produced by the &lt;a href=&#34;https://github.com/alasdairrae/gb-places&#34;&gt;Ordnance Survey&lt;/a&gt;. Again, download the .csv and point the script at it to reproduce.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load the .csv of small places in the uk
+small_places &amp;lt;- read.csv(&amp;quot;path/to.csv&amp;quot;, stringsAsFactors = FALSE) %&amp;gt;%
+  #only interested in England
+  filter(COUNTRY == &amp;quot;England&amp;quot;) %&amp;gt;%
+  select(name = NAME1, x = X, y = Y) %&amp;gt;%
+  st_as_sf(coords = c(&amp;quot;x&amp;quot;, &amp;quot;y&amp;quot;), crs = st_crs(27700)) %&amp;gt;%
+  #find small places outside of the large towns
+  .[-unique(unlist(st_contains(towns, .))),] %&amp;gt;%
+  #buffer by 500m
+  st_buffer(., 100)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot these for a cool map
+plot(select(small_places))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-12-01-advent_calendar_knowledge_files/figure-html/plot_small_places-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;It’s then simple to find the small places to hold football clubs using sf::st_contains and indexing&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find clubs that are in these remaining places
+small_town_clubs &amp;lt;- st_contains(small_places, filter(club_locations, tier &amp;lt; 5))
+small_places[which(lengths(small_town_clubs) &amp;gt; 0),]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## Simple feature collection with 6 features and 1 field
+## geometry type:  POLYGON
+## dimension:      XY
+## bbox:           xmin: 351959.9 ymin: 116300 xmax: 391793 ymax: 430665
+## epsg (SRID):    27700
+## proj4string:    +proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489 +units=m +no_defs
+##             name                       geometry
+## 3454    Laneside POLYGON ((376361 429724, 37...
+## 3474     Enfield POLYGON ((375759 430165, 37...
+## 8843   Moss Lane POLYGON ((391793 371719, 39...
+## 17646 Houndstone POLYGON ((353128 117093.1, ...
+## 17691     Lufton POLYGON ((352959.9 116800, ...
+## 19419  Newmarket POLYGON ((384471.3 199698.6...&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Enfield and Moss Lane are in London and Manchester, so don’t count. Houndstone and Lufton are actually in the same town (Yeovil) but still are valid answers.&lt;/p&gt;
+&lt;p&gt;Laneside is located just outside Accrington, where &lt;a href=&#34;https://en.wikipedia.org/wiki/Accrington_Stanley_F.C.&#34;&gt;Accrington Stanley&lt;/a&gt; play in the third tier (population 35,000).&lt;/p&gt;
+&lt;p&gt;Yeovil (population 45,000) is home to &lt;a href=&#34;https://en.wikipedia.org/wiki/Yeovil_Town_F.C.&#34;&gt;Yeovil Town&lt;/a&gt; who play in the 4th tier.&lt;/p&gt;
+&lt;p&gt;But the far and away winner is 4th tier &lt;a href=&#34;https://en.wikipedia.org/wiki/Forest_Green_Rovers_F.C.&#34;&gt;Forest Green Rovers&lt;/a&gt; who play in Nailsworth, with a population of just 5,700 people. Even more, the only remotely near town, Stroud, has a population of just 32,000 people. Most incredible of all, &lt;a href=&#34;https://en.wikipedia.org/wiki/The_New_Lawn&#34;&gt;the stadium for Forest Green Rovers&lt;/a&gt; can hold ~5,000 people, or almost the entire surrounding population.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
 </description>
     </item>
     
