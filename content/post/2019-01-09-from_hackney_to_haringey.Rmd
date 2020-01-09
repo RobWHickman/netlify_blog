@@ -1,0 +1,89 @@
+---
+title: 
+author: Robert Hickman
+date: '2020-01-09'
+slug: from_hackney_to_haringey
+output: pdf_document
+categories: []
+tags:
+  - maps
+  - pubs
+  - cambridge
+header:
+  caption: ''
+  image: ''
+---
+
+
+```{r libraries, warning=FALSE,message=FALSE}
+library(tidyverse)
+library(sf)
+library(rgdal)
+```
+
+```{r get_data, warning=FALSE,message=FALSE}
+vote_data <- "https://raw.githubusercontent.com/alasdairrae/wpc/master/files/wpc_2019_flat_file_v9.csv" %>%
+  read.csv(stringsAsFactors = FALSE) %>%
+  select(name = cname3, country = ukcountry, winner = first17, majority, con, lab, ld, ukip, green, snp, pc, dup, sf, sdlp, uup, alliance, other) %>%
+    mutate(name = case_when(
+    grepl("London and Westminster", name) ~ "Cities of London and Westminster",
+    TRUE ~ name
+  )) %>%
+  filter(country %in% c("England")) %>%
+  filter(winner != "Spk")
+
+constituency_geography <- readOGR(dsn = "C:/Users/robwh/Desktop/geo_data/boundary/Data/GB", layer = "westminster_const_region") %>%
+  st_as_sf() %>%
+  mutate(name = gsub(" Co Const| Burgh Const| Boro Const", "", NAME)) %>%
+  mutate(name = case_when(
+    grepl("London and Westminster", name) ~ "Cities of London and Westminster",
+    grepl("-.*-", name) ~ gsub("(-)([a-z]{1})(.*-)", perl = TRUE, "\\1\\U\\2\\E\\3", name),
+    grepl("St\\. ", name) ~ gsub("St\\. ", "St ", name),
+    grepl(" of ", name) ~ gsub(" of ", " Of ", name),
+    grepl("Newcastle upon ", name) ~ gsub(" upon ", " Upon ", name),
+    TRUE ~ name
+  )) %>%
+  mutate(first_letter = gsub("(.)(.*)", "\\1",  gsub("North |East |South |West ", "", name))) %>%
+  select(name, first_letter) %>%
+  filter(name %in% vote_data$name)
+
+```
+
+```{r geographic_center_distance, warning=FALSE,message=FALSE}
+centers <- constituency_geography %>%
+  st_centroid() %>%
+  split(f = .$first_letter)
+
+get_distances <- function(letter_list) {
+  i <<- letter_list
+  constituencies <- letter_list$name
+  first_letter <- unique(letter_list$first_letter)
+  distance_matrix <- st_distance(letter_list, letter_list)
+  
+  distances_df <- distance_matrix %>%
+    as.data.frame()
+  names(distances_df) <- constituencies
+  
+  melted_df <- distances_df %>%
+    pivot_longer(., names(.), names_to = "to", values_to = "distance") %>%
+    mutate(from = rep(unique(to), each = length(unique(to)))) %>%
+    mutate(first_letter = first_letter)
+  
+  return(melted_df)
+}
+
+all_distances <- map_df(centers, get_distances)
+
+x <- all_distances %>%
+    filter(!grepl(" ", from) & !grepl(" ", to)) %>%
+    arrange(-distance) %>%
+    filter(!duplicated(first_letter)) %>%
+  filter(distance != 0)
+```
+
+```{r}
+data <- readRDS("C:/Users/robwh/Downloads/census_data_gibbs.rds")
+
+```
+
+
