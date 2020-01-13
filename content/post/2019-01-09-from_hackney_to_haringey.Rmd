@@ -7,33 +7,37 @@ output: pdf_document
 categories: []
 tags:
   - maps
-  - pubs
-  - cambridge
+  - politics
 header:
   caption: ''
   image: ''
 ---
 
+https://twitter.com/peterwalker99/status/1189443331237003265?fbclid=IwAR1-vc2yA6blkhC7OthxrpbTKEG_ShyZ4_-NErWHYIPqCvqgcQYVVH1S7mA
 
 ```{r libraries, warning=FALSE,message=FALSE}
 library(tidyverse)
 library(sf)
 library(rgdal)
+library(broom)
+library(ggthemes)
+```
+
+```{r load_data_secret, warning=FALSE,message=FALSE,echo=FALSE}
+#some of these files are large so I store the locally
+#I've provided links to where you can find them below
+census_oa_data <- readRDS("C:/Users/robwh/Desktop/constituency_distances/census_data.rds")
+constituency_shapefiles <- readOGR(dsn = "C:/Users/robwh/Desktop/geo_data/boundary/Data/GB", layer = "westminster_const_region")
 ```
 
 ```{r get_data, warning=FALSE,message=FALSE}
-vote_data <- "https://raw.githubusercontent.com/alasdairrae/wpc/master/files/wpc_2019_flat_file_v9.csv" %>%
-  read.csv(stringsAsFactors = FALSE) %>%
-  select(name = cname3, country = ukcountry, winner = first17, majority, con, lab, ld, ukip, green, snp, pc, dup, sf, sdlp, uup, alliance, other) %>%
-    mutate(name = case_when(
-    grepl("London and Westminster", name) ~ "Cities of London and Westminster",
-    TRUE ~ name
-  )) %>%
-  filter(country %in% c("England")) %>%
-  filter(winner != "Spk")
-
-constituency_geography <- readOGR(dsn = "C:/Users/robwh/Desktop/geo_data/boundary/Data/GB", layer = "westminster_const_region") %>%
+#this data can be found at https://www.ordnancesurvey.co.uk/business-government/products/boundaryline
+#open as:
+# constituency_shapefiles <- readOGR(dsn = "where/you/downloaded", 
+#                                    layer = "westminster_const_region")
+constituency_geography <- constituency_shapefiles %>%
   st_as_sf() %>%
+  #some munging to line up datasets
   mutate(name = gsub(" Co Const| Burgh Const| Boro Const", "", NAME)) %>%
   mutate(name = case_when(
     grepl("London and Westminster", name) ~ "Cities of London and Westminster",
@@ -43,21 +47,34 @@ constituency_geography <- readOGR(dsn = "C:/Users/robwh/Desktop/geo_data/boundar
     grepl("Newcastle upon ", name) ~ gsub(" upon ", " Upon ", name),
     TRUE ~ name
   )) %>%
-  mutate(first_letter = gsub("(.)(.*)", "\\1",  gsub("North |East |South |West ", "", name))) %>%
-  select(name, first_letter) %>%
-  filter(name %in% vote_data$name)
+  #get the first letter
+  #removing compass directions
+  filter(!grepl("North |East |South |West ", name) & !grepl(" .* ", name)) %>%
+  mutate(first_letter = gsub("(.)(.*)", "\\1",  name)) %>%
+  #only going to play with English constituencies here
+  filter(grepl("^E", CODE)) %>%
+  #remove Chorley (speaker's seat)
+  filter(!grepl("Chorley", name)) %>%
+  #select and rename relevant columns
+  select(WSTid = CODE, WSTnm = name, first_letter)
+
+constituency_names <- constituency_geography %>%
+  `st_geometry<-`(NULL)
 
 ```
 
 ```{r geographic_center_distance, warning=FALSE,message=FALSE}
-centers <- constituency_geography %>%
+#get the coordinates of the center of each constituency
+geographic_centers <- constituency_geography %>%
   st_centroid() %>%
   split(f = .$first_letter)
 
+#function to find distances between center points
 get_distances <- function(letter_list) {
-  i <<- letter_list
-  constituencies <- letter_list$name
+  constituencies <- letter_list$WSTnm
   first_letter <- unique(letter_list$first_letter)
+  
+  #get distance to/from every center point with same first letter
   distance_matrix <- st_distance(letter_list, letter_list)
   
   distances_df <- distance_matrix %>%
@@ -72,18 +89,275 @@ get_distances <- function(letter_list) {
   return(melted_df)
 }
 
-all_distances <- map_df(centers, get_distances)
+#run the function to get the distances between constituencies with same
+#first letter
+constituency_interdistances <- map_df(geographic_centers, get_distances)
 
-x <- all_distances %>%
-    filter(!grepl(" ", from) & !grepl(" ", to)) %>%
-    arrange(-distance) %>%
-    filter(!duplicated(first_letter)) %>%
+#find the longest distances 
+longest_distances <- constituency_interdistances %>%
+  #arrange by longest first
+  arrange(-distance) %>%
+  #take the longest per first letter
+  filter(!duplicated(first_letter)) %>%
   filter(distance != 0)
+
+#show the ongest 10 interdistances
+head(constituency_interdistances %>% arrange(-distance))
+```
+
+```{r plot_interdistances, warning=FALSE,message=FALSE}
+#shapefile of England for plotting
+eng <- readRDS("../../static/files/constituency_distances/england_shape.rds")
+
+#filter the longest journey per letter
+selected_constituencies <- constituency_geography %>%
+  filter(WSTnm %in% pivot_longer(longest_distances, cols = c("to", "from"))$value) %>%
+  left_join(., 
+            longest_distances %>% 
+              mutate(journey = paste(to, from, sep = " to ")) %>% 
+              select(first_letter, journey),
+            by = "first_letter")
+
+#get the center coordinates of constituencies
+#to help plotting small constituencies
+plotting_points <- do.call(rbind, geographic_centers) %>%
+  filter(WSTnm %in% selected_constituencies$WSTnm) %>%
+  left_join(., 
+            longest_distances %>% 
+              mutate(journey = paste(to, from, sep = " to ")) %>% 
+              select(first_letter, journey),
+            by = "first_letter")
+
+#calculate straight lines between two constituencies
+plotting_lines <- plotting_points %>%
+  split(f = .$journey) %>%
+  map_df(., function(data) {
+    coords <- rbind(st_coordinates(data[1,]), st_coordinates(data[2,]))
+    line <- st_linestring(coords)
+    df <- st_sfc(line, crs = st_crs("+init=epsg:27700")) %>%
+      as.data.frame() %>%
+      mutate(journey = unique(data$journey))
+  }) %>%
+  st_as_sf(crs = st_crs(points))
+
+#plot the longest journey between constituencies with the same first letter
+alliterative_journeys <-  ggplot() +
+  geom_sf(data = eng, fill = "white") +
+  geom_sf(data = plotting_lines, colour = "darkblue") +
+  #some constituencies are too small to plot as shapefiles
+  geom_sf(data = plotting_points, colour = "red", size = 2.5) +
+  geom_sf(data = selected_constituencies, fill = "red") +
+  theme_map() +
+  #split by first letter
+  facet_wrap(~journey)
+```
+
+```{r brexit_differences, warning=FALSE,message=FALSE}
+#load data on voting in the 2019 general election
+#2016 brexit vote based on Hanretty work also included
+votes_data <- readRDS("../../static/files/constituency_distances/ge2019_results.rds") %>%
+  select(WSTnm = constituency_name, winner = first_party, votes = electorate, 
+         con, lab, ld, brexit, green, other, brexit_hanretty) %>%
+  #convert to vote fractions
+  modify_at(c("con", "lab", "ld", "brexit", "green", "other"), function(x) x/.$votes) %>%
+  filter(WSTnm %in% constituency_geography$WSTnm)
+
+#find the largest gap in 2016 brexit vote between constituencies
+#which same first letter
+brexit_differences <- votes_data %>%
+  left_join(., constituency_names, by = "WSTnm") %>%
+  split(f = .$first_letter) %>%
+  map_df(., function(data) {
+    difference <- outer(data$brexit_hanretty, data$brexit_hanretty, "-") %>%
+      as.data.frame() %>%
+      mutate(from = data$WSTnm)
+    names(difference)[1:(ncol(difference) - 1)] <- data$WSTnm
+    df <- difference %>%
+      pivot_longer(cols = -starts_with("from"),
+                   names_to = "to",
+                   values_to = "brexit_2016_difference") %>%
+      mutate(first_letter = unique(data$first_letter))
+  }) %>%
+  #arrange by greatest difference
+  arrange(-brexit_2016_difference)
+
+head(brexit_differences, n = 10)
+
+#plot the distances between constituencies of same first letter with
+#greatest difference in 2016 brexit vote
+brexit_distance_plot <- brexit_differences %>%
+  filter(!duplicated(first_letter)) %>%
+  left_join(constituency_interdistances, by = c("to", "from")) %>%
+  mutate(journey = paste(to, from, sep = "-")) %>%
+  select(journey, first_letter.x, brexit_2016_difference, distance) %>%
+  ggplot(aes(x = brexit_2016_difference, y = distance, label = journey)) +
+  geom_text()
+```
+```{r data, warning=FALSE,message=FALSE}
+#load the raw values from the census data for each output area
+census_oa_data <- census_oa_data %>%
+  #select only integer data (counts not percentages)
+  select(OAid = GeographyCode, which(sapply(.,class)=="integer"))
+
+#load the lookup between output areas to westminster constituency
+oa_to_westminster <- readRDS("../../static/files/constituency_distances/oa_to_westminster.rds") %>%
+  select(OAid = OA11CD, WSTid = PCON11CD, WSTnm = PCON11NM, WSTperc = OA11PERCENT) %>%
+  #select only english constituencies
+  filter(WSTid %in% constituency_names$WSTid)
+
+#load the terminology for each census statistic
+census_index <- readRDS("../../static/files/constituency_distances/census_names.rds")
+
+#gather the census data by westminster constituency
+census_data_westminster <- left_join(census_oa_data, oa_to_westminster, by = "OAid") %>%
+  filter(!is.na(WSTid)) %>%
+  #for output areas split between constituencies guesstimate the correct amounts
+  mutate_if(is.integer, funs(round(. * (WSTperc/100)))) %>%
+  select(-WSTnm, -WSTperc, -OAid) %>%
+  #sum the counts per constituency for each statistic
+  group_by(WSTid) %>%
+  summarise_if(is.numeric, sum, na.rm = TRUE) %>%
+  #a few codes missing from the index
+  .[-which(!names(.)[2:ncol(.)] %in% census_index$Code)] %>%
+  #turn into percentages from the total number of people (KS101)
+  modify_if(is.numeric, function(x) x/.$KS101EW0001) %>%
+  #arrange by name
+  arrange(WSTid)
+
 ```
 
 ```{r}
-data <- readRDS("C:/Users/robwh/Downloads/census_data_gibbs.rds")
+dependent <- census_data_westminster %>%
+  column_to_rownames("WSTid") %>%
+  t() %>%
+  split(f = rownames(.))
+
+lr_margin <- votes_data %>%
+  left_join(constituency_names, by = "WSTnm") %>%
+  #must line up in order with census data
+  arrange(WSTid) %>%
+  mutate(left = lab + ld + green,
+         right = con + brexit) %>%
+  mutate(margin = left - right) %>%
+  .$margin
+
+lr_correlations <- map_df(dependent, function(x) {
+  summary(lm(x ~ lr_margin)) %>%
+    tidy() %>%
+    filter(term != "(Intercept)")
+})  %>%
+  mutate(Code = names(census_data_westminster[2:ncol(census_data_westminster)])) %>%
+  left_join(., select(census_index, Code, Meaning), by = "Code") %>%
+  mutate(stat_category = gsub("(.{5})(.*)", "\\1", Code)) %>%
+  arrange(-abs(statistic)) %>%
+  group_by(stat_category) %>%
+  mutate(duplicate_n = 1:n()) %>%
+  ungroup() %>%
+  filter(duplicate_n == 1 & abs(statistic) > 10 & !duplicated(Meaning))
+
+right_variables <- lr_correlations %>%
+  mutate(census_info = paste(Code, Meaning)) %>%
+  filter(statistic < 0) %>%
+  .$census_info
+
+left_variables <- lr_correlations %>%
+  mutate(census_info = paste(Code, Meaning)) %>%
+  filter(statistic > 0) %>%
+  .$census_info
+
+right_variables
+
+left_variables
+```
+
+```{r}
+brexit <- lr_margin <- votes_data %>%
+  left_join(constituency_names, by = "WSTnm") %>%
+  .$brexit_hanretty
+
+brexit_correlations <- map_df(dependent, function(x) {
+  summary(lm(x ~ lr_margin)) %>%
+    tidy() %>%
+    filter(term != "(Intercept)")
+})  %>%
+  mutate(Code = names(census_data_westminster[2:ncol(census_data_westminster)])) %>%
+  left_join(., select(census_index, Code, Meaning), by = "Code") %>%
+  mutate(stat_category = gsub("(.{5})(.*)", "\\1", Code)) %>%
+  arrange(-abs(statistic)) %>%
+  group_by(stat_category) %>%
+  mutate(duplicate_n = 1:n()) %>%
+  ungroup() %>%
+  filter(duplicate_n == 1 & abs(statistic) > 10 & !duplicated(Meaning))
+
+head(brexit_correlations)
+```
+
+```{r}
+lr_correlations$Meaning[which(lr_correlations$Code %in% brexit_correlations$Code)]
+```
+
+```{r}
+pca_census <- census_data_westminster %>%
+  select(unique(c(lr_correlations$Code, brexit_correlations$Code))) %>%
+  scale()
+
+pca <- prcomp(pca_census)$x %>%
+  as.data.frame() %>%
+  .[1:3] %>%
+  mutate(WSTid = census_data_westminster$WSTid) %>%
+  left_join(., constituency_names, by = "WSTid") %>%
+  left_join(., select(votes_data, WSTnm, winner), by = "WSTnm")
+
+p <- ggplot(pca, aes(x = PC1, y = PC2, label = WSTnm, colour = winner)) +
+  geom_point() +
+  geom_text() +
+  scale_colour_manual(values = c("mediumblue", "green", "red", "goldenrod")) +
+  labs(x = "PC1 - Urband, Young & Diverse",
+       y = "PC2 - Economically 'Left Behind'") +
+  facet_wrap(~first_letter)
 
 ```
 
+```{r}
+distances <- pca %>%
+  split(f = .$first_letter) %>%
+  map_df(., function(data) {
+    distances <- (outer(data$PC1, data$PC1, "-")^2 + outer(data$PC2, data$PC2, "-")^2) %>%
+    sqrt() %>%
+    as.data.frame() %>%
+    mutate(from = data$WSTnm)
+    names(distances)[1:(ncol(distances)-1)] <- as.character(data$WSTnm)
+    df <- pivot_longer(distances, -starts_with("from"),
+                       names_to = "to",
+                       values_to = "pca_distance") %>%
+      mutate(pca_distance = abs(pca_distance))
+    return(df)
+  }) %>%
+  filter(!duplicated(pca_distance) & pca_distance != 0)
+
+p <- ggplot(x, aes(x = distance, y = brexit_2016_difference)) +
+    geom_point() +
+    theme_minimal() +
+    facet_wrap(~first_letter)
+```
+
+```{r}
+x <- distances %>%
+  left_join(brexit_differences, by = c("from", "to")) %>%
+  select(-first_letter) %>%
+  left_join(constituency_interdistances, by = c("from", "to")) %>%
+  mutate(label = case_when(
+    distance > 400000 & pca_distance > 15 ~ paste(to, from, sep = "-")
+  )) %>%
+  mutate(distance = distance / 1000)
+
+p <- ggplot(x, aes(x = distance, y = pca_distance, size = brexit_2016_difference)) +
+  geom_point(alpha = 0.2) +
+  geom_text(aes(label = label)) +
+  scale_size_continuous(name = "diff Brexit\n 2016 vote") +
+  labs(x = "Geographic Distances between Constituences (/km",
+       y = "'Distance' between Constituencies Demograph (2011 Census)") +
+  theme_minimal() +
+  stat_smooth(method = "lm")
+```
 
