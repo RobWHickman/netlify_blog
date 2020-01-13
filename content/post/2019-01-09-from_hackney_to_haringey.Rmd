@@ -141,7 +141,7 @@ plotting_lines <- plotting_points %>%
   st_as_sf(crs = st_crs(points))
 
 #plot the longest journey between constituencies with the same first letter
-alliterative_journeys <-  ggplot() +
+alliterative_journeys_plot <-  ggplot() +
   geom_sf(data = eng, fill = "white") +
   geom_sf(data = plotting_lines, colour = "darkblue") +
   #some constituencies are too small to plot as shapefiles
@@ -150,9 +150,11 @@ alliterative_journeys <-  ggplot() +
   theme_map() +
   #split by first letter
   facet_wrap(~journey)
+
+alliterative_journeys_plot
 ```
 
-```{r brexit_differences, warning=FALSE,message=FALSE}
+```{r load_vote_data, warning=FALSE,message=FALSE}
 #load data on voting in the 2019 general election
 #2016 brexit vote based on Hanretty work also included
 votes_data <- readRDS("../../static/files/constituency_distances/ge2019_results.rds") %>%
@@ -160,8 +162,13 @@ votes_data <- readRDS("../../static/files/constituency_distances/ge2019_results.
          con, lab, ld, brexit, green, other, brexit_hanretty) %>%
   #convert to vote fractions
   modify_at(c("con", "lab", "ld", "brexit", "green", "other"), function(x) x/.$votes) %>%
+  #take only relevant constituencies
   filter(WSTnm %in% constituency_geography$WSTnm)
 
+head(votes_data)
+```
+
+```{r get_brexit_differences, warning=FALSE,message=FALSE}
 #find the largest gap in 2016 brexit vote between constituencies
 #which same first letter
 brexit_differences <- votes_data %>%
@@ -182,7 +189,9 @@ brexit_differences <- votes_data %>%
   arrange(-brexit_2016_difference)
 
 head(brexit_differences, n = 10)
+```
 
+```{r plot_brexit_differences, warning=FALSE,message=FALSE}
 #plot the distances between constituencies of same first letter with
 #greatest difference in 2016 brexit vote
 brexit_distance_plot <- brexit_differences %>%
@@ -192,8 +201,11 @@ brexit_distance_plot <- brexit_differences %>%
   select(journey, first_letter.x, brexit_2016_difference, distance) %>%
   ggplot(aes(x = brexit_2016_difference, y = distance, label = journey)) +
   geom_text()
+
+brexit_distance_plot
 ```
-```{r data, warning=FALSE,message=FALSE}
+
+```{r load_census_data, warning=FALSE,message=FALSE}
 #load the raw values from the census data for each output area
 census_oa_data <- census_oa_data %>%
   #select only integer data (counts not percentages)
@@ -205,8 +217,6 @@ oa_to_westminster <- readRDS("../../static/files/constituency_distances/oa_to_we
   #select only english constituencies
   filter(WSTid %in% constituency_names$WSTid)
 
-#load the terminology for each census statistic
-census_index <- readRDS("../../static/files/constituency_distances/census_names.rds")
 
 #gather the census data by westminster constituency
 census_data_westminster <- left_join(census_oa_data, oa_to_westminster, by = "OAid") %>%
@@ -217,40 +227,84 @@ census_data_westminster <- left_join(census_oa_data, oa_to_westminster, by = "OA
   #sum the counts per constituency for each statistic
   group_by(WSTid) %>%
   summarise_if(is.numeric, sum, na.rm = TRUE) %>%
-  #a few codes missing from the index
-  .[-which(!names(.)[2:ncol(.)] %in% census_index$Code)] %>%
   #turn into percentages from the total number of people (KS101)
   modify_if(is.numeric, function(x) x/.$KS101EW0001) %>%
   #arrange by name
   arrange(WSTid)
 
+#only preview the first few columns as we have ~400 total
+head(census_data_westminster[1:8])
+
 ```
 
-```{r}
-dependent <- census_data_westminster %>%
-  column_to_rownames("WSTid") %>%
-  t() %>%
-  split(f = rownames(.))
+```{r load_census_index, warning=FALSE,message=FALSE}
+#load the terminology for each census statistic
+census_index <- readRDS("../../static/files/constituency_distances/census_names.rds")
 
-lr_margin <- votes_data %>%
+head(census_index)
+```
+
+```{r take_relevant_census_data, warning=FALSE,message=FALSE}
+census_data_westminster <- census_data_westminster %>%
+  #a few codes missing from the index
+  .[-which(!names(.)[2:ncol(.)] %in% census_index$Code)]
+
+```
+
+
+```{r get_correlations_func, warning=FALSE,message=FALSE}
+get_correlations_tidy <- function(demography, dependent_var) {
+  #first split up the demography data by variable so we can independently
+  #correlate each against the dependent variable
+  split_demog <- demography %>%
+    column_to_rownames("WSTid") %>%
+    t() %>%
+    split(f = rownames(.))
+  
+  #run the values for each variables against the dependent_var
+  correlations <- map_df(split_demog, function(x) {
+    summary(lm(x ~ lr_margin)) %>%
+      #tidy it to bind to df
+      broom::tidy() %>%
+      filter(term != "(Intercept)")
+  })
+  
+  tidy_df <- correlations %>%
+    #left join in the meaning for each variable
+    mutate(Code = names(demography[2:ncol(demography)])) %>%
+    left_join(., select(census_index, Code, Meaning), by = "Code") %>%
+    arrange(-abs(statistic))
+  
+  #return this data frame
+  return(tidy_df)
+}
+```
+
+```{r get_lr_correlations, warning=FALSE,message=FALSE}
+lr_marign <- votes_data %>%
   left_join(constituency_names, by = "WSTnm") %>%
   #must line up in order with census data
   arrange(WSTid) %>%
+  #assuming a simple left vs right decision for voters
   mutate(left = lab + ld + green,
          right = con + brexit) %>%
+  #take the difference between left and right sum votes for each constituency
   mutate(margin = left - right) %>%
   .$margin
 
-lr_correlations <- map_df(dependent, function(x) {
-  summary(lm(x ~ lr_margin)) %>%
-    tidy() %>%
-    filter(term != "(Intercept)")
-})  %>%
-  mutate(Code = names(census_data_westminster[2:ncol(census_data_westminster)])) %>%
-  left_join(., select(census_index, Code, Meaning), by = "Code") %>%
+#run in the above function
+lr_correlations <- get_correlations_tidy(census_data_westminster, lr_margin)
+
+head(select(lr_correlations, Code, Meaning, statistic, p.value))
+```
+
+```{r get_lr_variables, warning=FALSE,message=FALSE}
+lr_correlations <- lr_correlations %>%
+  #lots of these stats are self-correlated
+  #e.g. 3 cars in household vs 4+ cars in household
   mutate(stat_category = gsub("(.{5})(.*)", "\\1", Code)) %>%
-  arrange(-abs(statistic)) %>%
   group_by(stat_category) %>%
+  #take only the strongest correlated variable from each 'category'
   mutate(duplicate_n = 1:n()) %>%
   ungroup() %>%
   filter(duplicate_n == 1 & abs(statistic) > 10 & !duplicated(Meaning))
@@ -268,47 +322,54 @@ left_variables <- lr_correlations %>%
 right_variables
 
 left_variables
+
 ```
 
 ```{r}
-brexit <- lr_margin <- votes_data %>%
+brexit_vote <- votes_data %>%
   left_join(constituency_names, by = "WSTnm") %>%
+  #must line up in order with census data
+  arrange(WSTid) %>%
   .$brexit_hanretty
 
-brexit_correlations <- map_df(dependent, function(x) {
-  summary(lm(x ~ lr_margin)) %>%
-    tidy() %>%
-    filter(term != "(Intercept)")
-})  %>%
-  mutate(Code = names(census_data_westminster[2:ncol(census_data_westminster)])) %>%
-  left_join(., select(census_index, Code, Meaning), by = "Code") %>%
+brexit_correlations <- get_correlations_tidy(census_data_westminster, brexit_vote) %>%
+  #lots of these stats are self-correlated
+  #e.g. 3 cars in household vs 4+ cars in household
   mutate(stat_category = gsub("(.{5})(.*)", "\\1", Code)) %>%
-  arrange(-abs(statistic)) %>%
   group_by(stat_category) %>%
+  #take only the strongest correlated variable from each 'category'
   mutate(duplicate_n = 1:n()) %>%
   ungroup() %>%
   filter(duplicate_n == 1 & abs(statistic) > 10 & !duplicated(Meaning))
 
-head(brexit_correlations)
+head(brexit_correlations) 
 ```
 
 ```{r}
 lr_correlations$Meaning[which(lr_correlations$Code %in% brexit_correlations$Code)]
 ```
 
-```{r}
+```{r do_census_pca, warning=FALSE,message=FALSE}
 pca_census <- census_data_westminster %>%
+  #take only the variable that strongly correlate with 2019/brexit vote
   select(unique(c(lr_correlations$Code, brexit_correlations$Code))) %>%
+  #scale before pca
   scale()
 
-pca <- prcomp(pca_census)$x %>%
+#run the pca
+#take first 3 components
+demographic_pca <- prcomp(pca_census)$x %>%
   as.data.frame() %>%
   .[1:3] %>%
+  #add back in ID column
   mutate(WSTid = census_data_westminster$WSTid) %>%
+  #join in additional dta for plotting
   left_join(., constituency_names, by = "WSTid") %>%
   left_join(., select(votes_data, WSTnm, winner), by = "WSTnm")
 
-p <- ggplot(pca, aes(x = PC1, y = PC2, label = WSTnm, colour = winner)) +
+#plot
+demographic_pca_plot <- demographic_pca %>%
+  ggplot(aes(x = PC1, y = PC2, label = WSTnm, colour = winner)) +
   geom_point() +
   geom_text() +
   scale_colour_manual(values = c("mediumblue", "green", "red", "goldenrod")) +
@@ -316,10 +377,11 @@ p <- ggplot(pca, aes(x = PC1, y = PC2, label = WSTnm, colour = winner)) +
        y = "PC2 - Economically 'Left Behind'") +
   facet_wrap(~first_letter)
 
+demographic_pca_plot
 ```
 
-```{r}
-distances <- pca %>%
+```{r get_census_distances, warning=FALSE,message=FALSE}
+distances <- demographic_pca %>%
   split(f = .$first_letter) %>%
   map_df(., function(data) {
     distances <- (outer(data$PC1, data$PC1, "-")^2 + outer(data$PC2, data$PC2, "-")^2) %>%
@@ -334,11 +396,6 @@ distances <- pca %>%
     return(df)
   }) %>%
   filter(!duplicated(pca_distance) & pca_distance != 0)
-
-p <- ggplot(x, aes(x = distance, y = brexit_2016_difference)) +
-    geom_point() +
-    theme_minimal() +
-    facet_wrap(~first_letter)
 ```
 
 ```{r}
