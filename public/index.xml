@@ -6,8 +6,518 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
-    <lastBuildDate>Sun, 01 Dec 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 09 Jan 2020 00:00:00 +0000</lastBuildDate>
     <atom:link href="/" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title></title>
+      <link>/post/from_hackney_to_haringey/</link>
+      <pubDate>Thu, 09 Jan 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/from_hackney_to_haringey/</guid>
+      <description>
+
+
+&lt;p&gt;A perculiar way in which the UK’s constituency-based electoral system shapes media coverage is that the names of certain towns/districts have an outsized effect. For instance, in the 2019 UK general election, much was made of &lt;a href=&#34;https://www.newstatesman.com/politics/uk/2019/10/which-voters-who-swing-election-2019-workington-man&#34;&gt;Workington&lt;/a&gt; &lt;a href=&#34;https://www.dailymail.co.uk/news/article-7640915/Workington-Man-backing-Boris-Johnson-Survey-finds-Tories-course-win-key-Labour-seat.html&#34;&gt;Man&lt;/a&gt;* in Cumbria- a seat that had fairly consistently returned Labour MPs in the modern era.&lt;/p&gt;
+&lt;p&gt;One particular media trend made possible by the variety of names for UK seats is to alliterate between constituencies that are seen as showing a range of geography/opinion/etc. This is best summed up in a great exchange between the absolute boy, and Health Secretary, Matt Hancock, and Kay Burley:&lt;/p&gt;
+&lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en-gb&#34;&gt;
+&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
+On Sky, Matt Hanock says new cancer treatments are being rolled out “from Barnsley to Bassetlaw; from Wigan to Warrington.”&lt;br&gt;&lt;br&gt;Kay Burley: “That&#39;s not very far, you know.”&lt;br&gt;&lt;br&gt;Hancock: “It&#39;s also happening in Cornwall.”
+&lt;/p&gt;
+— Peter Walker (&lt;span class=&#34;citation&#34;&gt;@peterwalker99&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/peterwalker99/status/1189443331237003265?ref_src=twsrc%5Etfw&#34;&gt;30 October 2019&lt;/a&gt;
+&lt;/blockquote&gt;
+&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
+&lt;p&gt;Given that I had an afternoon off sick from work, and enjoy wasting my time on such things, I wanted to see what the best constituencies to use for ‘From Xx to Xy’ in British politics is. For this I’m going to use mostly data that is hosted on this website, however, where it isn’t I’ve made it pretty clear in comments where it can be downlaoded.&lt;/p&gt;
+&lt;p&gt;*for a good take on this, see &lt;a href=&#34;https://www.theguardian.com/commentisfree/2019/nov/22/workington-man-voter-caricature-essex-man&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;## OGR data source with driver: ESRI Shapefile 
+## Source: &amp;quot;C:\Users\rob-getty\Desktop\cleanup desktop\geo_data\boundary\Data\GB&amp;quot;, layer: &amp;quot;westminster_const_region&amp;quot;
+## with 632 features
+## It has 15 fields
+## Integer64 fields read as strings:  NUMBER NUMBER0 POLYGON_ID UNIT_ID&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;First, and easiest, let’s start with geographic distances between constituencies. For this I use the Ordnance Survey &lt;a href=&#34;https://www.ordnancesurvey.co.uk/business-government/products/boundaryline&#34;&gt;boundary line&lt;/a&gt; dataset which gives shapefile of each constituency in the UK.&lt;/p&gt;
+&lt;p&gt;After some string regex to match names between datasets, I also removed all constituencies beginning with North/South/East/West (as ‘From East Surry to East Hampshire’ doesn’t really have a ring to it) and also only took seats within England or Wales (more on why later). I also took out constituency names that were longer than two words, again for stylistic reasons.&lt;/p&gt;
+&lt;p&gt;We’re then left with 350 (out of 650 total) seats which we can plot, filled by the first letter of their name.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load tidyverse for munging
+library(tidyverse)
+
+#this data can be found at https://www.ordnancesurvey.co.uk/business-government/products/boundaryline
+#open as:
+# constituency_shapefiles &amp;lt;- readOGR(dsn = &amp;quot;where/you/downloaded&amp;quot;, 
+#                                    layer = &amp;quot;westminster_const_region&amp;quot;)
+#using rgdal and sf for geospatial work
+library(rgdal)
+library(sf)
+
+constituency_geography &amp;lt;- constituency_shapefiles %&amp;gt;%
+  st_as_sf() %&amp;gt;%
+  #some munging to line up datasets
+  mutate(name = gsub(&amp;quot; Co Const| Burgh Const| Boro Const&amp;quot;, &amp;quot;&amp;quot;, NAME)) %&amp;gt;%
+  mutate(name = case_when(
+    grepl(&amp;quot;London and Westminster&amp;quot;, name) ~ &amp;quot;Cities of London and Westminster&amp;quot;,
+    grepl(&amp;quot;-.*-&amp;quot;, name) ~ gsub(&amp;quot;(-)([a-z]{1})(.*-)&amp;quot;, perl = TRUE, &amp;quot;\\1\\U\\2\\E\\3&amp;quot;, name),
+    grepl(&amp;quot;St\\. &amp;quot;, name) ~ gsub(&amp;quot;St\\. &amp;quot;, &amp;quot;St &amp;quot;, name),
+    grepl(&amp;quot; of &amp;quot;, name) ~ gsub(&amp;quot; of &amp;quot;, &amp;quot; Of &amp;quot;, name),
+    grepl(&amp;quot;Newcastle upon &amp;quot;, name) ~ gsub(&amp;quot; upon &amp;quot;, &amp;quot; Upon &amp;quot;, name),
+    TRUE ~ name
+  )) %&amp;gt;%
+  #get the first letter
+  #removing compass directions
+  filter(!grepl(&amp;quot;North |East |South |West &amp;quot;, name) &amp;amp; !grepl(&amp;quot; .* &amp;quot;, name)) %&amp;gt;%
+  mutate(first_letter = gsub(&amp;quot;(.)(.*)&amp;quot;, &amp;quot;\\1&amp;quot;,  name)) %&amp;gt;%
+  #only going to play with English constituencies here
+  filter(grepl(&amp;quot;^E|^W&amp;quot;, CODE)) %&amp;gt;%
+  #remove Chorley (speaker&amp;#39;s seat)
+  filter(!grepl(&amp;quot;Chorley&amp;quot;, name)) %&amp;gt;%
+  #select and rename relevant columns
+  select(WSTid = CODE, WSTnm = name, first_letter)
+
+constituency_names &amp;lt;- constituency_geography %&amp;gt;%
+  `st_geometry&amp;lt;-`(NULL)
+
+#ggthemes for map theme
+library(ggthemes)
+
+#plot remaining constituencies coloured based on first letter
+first_letter_plot &amp;lt;- ggplot() +
+  geom_sf(data = constituency_geography, aes(fill = first_letter)) +
+  scale_fill_discrete(guide = FALSE) +
+  theme_map()
+
+plot(first_letter_plot)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-09-from_hackney_to_haringey_files/figure-html/get_data-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;To calculate the distance between any two constituencies, I use the center location of each, calculated using sf::st_centroid(). Grouping by first letter then creating a matrix from each to each is simple enough using sf::st_distance() as follows:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the coordinates of the center of each constituency
+geographic_centers &amp;lt;- constituency_geography %&amp;gt;%
+  st_centroid() %&amp;gt;%
+  split(f = .$first_letter)
+
+#function to find distances between center points
+get_distances &amp;lt;- function(letter_list) {
+  constituencies &amp;lt;- letter_list$WSTnm
+  first_letter &amp;lt;- unique(letter_list$first_letter)
+  
+  #get distance to/from every center point with same first letter
+  distance_matrix &amp;lt;- st_distance(letter_list, letter_list)
+  
+  distances_df &amp;lt;- distance_matrix %&amp;gt;%
+    as.data.frame()
+  names(distances_df) &amp;lt;- constituencies
+  
+  melted_df &amp;lt;- distances_df %&amp;gt;%
+    pivot_longer(., names(.), names_to = &amp;quot;to&amp;quot;, values_to = &amp;quot;distance&amp;quot;) %&amp;gt;%
+    mutate(from = rep(unique(to), each = length(unique(to)))) %&amp;gt;%
+    mutate(first_letter = first_letter)
+  
+  return(melted_df)
+}
+
+#run the function to get the distances between constituencies with same
+#first letter
+constituency_interdistances &amp;lt;- map_df(geographic_centers, get_distances)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then find the longest distance (in metres) between the centre of constituencies, grouped by the first letter of their name using some simple muning:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the longest distances 
+longest_distances &amp;lt;- constituency_interdistances %&amp;gt;%
+  #arrange by longest first
+  arrange(-distance) %&amp;gt;%
+  #take the longest per first letter
+  filter(!duplicated(first_letter)) %&amp;gt;%
+  filter(distance != 0)
+
+#show the ongest 10 interdistances
+head(longest_distances %&amp;gt;% arrange(-distance))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 4
+##   to                 distance from               first_letter
+##   &amp;lt;chr&amp;gt;                 &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;              &amp;lt;chr&amp;gt;       
+## 1 St Ives             601117. Sunderland Central S           
+## 2 Tynemouth           540605. Totnes             T           
+## 3 Berwick-Upon-Tweed  528160. Brighton, Kemptown B           
+## 4 Worthing West       490544. Wansbeck           W           
+## 5 Hove                488181. Hexham             H           
+## 6 Carlisle            483127. Canterbury         C&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Perhaps not surprisingly, St Ives (in the far South West on England) to Sunderland Central (in the far North East) is the furthest distance (601km). We can see though that there’s a fair few first letter for which we have a pair of constituencies that are pretty far away from each other.&lt;/p&gt;
+&lt;p&gt;To plot the longest distance between a pair of constituencies that alliterate is simple enough. I also load a shapefile of the outline of England and Wales to pretty up the plots and create lines between each constituency. Where constituencies are too small to be plotted on this scale, I use a red dot.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#shapefile of England and Wales for plotting
+eng_wal &amp;lt;- &amp;quot;C:/Users/rob-getty/Desktop/netlify_blog/static/files/constituency_distances/england_wales_shape.rds&amp;quot; %&amp;gt;%
+  readRDS()
+
+#filter the longest journey per letter
+selected_constituencies &amp;lt;- constituency_geography %&amp;gt;%
+  filter(WSTnm %in% pivot_longer(longest_distances, cols = c(&amp;quot;to&amp;quot;, &amp;quot;from&amp;quot;))$value) %&amp;gt;%
+  left_join(., 
+            longest_distances %&amp;gt;% 
+              mutate(journey = paste(to, from, sep = &amp;quot; to\n&amp;quot;)) %&amp;gt;% 
+              select(first_letter, journey),
+            by = &amp;quot;first_letter&amp;quot;)
+
+#get the center coordinates of constituencies
+#to help plotting small constituencies
+plotting_points &amp;lt;- do.call(rbind, geographic_centers) %&amp;gt;%
+  filter(WSTnm %in% selected_constituencies$WSTnm) %&amp;gt;%
+  left_join(., 
+            longest_distances %&amp;gt;% 
+              mutate(journey = paste(to, from, sep = &amp;quot; to\n&amp;quot;)) %&amp;gt;% 
+              select(first_letter, journey),
+            by = &amp;quot;first_letter&amp;quot;) %&amp;gt;%
+  st_transform(crs = st_crs(eng_wal))
+
+#calculate straight lines between two constituencies
+plotting_lines &amp;lt;- plotting_points %&amp;gt;%
+  split(f = .$journey) %&amp;gt;%
+  map_df(., function(data) {
+    coords &amp;lt;- rbind(st_coordinates(data[1,]), st_coordinates(data[2,]))
+    line &amp;lt;- st_linestring(coords)
+    df &amp;lt;- st_sfc(line, crs = st_crs(&amp;quot;+init=epsg:27700&amp;quot;)) %&amp;gt;%
+      as.data.frame() %&amp;gt;%
+      mutate(journey = unique(data$journey))
+  }) %&amp;gt;%
+  st_as_sf(crs = st_crs(plotting_points))
+
+#plot the longest journey between constituencies with the same first letter
+alliterative_journeys_plot &amp;lt;-  ggplot() +
+  geom_sf(data = eng_wal, fill = &amp;quot;white&amp;quot;) +
+  geom_sf(data = plotting_lines, colour = &amp;quot;darkblue&amp;quot;) +
+  #some constituencies are too small to plot as shapefiles
+  geom_sf(data = plotting_points, colour = &amp;quot;red&amp;quot;, size = 2.5) +
+  geom_sf(data = selected_constituencies, fill = &amp;quot;red&amp;quot;) +
+  theme_map() +
+  #split by first letter
+  facet_wrap(~journey)
+
+plot(alliterative_journeys_plot)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-09-from_hackney_to_haringey_files/figure-html/plot_interdistances-1.png&#34; width=&#34;1344&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load data on voting in the 2019 general election
+#2016 brexit vote based on Hanretty work also included
+votes_data &amp;lt;- readRDS(&amp;quot;../../static/files/constituency_distances/ge2019_results.rds&amp;quot;) %&amp;gt;%
+  select(WSTnm = constituency_name, winner = first_party, votes = electorate, 
+         con, lab, ld, brexit, green, other, brexit_hanretty) %&amp;gt;%
+  #convert to vote fractions
+  modify_at(c(&amp;quot;con&amp;quot;, &amp;quot;lab&amp;quot;, &amp;quot;ld&amp;quot;, &amp;quot;brexit&amp;quot;, &amp;quot;green&amp;quot;, &amp;quot;other&amp;quot;), function(x) x/.$votes) %&amp;gt;%
+  #take only relevant constituencies
+  filter(WSTnm %in% constituency_geography$WSTnm)
+
+head(votes_data)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##                 WSTnm winner votes       con       lab         ld
+## 1            Aberavon    Lab 50750 0.1284335 0.3351330 0.02112315
+## 2           Aberconwy    Con 44699 0.3285756 0.2830712 0.04073917
+## 3           Aldershot    Con 72617 0.3853092 0.1553631 0.09529449
+## 4 Aldridge-Brownhills    Con 60138 0.4631015 0.1332602 0.03942599
+## 5        Amber Valley    Con 69976 0.4157997 0.1744884 0.04105693
+## 6               Arfon     PC 42215 0.1048916 0.2452446 0.00000000
+##       brexit       green      other brexit_hanretty
+## 1 0.06124138 0.008866995 0.01440394       0.6012448
+## 2 0.00000000 0.000000000 0.00000000       0.5219712
+## 3 0.00000000 0.024099040 0.00000000       0.5789777
+## 4 0.00000000 0.012820513 0.00558715       0.6779635
+## 5 0.00000000 0.019835372 0.00000000       0.6529912
+## 6 0.02745470 0.000000000 0.00000000       0.3584544&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the largest gap in 2016 brexit vote between constituencies
+#which same first letter
+brexit_differences &amp;lt;- votes_data %&amp;gt;%
+  left_join(., constituency_names, by = &amp;quot;WSTnm&amp;quot;) %&amp;gt;%
+  split(f = .$first_letter) %&amp;gt;%
+  map_df(., function(data) {
+    difference &amp;lt;- outer(data$brexit_hanretty, data$brexit_hanretty, &amp;quot;-&amp;quot;) %&amp;gt;%
+      as.data.frame() %&amp;gt;%
+      mutate(from = data$WSTnm)
+    names(difference)[1:(ncol(difference) - 1)] &amp;lt;- data$WSTnm
+    df &amp;lt;- difference %&amp;gt;%
+      pivot_longer(cols = -starts_with(&amp;quot;from&amp;quot;),
+                   names_to = &amp;quot;to&amp;quot;,
+                   values_to = &amp;quot;brexit_2016_difference&amp;quot;) %&amp;gt;%
+      mutate(first_letter = unique(data$first_letter))
+  }) %&amp;gt;%
+  #arrange by greatest difference
+  arrange(-brexit_2016_difference)
+
+head(brexit_differences, n = 10)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 10 x 4
+##    from                 to           brexit_2016_difference first_letter
+##    &amp;lt;chr&amp;gt;                &amp;lt;chr&amp;gt;                         &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;       
+##  1 Stoke-On-Trent North Streatham                     0.516 S           
+##  2 Stoke-On-Trent South Streatham                     0.506 S           
+##  3 Barnsley East        Bristol West                  0.503 B           
+##  4 Bolsover             Bristol West                  0.497 B           
+##  5 Barnsley East        Battersea                     0.489 B           
+##  6 Bolsover             Battersea                     0.483 B           
+##  7 Scunthorpe           Streatham                     0.481 S           
+##  8 Bassetlaw            Bristol West                  0.476 B           
+##  9 Barnsley Central     Bristol West                  0.475 B           
+## 10 Blackpool South      Bristol West                  0.471 B&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot the distances between constituencies of same first letter with
+#greatest difference in 2016 brexit vote
+brexit_distance_plot &amp;lt;- brexit_differences %&amp;gt;%
+  filter(!duplicated(first_letter)) %&amp;gt;%
+  left_join(constituency_interdistances, by = c(&amp;quot;to&amp;quot;, &amp;quot;from&amp;quot;)) %&amp;gt;%
+  mutate(journey = paste(to, from, sep = &amp;quot;-&amp;quot;)) %&amp;gt;%
+  select(journey, first_letter.x, brexit_2016_difference, distance) %&amp;gt;%
+  ggplot(aes(x = brexit_2016_difference, y = distance, label = journey)) +
+  geom_text() +
+  theme_minimal()
+
+brexit_distance_plot&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-09-from_hackney_to_haringey_files/figure-html/plot_brexit_differences-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load the raw values from the census data for each output area
+census_oa_data &amp;lt;- census_oa_data %&amp;gt;%
+  #select only integer data (counts not percentages)
+  select(OAid = GeographyCode, which(sapply(.,class)==&amp;quot;integer&amp;quot;))
+
+#load the lookup between output areas to westminster constituency
+oa_to_westminster &amp;lt;- readRDS(&amp;quot;../../static/files/constituency_distances/oa_to_westminster.rds&amp;quot;) %&amp;gt;%
+  select(OAid = OA11CD, WSTid = PCON11CD, WSTnm = PCON11NM, WSTperc = OA11PERCENT) %&amp;gt;%
+  #select only english constituencies
+  filter(WSTid %in% constituency_names$WSTid)
+
+
+#gather the census data by westminster constituency
+census_data_westminster &amp;lt;- left_join(census_oa_data, oa_to_westminster, by = &amp;quot;OAid&amp;quot;) %&amp;gt;%
+  filter(!is.na(WSTid)) %&amp;gt;%
+  #for output areas split between constituencies guesstimate the correct amounts
+  mutate_if(is.integer, funs(round(. * (WSTperc/100)))) %&amp;gt;%
+  select(-WSTnm, -WSTperc, -OAid) %&amp;gt;%
+  #sum the counts per constituency for each statistic
+  group_by(WSTid) %&amp;gt;%
+  summarise_if(is.numeric, sum, na.rm = TRUE) %&amp;gt;%
+  #turn into percentages from the total number of people (KS101)
+  modify_if(is.numeric, function(x) x/.$KS101EW0001) %&amp;gt;%
+  #arrange by name
+  arrange(WSTid)
+
+#only preview the first few columns as we have ~400 total
+head(census_data_westminster[1:8])&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 8
+##   WSTid KS101EW0001 KS101EW0002 KS101EW0003 KS101EW0004 KS101EW0005
+##   &amp;lt;chr&amp;gt;       &amp;lt;dbl&amp;gt;       &amp;lt;dbl&amp;gt;       &amp;lt;dbl&amp;gt;       &amp;lt;dbl&amp;gt;       &amp;lt;dbl&amp;gt;
+## 1 E140~           1       0.499       0.501       0.980     0.0195 
+## 2 E140~           1       0.489       0.511       0.994     0.00574
+## 3 E140~           1       0.492       0.508       0.991     0.00885
+## 4 E140~           1       0.492       0.508       0.989     0.0111 
+## 5 E140~           1       0.485       0.515       0.992     0.00791
+## 6 E140~           1       0.492       0.508       0.992     0.00766
+## # ... with 2 more variables: KS101EW0006 &amp;lt;dbl&amp;gt;, KS102EW0001 &amp;lt;dbl&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load the terminology for each census statistic
+census_index &amp;lt;- readRDS(&amp;quot;../../static/files/constituency_distances/census_names.rds&amp;quot;)
+
+head(select(census_index, Code, Meaning))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##          Code
+## 2 KS101EW0001
+## 3 KS101EW0002
+## 4 KS101EW0003
+## 5 KS101EW0004
+## 6 KS101EW0005
+## 7 KS101EW0006
+##                                                                           Meaning
+## 2                                                             All categories: Sex
+## 3                                                                           Males
+## 4                                                                         Females
+## 5                                                            Lives in a household
+## 6                                               Lives in a communal establishment
+## 7 Schoolchild or full-time student aged 4 and over at their non term-time address&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;census_data_westminster &amp;lt;- census_data_westminster %&amp;gt;%
+  #a few codes missing from the index
+  .[-which(!names(.)[2:ncol(.)] %in% census_index$Code)] %&amp;gt;%
+  .[c(1, which(!apply(.[2:ncol(.)],2,function(x) var(x,na.rm=T)==0))+1)]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;get_correlations_tidy &amp;lt;- function(demography, dependent_var) {
+  #first split up the demography data by variable so we can independently
+  #correlate each against the dependent variable
+  split_demog &amp;lt;- demography %&amp;gt;%
+    column_to_rownames(&amp;quot;WSTid&amp;quot;) %&amp;gt;%
+    t() %&amp;gt;%
+    split(f = rownames(.))
+  
+  #run the values for each variables against the dependent_var
+  correlations &amp;lt;- map_df(split_demog, function(x) {
+    regression &amp;lt;- lm(dependent_var ~ x)
+    adj_r_squared &amp;lt;- summary(regression)$adj.r.squared
+    f_stat &amp;lt;- summary(regression)$fstatistic[1]
+    df &amp;lt;- summary(regression) %&amp;gt;%
+      #tidy it to bind to df
+      broom::tidy() %&amp;gt;%
+      filter(term != &amp;quot;(Intercept)&amp;quot;) %&amp;gt;%
+      mutate(adj_r = adj_r_squared, f_stat)
+  })
+  
+  tidy_df &amp;lt;- correlations %&amp;gt;%
+    #left join in the meaning for each variable
+    mutate(Code = names(demography[2:ncol(demography)])) %&amp;gt;%
+    left_join(., select(census_index, Code, Meaning), by = &amp;quot;Code&amp;quot;) %&amp;gt;%
+    arrange(-abs(statistic)) %&amp;gt;%
+    select(-term)
+  
+  #return this data frame
+  return(tidy_df)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;lr_margin &amp;lt;- votes_data %&amp;gt;%
+  left_join(constituency_names, by = &amp;quot;WSTnm&amp;quot;) %&amp;gt;%
+  #must line up in order with census data
+  arrange(WSTid) %&amp;gt;%
+  #assuming a simple left vs right decision for voters
+  mutate(left = lab + ld + green,
+         right = con + brexit) %&amp;gt;%
+  #take the difference between left and right sum votes for each constituency
+  mutate(margin = left - right) %&amp;gt;%
+  .$margin
+
+#run in the above function
+lr_correlations &amp;lt;- get_correlations_tidy(census_data_westminster, lr_margin)
+
+head(select(lr_correlations, Code, Meaning, statistic, p.value))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 4
+##   Code      Meaning                                      statistic  p.value
+##   &amp;lt;chr&amp;gt;     &amp;lt;fct&amp;gt;                                            &amp;lt;dbl&amp;gt;    &amp;lt;dbl&amp;gt;
+## 1 KS104EW0~ Not living in a couple: Single (never marri~      26.0 1.86e-83
+## 2 KS404EW0~ All categories: Car or van availability          -23.4 1.67e-73
+## 3 KS104EW0~ Living in a couple: Married or in a registe~     -23.2 1.44e-72
+## 4 KS105EW0~ One family only: Married or same-sex civil ~     -22.2 1.78e-68
+## 5 KS103EW0~ Married                                          -22.0 4.93e-68
+## 6 KS404EW0~ 2 cars or vans in household                      -22.0 5.77e-68&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;lr_correlations &amp;lt;- lr_correlations %&amp;gt;%
+  #lots of these stats are self-correlated
+  #e.g. 3 cars in household vs 4+ cars in household
+  mutate(stat_category = gsub(&amp;quot;(.{5})(.*)&amp;quot;, &amp;quot;\\1&amp;quot;, Code)) %&amp;gt;%
+  group_by(stat_category) %&amp;gt;%
+  #take only the strongest correlated variable from each &amp;#39;category&amp;#39;
+  mutate(duplicate_n = 1:n()) %&amp;gt;%
+  ungroup() %&amp;gt;%
+  filter(duplicate_n == 1 &amp;amp; abs(statistic) &amp;gt; 10 &amp;amp; !duplicated(Meaning))
+
+right_variables &amp;lt;- lr_correlations %&amp;gt;%
+  mutate(census_info = paste(Code, Meaning)) %&amp;gt;%
+  filter(statistic &amp;lt; 0) %&amp;gt;%
+  .$census_info
+
+left_variables &amp;lt;- lr_correlations %&amp;gt;%
+  mutate(census_info = paste(Code, Meaning)) %&amp;gt;%
+  filter(statistic &amp;gt; 0) %&amp;gt;%
+  .$census_info
+
+right_variables&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##  [1] &amp;quot;KS404EW0007 All categories: Car or van availability&amp;quot;                                   
+##  [2] &amp;quot;KS105EW0005 One family only: Married or same-sex civil partnership couple: No children&amp;quot;
+##  [3] &amp;quot;KS103EW0003 Married&amp;quot;                                                                   
+##  [4] &amp;quot;KS501EW0004 Highest level of qualification: Level 2 qualifications&amp;quot;                    
+##  [5] &amp;quot;KS102EW0013 Age 60 to 64&amp;quot;                                                              
+##  [6] &amp;quot;KS401EW0008 Whole house or bungalow: Detached&amp;quot;                                         
+##  [7] &amp;quot;KS603EW0002 Economically active: Employee: Part-time&amp;quot;                                  
+##  [8] &amp;quot;KS609EW0006 5. Skilled trades occupations&amp;quot;                                             
+##  [9] &amp;quot;KS605EW0007 F Construction&amp;quot;                                                            
+## [10] &amp;quot;KS402EW0002 Owned: Owned outright&amp;quot;                                                     
+## [11] &amp;quot;KS301EW0014 Provides 1 to 19 hours unpaid care a week&amp;quot;                                 
+## [12] &amp;quot;KS209EW0002 Christian&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;left_variables&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##  [1] &amp;quot;KS104EW0004 Not living in a couple: Single (never married or never registered a same-sex civil partnership)&amp;quot;
+##  [2] &amp;quot;KS403EW0004 Occupancy rating (rooms) of -1 or less&amp;quot;                                                         
+##  [3] &amp;quot;KS201EW0007 Mixed/multiple ethnic group: White and Black African&amp;quot;                                           
+##  [4] &amp;quot;KS604EW0008 Males: Part-time: 16 to 30 hours worked&amp;quot;                                                        
+##  [5] &amp;quot;KS612EW0012 L14.1 Never worked&amp;quot;                                                                             
+##  [6] &amp;quot;KS613EW0014 Not classified&amp;quot;                                                                                 
+##  [7] &amp;quot;KS202EW0039 Other identities only&amp;quot;                                                                          
+##  [8] &amp;quot;KS206EW0005 No people in household have English as a main language (English or Welsh in Wales)&amp;quot;             
+##  [9] &amp;quot;KS204EW0010 Other countries&amp;quot;                                                                                
+## [10] &amp;quot;KS205EW0008 Middle East and Asia&amp;quot;                                                                           
+## [11] &amp;quot;KS107EW0012 Female lone parent: Not in employment&amp;quot;                                                          
+## [12] &amp;quot;KS106EW0002 No adults in employment in household: With dependent children&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;brexit_vote &amp;lt;- votes_data %&amp;gt;%
+  left_join(constituency_names, by = &amp;quot;WSTnm&amp;quot;) %&amp;gt;%
+  #must line up in order with census data
+  arrange(WSTid) %&amp;gt;%
+  .$brexit_hanretty
+
+brexit_correlations &amp;lt;- get_correlations_tidy(census_data_westminster, brexit_vote) %&amp;gt;%
+  #lots of these stats are self-correlated
+  #e.g. 3 cars in household vs 4+ cars in household
+  mutate(stat_category = gsub(&amp;quot;(.{5})(.*)&amp;quot;, &amp;quot;\\1&amp;quot;, Code)) %&amp;gt;%
+  group_by(stat_category) %&amp;gt;%
+  #take only the strongest correlated variable from each &amp;#39;category&amp;#39;
+  mutate(duplicate_n = 1:n()) %&amp;gt;%
+  ungroup() %&amp;gt;%
+  filter(duplicate_n == 1 &amp;amp; abs(statistic) &amp;gt; 10 &amp;amp; !duplicated(Meaning))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## Warning: Column `Code` joining character vector and factor, coercing into
+## character vector&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;head(brexit_correlations) &lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 10
+##   estimate std.error statistic   p.value adj_r f_stat Code  Meaning
+##      &amp;lt;dbl&amp;gt;     &amp;lt;dbl&amp;gt;     &amp;lt;dbl&amp;gt;     &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt; &amp;lt;fct&amp;gt;  
+## 1     5.27     0.171      30.8 2.32e-101 0.731   948. KS50~ Highes~
+## 2     6.08     0.239      25.4 3.36e- 81 0.648   645. KS61~ 6. Sem~
+## 3    -3.14     0.126     -25.0 1.52e- 79 0.641   623. KS60~ 2. Pro~
+## 4     9.04     0.380      23.8 5.00e- 75 0.618   567. KS60~ 8. Pro~
+## 5     7.65     0.329      23.3 6.44e- 73 0.608   542. KS61~ 5. Low~
+## 6    -2.20     0.103     -21.3 5.47e- 65 0.564   453. KS30~ Very g~
+## # ... with 2 more variables: stat_category &amp;lt;chr&amp;gt;, duplicate_n &amp;lt;int&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;lr_correlations$Meaning[which(lr_correlations$Code %in% brexit_correlations$Code)]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] Not living in a couple: Single (never married or never registered a same-sex civil partnership)
+## [2] Economically active: Employee: Part-time                                                       
+## [3] Occupancy rating (rooms) of -1 or less                                                         
+## 793 Levels: 0 or multiple adults in household ... Widowed or surviving partner from a same-sex civil partnership&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;pca_census &amp;lt;- census_data_westminster %&amp;gt;%
+  #take only the variable that strongly correlate with 2019/brexit vote
+  select(unique(c(lr_correlations$Code, brexit_correlations$Code))) %&amp;gt;%
+  #scale before pca
+  scale()
+
+#run the pca
+#take first 3 components
+demographic_pca &amp;lt;- prcomp(pca_census)$x %&amp;gt;%
+  as.data.frame() %&amp;gt;%
+  .[1:3] %&amp;gt;%
+  #add back in ID column
+  mutate(WSTid = census_data_westminster$WSTid) %&amp;gt;%
+  #join in additional dta for plotting
+  left_join(., constituency_names, by = &amp;quot;WSTid&amp;quot;) %&amp;gt;%
+  left_join(., select(votes_data, WSTnm, winner), by = &amp;quot;WSTnm&amp;quot;)
+
+#plot
+demographic_pca_plot &amp;lt;- demographic_pca %&amp;gt;%
+  ggplot(aes(x = PC1, y = PC2, label = gsub(&amp;quot;a|e|i|o|u&amp;quot;, &amp;quot;&amp;quot;, WSTnm), colour = winner)) +
+  geom_point() +
+  geom_text() +
+  scale_colour_manual(values = c(&amp;quot;mediumblue&amp;quot;, &amp;quot;green&amp;quot;, &amp;quot;red&amp;quot;, &amp;quot;goldenrod&amp;quot;, &amp;quot;darkgreen&amp;quot;)) +
+  labs(x = &amp;quot;PC1 - Urban, Young &amp;amp; Diverse -&amp;gt;&amp;quot;,
+       y = &amp;quot;PC2 - Economically &amp;#39;Left Behind&amp;#39; -&amp;gt;&amp;quot;) +
+  facet_wrap(~first_letter)
+
+demographic_pca_plot&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-09-from_hackney_to_haringey_files/figure-html/do_census_pca-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;distances &amp;lt;- demographic_pca %&amp;gt;%
+  split(f = .$first_letter) %&amp;gt;%
+  map_df(., function(data) {
+    distances &amp;lt;- (outer(data$PC1, data$PC1, &amp;quot;-&amp;quot;)^2 + outer(data$PC2, data$PC2, &amp;quot;-&amp;quot;)^2) %&amp;gt;%
+    sqrt() %&amp;gt;%
+    as.data.frame() %&amp;gt;%
+    mutate(from = data$WSTnm)
+    names(distances)[1:(ncol(distances)-1)] &amp;lt;- as.character(data$WSTnm)
+    df &amp;lt;- pivot_longer(distances, -starts_with(&amp;quot;from&amp;quot;),
+                       names_to = &amp;quot;to&amp;quot;,
+                       values_to = &amp;quot;pca_distance&amp;quot;) %&amp;gt;%
+      mutate(pca_distance = abs(pca_distance))
+    return(df)
+  }) %&amp;gt;%
+  filter(!duplicated(pca_distance) &amp;amp; pca_distance != 0)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(ggrepel)
+all_distances &amp;lt;- distances %&amp;gt;%
+  left_join(brexit_differences, by = c(&amp;quot;from&amp;quot;, &amp;quot;to&amp;quot;)) %&amp;gt;%
+  mutate(brexit_2016_difference = abs(brexit_2016_difference)) %&amp;gt;%
+  select(-first_letter) %&amp;gt;%
+  left_join(constituency_interdistances, by = c(&amp;quot;from&amp;quot;, &amp;quot;to&amp;quot;)) %&amp;gt;%
+  mutate(label = case_when(
+    distance &amp;gt; 400000 &amp;amp; pca_distance &amp;gt; 15 &amp;amp; brexit_2016_difference &amp;gt; 0.3 ~ paste(to, from, sep = &amp;quot;-&amp;quot;)
+  )) %&amp;gt;%
+  mutate(distance = distance / 1000)
+
+p &amp;lt;- ggplot(all_distances, aes(x = distance, y = pca_distance, size = brexit_2016_difference)) +
+  geom_point(alpha = 0.2) +
+  geom_point(data = filter(all_distances, !is.na(label))) +
+  geom_text_repel(aes(label = label)) +
+  scale_size_continuous(name = &amp;quot;diff Brexit\n 2016 vote&amp;quot;, range = c(0.5, 5)) +
+  labs(x = &amp;quot;Geographic Distances between Constituences (/km&amp;quot;,
+       y = &amp;quot;&amp;#39;Distance&amp;#39; between Constituencies Demograph (2011 Census)&amp;quot;) +
+  theme_minimal()
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## Warning: Removed 4608 rows containing missing values (geom_text_repel).&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-09-from_hackney_to_haringey_files/figure-html/unnamed-chunk-3-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Advent Calendar of Football Trivia Analyses</title>
@@ -4744,675 +5254,6 @@ trial_data &amp;lt;- choice_data %&amp;gt;%
   map_df(I) %&amp;gt;%
   #randomly shuffle the data
   .[sample(nrow(.)),]&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>The Knowledge 7th February 2019</title>
-      <link>/post/the-knowledge-7th-february-2019/</link>
-      <pubDate>Thu, 07 Feb 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/the-knowledge-7th-february-2019/</guid>
-      <description>
-
-
-&lt;p&gt;In what is becoming a &lt;a href=&#34;http://www.robert-hickman.eu/post/the-knowledge-4th-august-2018/&#34;&gt;repeated&lt;/a&gt; &lt;a href=&#34;http://www.robert-hickman.eu/post/counties_league_points/&#34;&gt;series&lt;/a&gt;, I enjoy answering trivia questions from The Guardian’s &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt; football trivia column.&lt;/p&gt;
-&lt;p&gt;There’s a few questions that built up that seemed amenable to coding answers so I’ve taken a stab at them here&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#munging
-library(tidyverse)
-library(data.table)
-library(zoo)
-#english football data
-library(engsoccerdata)
-#web data scraping
-library(rvest)
-#plotting
-library(openair)&lt;/code&gt;&lt;/pre&gt;
-&lt;div id=&#34;calendar-boys&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Calendar Boys&lt;/h1&gt;
-&lt;p&gt;The first question this week concerns players scoring on (or nearest to) every day of the year&lt;/p&gt;
-&lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en&#34;&gt;
-&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
-Has any player played/or even scored on every date in a calendar year. What’s the nearest anyone has come?
-&lt;/p&gt;
-— David Thomson (&lt;span class=&#34;citation&#34;&gt;@thomsonionioni&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/thomsonionioni/status/1090206478479298560?ref_src=twsrc%5Etfw&#34;&gt;January 29, 2019&lt;/a&gt;
-&lt;/blockquote&gt;
-&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
-&lt;div id=&#34;answer-cristiano-ronaldo-using-data-from-around-the-turn-of-the-millenium---244-days&#34; class=&#34;section level3&#34;&gt;
-&lt;h3&gt;Answer: Cristiano Ronaldo (using data from around the turn of the millenium) - 244 days&lt;/h3&gt;
-&lt;p&gt;Getting the data for this is the main problem. The best (free) source I tend to use is transfermarkt.com, but data there becomes less reliable from before 2000 (and only has a few years of data from more obscure years where I could believe some players are banging in goals for fun). Nonetheless, it should at least gives us some ideas&lt;/p&gt;
-&lt;p&gt;For each player sampled we’re going to want the data for each goal scored both for their club and country. Saving the competition data is also useful as it also allows us to sort out friendlies which may or may not count depending on interpretation of the question.&lt;/p&gt;
-&lt;p&gt;Two quick functions will do this for any given player id&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#create a data frame of club goals
-get_club_goals &amp;lt;- function(club_stats) {
-  #read the page
-  read &amp;lt;- read_html(club_stats)
-  
-  #get the players names
-  name &amp;lt;- read %&amp;gt;%
-    html_nodes(&amp;quot;.dataName b&amp;quot;) %&amp;gt;%
-    html_text()
-    
-  #read the table of goals scored and munge together
-  club_df &amp;lt;- read %&amp;gt;%
-    html_nodes(xpath = &amp;#39;//*[@id=&amp;quot;main&amp;quot;]/div[10]/div/div/div[4]/table&amp;#39;) %&amp;gt;%
-    html_table(fill = TRUE) %&amp;gt;%
-    as.data.frame() %&amp;gt;%
-    select(Date, Minute, Competition.1) %&amp;gt;%
-    mutate(minute = as.numeric(gsub(&amp;quot;&amp;#39;.*&amp;quot;, &amp;quot;&amp;quot;, Minute))) %&amp;gt;%
-    filter(!is.na(minute)) %&amp;gt;% 
-    #convert date to day of the year
-    mutate(date = case_when(
-      Date != &amp;quot;&amp;quot; ~ strftime(as.Date(Date, &amp;quot;%m/%d/%y&amp;quot;), &amp;quot;%m/%d&amp;quot;)
-    )) %&amp;gt;%
-    mutate(competition = ifelse(Competition.1 == &amp;quot;&amp;quot;, NA, Competition.1)) %&amp;gt;%
-    select(competition, date, minute) %&amp;gt;%
-    #fill down the competition and date if missing
-    do(na.locf(.)) %&amp;gt;%
-    mutate(scored_for = &amp;quot;club&amp;quot;, name = name)
-}
-
-#do the same for national team goals
-get_nt_goals &amp;lt;- function(nt_stats) {
-  read &amp;lt;- read_html(nt_stats)
-  
-  name &amp;lt;- read %&amp;gt;%
-    html_nodes(&amp;quot;.dataName b&amp;quot;) %&amp;gt;%
-    html_text()
-
-  goal_table &amp;lt;- read %&amp;gt;%
-    html_nodes(xpath = &amp;#39;//*[@id=&amp;quot;main&amp;quot;]/div[10]/div[1]/div[3]/div[4]/table&amp;#39;)
-  
-  #some players won&amp;#39;t have any national team goals
-  #return NA
-  if(!is_empty(goal_table)) {
-    nt &amp;lt;- goal_table %&amp;gt;%
-      html_table(fill = TRUE) %&amp;gt;%
-      as.data.frame() %&amp;gt;%
-      select(For, Date, Var.11) %&amp;gt;%
-      mutate(goals = as.numeric(Var.11)) %&amp;gt;%
-      mutate(date = case_when(
-        Date != &amp;quot;&amp;quot; ~ strftime(as.Date(Date, &amp;quot;%m/%d/%y&amp;quot;), &amp;quot;%m/%d&amp;quot;)
-      )) %&amp;gt;%
-      mutate(competition = ifelse(For == &amp;quot;&amp;quot;, NA, For)) %&amp;gt;%
-      mutate(competition = na.locf(competition)) %&amp;gt;%
-      filter(!is.na(date)) %&amp;gt;%
-      select(competition, date, goals) 
-    
-    #if more than 1 goal is scored on a game it&amp;#39;s counted as two rows
-    #separate these out
-    if(any(nt$goals != 1)) {
-      nt_df &amp;lt;- do.call(&amp;quot;c&amp;quot;, (mapply(rep, c(nt$competition, nt$date), nt$goals))) %&amp;gt;%
-        matrix(., 2, byrow = TRUE) %&amp;gt;%
-        t() %&amp;gt;%
-        as.data.frame() %&amp;gt;%
-        select(competition = V1, date = V2)
-    } else {
-      nt_df &amp;lt;- nt %&amp;gt;%
-        select(-goals)
-    }
-    
-    #finish off munging
-    df &amp;lt;- nt_df %&amp;gt;%
-      mutate(minute = NA, scored_for = &amp;quot;nation&amp;quot;, name = name)
-  } else {
-    df &amp;lt;- NA
-  }
-  return(df)
-}&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now we can get into the scraping. For each player some parts of the URL stay the same, so lets save those as objects so we don’t have to deal with massive long urls.&lt;/p&gt;
-&lt;p&gt;I decided to test out the functions using Cristiano Ronaldo as his 675 goals for club and country is (I believe) more than any active player. Pasting the url together and running on the functions does the trick&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#for each player some parts of url stay the same
-base_url &amp;lt;- &amp;quot;https://www.transfermarkt.co.uk/&amp;quot;
-club_text1 &amp;lt;- &amp;quot;/alletore/spieler/&amp;quot;
-club_text2 &amp;lt;- &amp;quot;/saison//verein/0/liga/0/wettbewerb//pos/0/trainer_id/0/minute/0/torart/0/plus/1&amp;quot;
-nt_text1 &amp;lt;- &amp;quot;/nationalmannschaft/spieler/&amp;quot;
-nt_text2 &amp;lt;- &amp;quot;/verein_id/3300/plus/0?hauptwettbewerb=&amp;amp;wettbewerb_id=&amp;amp;trainer_id=&amp;amp;start=Aug+20%2C+2003&amp;amp;ende=Feb+4%2C+2019&amp;amp;nurEinsatz=2&amp;quot;
-
-#get all the goals scored by Cristiano Ronaldo
-ronaldo &amp;lt;- rbind(
-  paste0(base_url, &amp;quot;player_name&amp;quot;, club_text1, 8198, club_text2) %&amp;gt;%
-    get_club_goals(),
-  paste0(base_url, &amp;quot;player_name&amp;quot;, nt_text1, 8198, nt_text2) %&amp;gt;%
-    get_nt_goals()
-)
-
-#count the number of unique dates scored on
-length(unique(ronaldo$date))&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## [1] 244&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So Ronaldo has scored on 244 of the 366 possible days of the year. It’s not surprising that scoring on &lt;em&gt;every&lt;/em&gt; day would be difficult. The club season only runs August-June and there are unlikely to be many possible games to play in July at all. Plus days such a Christmas are usually taken off from football.&lt;/p&gt;
-&lt;p&gt;In terms of goals per day using 2019s calendar this looks like (plot made using the &lt;a href=&#34;https://cran.r-project.org/web/packages/openair/index.html&#34;&gt;openair package&lt;/a&gt;:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;ronaldo %&amp;gt;%
-  #count goals per date
-  group_by(date) %&amp;gt;%
-  summarise(goals = n()) %&amp;gt;%
-  #convert to 2019 dates
-  mutate(date = as.Date(paste0(&amp;quot;2019/&amp;quot;, date))) %&amp;gt;%
-  #use calendarPlot from the openair package
-  calendarPlot(., pollutant = &amp;quot;goals&amp;quot;, year = 2019)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-03-05-The_Knowledge_3_files/figure-html/ronaldo_calendar-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;Which shows more deviation in scoring than I thought it would. Nevertheless, from September-May each year is pretty blocked out, though there is a run of Saturdays this December which could be fertile ground for increasing his total.&lt;/p&gt;
-&lt;p&gt;Next we need to get a list of likely players who could come close to matching Ronaldo’s record.&lt;/p&gt;
-&lt;p&gt;For this I took the first page of transfermarkt’s top scorers of the year across all leagues. It’s possible that a player might (e.g.) be on the second page each year and have scored a ton, but I don’t think it’s super likely.&lt;/p&gt;
-&lt;p&gt;I run this through the top scorers page from 1995 (the earliest year available) to 2018 and grab each player id. Afterwards, save the scraped list as an .rds to prevent needing to continually re scrape the page and put extra load onto the server.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#the url for the pages of top scorers
-top_scorer_ids &amp;lt;- paste0(base_url, 
-                         &amp;quot;spieler-statistik/jahrestorschuetzen/&amp;quot;,
-                         &amp;quot;statistik/stat/plus/0/galerie/0?jahr=&amp;quot;,
-                         1995:2018,
-                         &amp;quot;&amp;amp;wettbewerb=alle&amp;amp;monatVon=01&amp;amp;monatBis=12&amp;amp;altersklasse=&amp;amp;&amp;quot;,
-                         &amp;quot;land_id=&amp;amp;ausrichtung=alle&amp;amp;spielerposition_id=alle&amp;amp;art=0&amp;quot;) %&amp;gt;%
-  #scrape the ids of players
-  lapply(., function(year) {
-    read_html(year) %&amp;gt;%
-      html_nodes(&amp;quot;#yw1 .spielprofil_tooltip&amp;quot;) %&amp;gt;%
-      html_attr(&amp;quot;id&amp;quot;)
-  }) %&amp;gt;%
-  unlist() %&amp;gt;%
-  unique()
-
-#save this to prevent need for re-scraping
-saveRDS(top_scorer_ids, &amp;quot;transfermarkt_top_scorers.rds&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then all that’s left is to scrape the goals for each player whose id we’ve scraped. Again, save this once run, especially as it takes a fair while to complete. For this article the data was scraped on the 5th February 2019&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;player_goals &amp;lt;- top_scorer_ids %&amp;gt;%
-  #for each player scrape every goal
-  lapply(., function(id) {
-    goals &amp;lt;- rbind(
-      paste0(base_url, &amp;quot;player_name&amp;quot;, club_text1, id, club_text2) %&amp;gt;%
-        get_club_goals(),
-      paste0(base_url, &amp;quot;player_name&amp;quot;, nt_text1, id, nt_text2) %&amp;gt;%
-        get_nt_goals()
-    ) %&amp;gt;%
-      #remove NAS
-      #this is where a player hasn&amp;#39;t scored for their nation
-      filter(!is.na(date)) %&amp;gt;%
-      mutate(id = id)
-  }) %&amp;gt;%
-  do.call(rbind, .)
-
-#and save
-saveRDS(player_goals, &amp;quot;top_scorer_goals.rds&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now we have a list of every goal scored by prolific strikers, we just have to group by each player and count how many dates they’ve scored on. To get the players with the highest number of unique dates we group by their id and count the length of the unique dates they’ve scored on.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;days_per_player &amp;lt;- player_goals %&amp;gt;%
-  #group by player
-  group_by(id) %&amp;gt;%
-  #count the dates scored on
-  summarise(days = length(unique(date))) %&amp;gt;%
-  arrange(-days) %&amp;gt;%
-  #rejoin the name data back in
-  left_join(.,
-            player_goals %&amp;gt;%
-              select(id, name) %&amp;gt;%
-              unique(),
-            by = &amp;quot;id&amp;quot;) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 413 x 3
-##    id     days name             
-##    &amp;lt;chr&amp;gt; &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt;            
-##  1 8198    244 Cristiano Ronaldo
-##  2 28003   210 Messi            
-##  3 7349    203 Raúl             
-##  4 3455    200 Ibrahimovic      
-##  5 3207    189 Henry            
-##  6 4257    187 Eto&amp;#39;o            
-##  7 3924    173 Drogba           
-##  8 48280   173 Cavani           
-##  9 44352   172 Suárez           
-## 10 7980    171 Villa            
-## # ... with 403 more rows&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;so perhaps unsurprisingly, Ronaldo comes out on top. As expected given the data source, most of the top players are very recent strikers- all of the top 10 were active well into the 2010s. &lt;a href=&#34;https://en.wikipedia.org/wiki/Ulf_Kirsten&#34;&gt;Ulf Kirsten&lt;/a&gt; and &lt;a href=&#34;https://en.wikipedia.org/wiki/Toni_Polster&#34;&gt;Toni Polster&lt;/a&gt; are the torchbearers for strikers from the 90s.&lt;/p&gt;
-&lt;p&gt;As always in these posts, I try to learn some new stuff as I do them. I thought this might be a good time to try some circular plotting. I don’t think the resultant plots actually inform that much but they are cool to look at.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;circular_data &amp;lt;- player_goals %&amp;gt;%
-  #filter out top 16 scorers
-  filter(id %in% days_per_player$id[1:16]) %&amp;gt;%
-  #group by month and player and sum
-  mutate(month = gsub(&amp;quot;\\/.*&amp;quot;, &amp;quot;&amp;quot;, date)) %&amp;gt;%
-  group_by(id, month, competition) %&amp;gt;%
-  summarise(goals = n()) %&amp;gt;%
-  left_join(.,
-            player_goals %&amp;gt;%
-              select(id, name) %&amp;gt;%
-              unique(),
-            by = &amp;quot;id&amp;quot;)
-
-#too many competititon for legend
-#sort out into broad groups
-competition_types &amp;lt;- data.frame(competition = circular_data$competition) %&amp;gt;%
-  unique() %&amp;gt;%
-  mutate(competition = as.character(competition)) %&amp;gt;%
-  mutate(competition_type = case_when(
-    grepl(&amp;quot;MLS&amp;quot;, competition) ~ &amp;quot;Domestic&amp;quot;,
-    grepl(&amp;quot;World Cup qualification| Qualifiers&amp;quot;, competition) ~ &amp;quot;International&amp;quot;,
-    grepl(&amp;quot;Friendlies&amp;quot;, competition) ~ &amp;quot;International Friendlies&amp;quot;,
-    grepl(&amp;quot;World Cup [0-9]{4}|Confederations|EURO [0-9]{4}&amp;quot;, competition) ~ &amp;quot;International Tournament&amp;quot;,
-    grepl(&amp;quot;UEFA|Champions League|UI Cup|Cup Winners|European Cup|Europa&amp;quot;, competition) ~ &amp;quot;European&amp;quot;,
-    grepl(&amp;quot;Club World&amp;quot;, competition) ~ &amp;quot;International Club&amp;quot;,
-    grepl(&amp;quot;Cup|cup|Pokal|copa|Copa|beker|Coupe|coppa|Kupasi|Trophée|Kupa&amp;quot;, competition) ~ &amp;quot;Domestic Cup&amp;quot;
-  )) %&amp;gt;%
-  mutate(competition_type = ifelse(is.na(competition_type), &amp;quot;Domestic&amp;quot;, competition_type)) %&amp;gt;%
-  #convert to factor for plot fill order
-  mutate(competition_type = fct_rev(factor(competition_type)))
-
-#plot as circular radar plots
-circular_data %&amp;gt;%
-  left_join(., competition_types, by = &amp;quot;competition&amp;quot;) %&amp;gt;%
-  ggplot(., aes(x = month, y = goals, fill = competition_type)) +
-  #convert to polar coordinates
-  coord_polar(theta = &amp;quot;x&amp;quot;, start = -.13) +
-  geom_bar(stat = &amp;quot;identity&amp;quot;) +
-  scale_fill_discrete(name = &amp;quot;Competition Type&amp;quot;) +
-  ggtitle(&amp;quot;Goals Per Month for Top 16 Unique Day Scorers&amp;quot;) +
-  facet_wrap(~name) +
-  theme_minimal() +
-  theme(axis.text = element_blank())&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-03-05-The_Knowledge_3_files/figure-html/plot_circular-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;One nice thing that pops out is how Kirsten rarely scored in December/January- probably due to the Bundesliga mid season break.&lt;/p&gt;
-&lt;p&gt;I also found it interesting that &lt;a href=&#34;https://en.wikipedia.org/wiki/Dirk_Kuyt&#34;&gt;Dirk Kuyt&lt;/a&gt; featured in the top 16, despite not being renowned as a great goalscorer.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#count total goals per player
-left_join(
-  days_per_player,
-  player_goals %&amp;gt;%
-    group_by(id) %&amp;gt;%
-    summarise(goals = n()),
-  by = &amp;quot;id&amp;quot;
-) %&amp;gt;%
-  #work out days/total goals
-  mutate(proportion_unique = days / goals) %&amp;gt;%
-  arrange(-days) %&amp;gt;%
-  filter(days &amp;gt; 150) %&amp;gt;%
-  select(name, goals, days, proportion_unique) %&amp;gt;%
-  arrange(-proportion_unique)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 34 x 4
-##    name      goals  days proportion_unique
-##    &amp;lt;chr&amp;gt;     &amp;lt;int&amp;gt; &amp;lt;int&amp;gt;             &amp;lt;dbl&amp;gt;
-##  1 Gilardino   231   154             0.667
-##  2 Cissé       269   166             0.617
-##  3 Signori     260   160             0.615
-##  4 Di Vaio     269   165             0.613
-##  5 Toni        273   165             0.604
-##  6 Kuyt        281   169             0.601
-##  7 Lampard     258   154             0.597
-##  8 Frei        257   153             0.595
-##  9 Drogba      300   173             0.577
-## 10 Trézéguet   265   152             0.574
-## # ... with 24 more rows&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;When sorted by how evenly their goals/date coverage is (i.e. the ideal ratio would be 1 goal on every day), Dirk Kuyt pops up again (and did in fact score many more goals than I had assumed). &lt;a href=&#34;https://en.wikipedia.org/wiki/Alberto_Gilardino&#34;&gt;Alberto Gilardino&lt;/a&gt; really stands out as a player who has maximum date coverage despite (relative to other members of the list!) a low number of total goals scored.&lt;/p&gt;
-&lt;p&gt;I’m not sure what, if any, insight that adds but is a cool piece of trivia.&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div id=&#34;first-losers&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;First Losers&lt;/h1&gt;
-&lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en&#34;&gt;
-&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
-Which club holds the record for most 2nd place finishes in the English top flight?
-&lt;/p&gt;
-— Tom Goddard (&lt;span class=&#34;citation&#34;&gt;@Tom_Goddard_13&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/Tom_Goddard_13/status/1092785174046228480?ref_src=twsrc%5Etfw&#34;&gt;February 5, 2019&lt;/a&gt;
-&lt;/blockquote&gt;
-&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
-&lt;div id=&#34;answer-manchester-united-in-the-top-flight---14-times&#34; class=&#34;section level3&#34;&gt;
-&lt;h3&gt;Answer: Manchester United in the top flight - 14 times&lt;/h3&gt;
-&lt;p&gt;The fist question this week where I get to dive back into &lt;a href=&#34;https://github.com/jalapic/engsoccerdata&#34;&gt;James Curley’s engsoccerdata package&lt;/a&gt; asks which teams have finished second in their league the most.&lt;/p&gt;
-&lt;p&gt;First lets load up the engsoccerdata for English leagues 1882-2016. I’ve munged it in a pretty verbose way; there’s definitely a faster way to do it but that’s not really necessary. All we need are the indicators used to sort the league (points, goal difference, and goal scored) for every match in a long format.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;eng_data &amp;lt;- engsoccerdata::england %&amp;gt;%
-  #select only pertinent variables
-  select(Date, Season, home, visitor, hgoal, vgoal, division) %&amp;gt;%
-  rename_all(tolower) %&amp;gt;%
-  #melt the data to long format
-  reshape2::melt(id.vars = c(&amp;quot;date&amp;quot;, &amp;quot;season&amp;quot;, &amp;quot;hgoal&amp;quot;, &amp;quot;vgoal&amp;quot;, &amp;quot;division&amp;quot;),
-                 value.name = &amp;quot;team&amp;quot;, variable.name = &amp;quot;location&amp;quot;) %&amp;gt;%
-  #this can be done in one step but for sanity
-  mutate(result = case_when(
-    hgoal &amp;gt; vgoal &amp;amp; location == &amp;quot;home&amp;quot; ~ &amp;quot;W&amp;quot;,
-    vgoal &amp;gt; hgoal &amp;amp; location == &amp;quot;visitor&amp;quot; ~ &amp;quot;W&amp;quot;,
-    hgoal &amp;lt; vgoal &amp;amp; location == &amp;quot;home&amp;quot; ~ &amp;quot;L&amp;quot;,
-    vgoal &amp;lt; hgoal &amp;amp; location == &amp;quot;visitor&amp;quot; ~ &amp;quot;L&amp;quot;,
-    vgoal == hgoal ~ &amp;quot;D&amp;quot;
-  )) %&amp;gt;%
-  #points for a win changed in 1981
-  mutate(points = case_when(
-    result == &amp;quot;L&amp;quot; ~ 0,
-    result == &amp;quot;D&amp;quot; ~ 1,
-    result == &amp;quot;W&amp;quot; &amp;amp; season &amp;lt; 1981 ~ 2,
-    result == &amp;quot;W&amp;quot; &amp;amp; season &amp;gt; 1980 ~ 3
-  )) %&amp;gt;%
-  #and get the goal info too
-  mutate(goal_diff = case_when(
-    location == &amp;quot;home&amp;quot; ~ hgoal - vgoal,
-    location == &amp;quot;visitor&amp;quot; ~ vgoal - hgoal
-  )) %&amp;gt;%
-  mutate(goals = case_when(
-    location == &amp;quot;home&amp;quot; ~ hgoal,
-    location == &amp;quot;visitor&amp;quot; ~ vgoal
-  )) %&amp;gt;%
-  #only save the variables we care about then sort
-  select(date, season, division, team, points, goals, goal_diff) %&amp;gt;%
-  arrange(date, team)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then find the final positions of each team in each season of English football sorted by points, goal difference and goals for&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;final_positions &amp;lt;- eng_data %&amp;gt;%
-  setDT() %&amp;gt;%
-  #find the match number
-  .[, match := 1:.N, by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
-  #find the cumulative points, goal difference and goals for
-  .[, season_points := cumsum(points), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
-  .[, season_gd := cumsum(goal_diff), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
-  .[, season_g := cumsum(goals), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
-  #filter out the final matches totals and order
-  .[.[, .I[match == max(match)], by= c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;)]$V1] %&amp;gt;%
-  .[order(season, division, -season_points)] %&amp;gt;%
-  #assign the final positions
-  .[, final_position := 1:.N, by = c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;)] %&amp;gt;%
-  .[, c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;)] %&amp;gt;%
-  #count by final position
-  .[, pos_count := .N, by = c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;)] %&amp;gt;%
-  unique()&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then we can filter out those who have finished second most&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;second_place &amp;lt;- final_positions %&amp;gt;%
-  #filter out second place finishes
-  .[final_position == 2] %&amp;gt;%
-  .[, c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;, &amp;quot;pos_count&amp;quot;)] %&amp;gt;%
-  .[order(-pos_count)]
-
-head(data.frame(second_place), 10)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##                 team division final_position pos_count
-## 1  Manchester United        1              2        14
-## 2            Arsenal        1              2        12
-## 3          Liverpool        1              2        11
-## 4        Aston Villa        1              2         9
-## 5   Sheffield United        2              2         8
-## 6    Birmingham City        2              2         8
-## 7            Everton        1              2         7
-## 8         Sunderland        1              2         7
-## 9  Preston North End        1              2         6
-## 10   Manchester City        1              2         6&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Perhaps unsurprisingly, most of the teams to finish second have finished second in the top flight. Manchester United lead the way with Arsenal and Liverpool following up.&lt;/p&gt;
-&lt;p&gt;Bristol City, Charlton Athletic, Oldham Athletic, Blackpool, QPR, Watford and Southampton have finished runners up in the top division without winning it, all having achieved this exactly once.&lt;/p&gt;
-&lt;p&gt;Plymouth Argyle have perhaps the most heartbreaking run of all though- having finished second in the old 3rd Division South &lt;a href=&#34;https://en.wikipedia.org/wiki/Plymouth_Argyle_F.C.#Honours&#34;&gt;SIX times in a row between 1922-1927&lt;/a&gt; before finally winning it in 1929.&lt;/p&gt;
-&lt;p&gt;I thought I might as well also plot every teams league finishes as a proportion of their season in the league. Position here refers to total overall position (so 1st in Division two might be 21st overall). The darker the colour, the more likely the team was the end the season in that position. All teams have been sorted by their mean final league position.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;eng_data %&amp;gt;%
-  #filter out modern era
-  filter(season &amp;gt; 1991) %&amp;gt;%
-  setDT() %&amp;gt;%
-  #find finish positions and count as above
-  .[, match := 1:.N, by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
-  .[, season_points := cumsum(points), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
-  .[, season_gd := cumsum(goal_diff), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
-  .[, season_g := cumsum(goals), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
-  .[.[, .I[match == max(match)], by= c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;)]$V1] %&amp;gt;%
-  .[order(season, division, -season_points)] %&amp;gt;%
-  .[, final_position := 1:.N, by = c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;)] %&amp;gt;%
-  .[, total_position := 1:.N, by = c(&amp;quot;season&amp;quot;)] %&amp;gt;%
-  .[, c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;, &amp;quot;total_position&amp;quot;)] %&amp;gt;%
-  .[, pos_count := .N, by = c(&amp;quot;team&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;final_position&amp;quot;)] %&amp;gt;%
-  .[, team_appearances := .N, by = c(&amp;quot;team&amp;quot;)] %&amp;gt;%
-  .[, mean_pos := sum(total_position)/team_appearances, by = c(&amp;quot;team&amp;quot;)] %&amp;gt;%
-  unique() %&amp;gt;%
-  #order by mean position
-  .[order(mean_pos)] %&amp;gt;%
-  .[, team := fct_rev(fct_relevel(as.factor(team), unique(.$team)))] %&amp;gt;%
-  #plot
-  ggplot(., aes(x = total_position, y = team)) + 
-  geom_tile(aes(alpha = pos_count/team_appearances), fill = &amp;quot;blue&amp;quot;) +
-  scale_alpha_continuous(guide = FALSE) +
-  ggtitle(&amp;quot;Teams Ordered by Mean Final Position 1992-2016&amp;quot;,
-          subtitle = &amp;quot;Weight indicates proportion of finishes in that position&amp;quot;) +
-  xlab(&amp;quot;Total League Position&amp;quot;) +
-  theme_minimal() +
-  theme(axis.text.y = element_text(angle = 10))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-03-05-The_Knowledge_3_files/figure-html/all_final_positions-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;There’s probably too much data to graph here, but it’s still a fun way to look at 140 years of English football&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div id=&#34;slip-slidin-away&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Slip Slidin’ Away&lt;/h1&gt;
-&lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en&#34;&gt;
-&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
-As we&#39;re starting to reach that time of season (we&#39;ll, we are at &lt;a href=&#34;https://twitter.com/hashtag/itfc?src=hash&amp;amp;ref_src=twsrc%5Etfw&#34;&gt;#itfc&lt;/a&gt;)… What&#39;s the earliest &lt;em&gt;collectively&lt;/em&gt; a team from each of the top 4 English leagues has been relegated?
-&lt;/p&gt;
-— Philip Genochio (&lt;span class=&#34;citation&#34;&gt;@philipgenochio&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/philipgenochio/status/1092782376852156416?ref_src=twsrc%5Etfw&#34;&gt;February 5, 2019&lt;/a&gt;
-&lt;/blockquote&gt;
-&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
-&lt;div id=&#34;answer-rochdale-with-8-games-to-go-in-division-3-in-19731974&#34; class=&#34;section level3&#34;&gt;
-&lt;h3&gt;Answer: Rochdale with 8 games to go in Division 3 in 1973/1974&lt;/h3&gt;
-&lt;p&gt;A similar question involves the earliest teams to get relegated. Obviously for this first we need to know how many teams are relegated from each league per season. Having only really started watching football around the turn of the millenium I was a bit surprised how much this has changed over the years (n.b. I’m only counting automatic relegation- playoffs and re-elections don’t count).&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#manually enter the number of relegation spots per league
-relegation_spots &amp;lt;- eng_data %&amp;gt;%
-  .[, c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;)] %&amp;gt;%
-  unique() %&amp;gt;%
-  mutate(relegation_spots = case_when(
-    season &amp;gt;= 1995 &amp;amp; division == 1 ~ 3,
-    season &amp;gt;= 1994 &amp;amp; division == 1 ~ 4,
-    season &amp;gt;= 1991 &amp;amp; division == 1 ~ 3,
-    season &amp;gt;= 1990 &amp;amp; division == 1 ~ 2,
-    season &amp;gt;= 1973 &amp;amp; division == 1 ~ 3,
-    season &amp;gt;= 1898 &amp;amp; division == 1 ~ 2,
-    season &amp;gt;= 1995 &amp;amp; division == 2 ~ 3,
-    season &amp;gt;= 1994 &amp;amp; division == 2 ~ 4,
-    season &amp;gt;= 1991 &amp;amp; division == 2 ~ 3,
-    season &amp;gt;= 1990 &amp;amp; division == 2 ~ 2,
-    season &amp;gt;= 1988 &amp;amp; division == 2 ~ 3,
-    season &amp;gt;= 1986 &amp;amp; division == 2 ~ 2,
-    season &amp;gt;= 1973 &amp;amp; division == 2 ~ 3,
-    season &amp;gt;= 1921 &amp;amp; division == 2 ~ 2,
-    season &amp;gt;= 1920 &amp;amp; division == 2 ~ 1,
-    season &amp;gt;= 1919 &amp;amp; division == 2 ~ 3,
-    season &amp;gt;= 1995 &amp;amp; division == 3 ~ 4,
-    season &amp;gt;= 1994 &amp;amp; division == 3 ~ 5,
-    season &amp;gt;= 1991 &amp;amp; division == 3 ~ 4,
-    season &amp;gt;= 1990 &amp;amp; division == 3 ~ 3,
-    season &amp;gt;= 1988 &amp;amp; division == 3 ~ 4,
-    season &amp;gt;= 1986 &amp;amp; division == 3 ~ 3,
-    season &amp;gt;= 1958 &amp;amp; division == 3 ~ 4,
-    season &amp;gt;= 2002 &amp;amp; division == 4 ~ 2,
-    season &amp;gt;= 1996 &amp;amp; division == 4 ~ 1,
-    season &amp;gt;= 1993 &amp;amp; division == 4 ~ 0,
-    season &amp;gt;= 1992 &amp;amp; division == 4 ~ 1,
-    season &amp;gt;= 1990 &amp;amp; division == 4 ~ 0,
-    season &amp;gt;= 1986 &amp;amp; division == 4 ~ 1
- )) %&amp;gt;%
-  mutate(relegation_spots = ifelse(relegation_spots == 0, NA, relegation_spots))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We then need to work out how many points each team has, and how many they could possibly achieve, after every match in a season.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;possible_positions &amp;lt;- eng_data %&amp;gt;%
-    setDT() %&amp;gt;%
-  #get the match number
-  .[, match := 1:.N, by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
-  #get the current points for the team
-  .[, season_points := cumsum(points), by = c(&amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;)] %&amp;gt;%
-  .[order(division, season, match, -season_points)] %&amp;gt;%
-  #get the current position for the team
-  .[, position := 1:.N, by = c(&amp;quot;division&amp;quot;, &amp;quot;season&amp;quot;, &amp;quot;match&amp;quot;)] %&amp;gt;%
-  #how many teams are in the league
-  .[, teams := max(position), by = c(&amp;quot;division&amp;quot;, &amp;quot;season&amp;quot;)] %&amp;gt;%
-  #find how many matches each team has left to play
-  .[, matches_remaining := max(match) - match, by = c(&amp;quot;division&amp;quot;, &amp;quot;season&amp;quot;)] %&amp;gt;%
-  #the max points assumes each team wins all of their remaining matches
-  .[season &amp;lt; 1981, possible_points := season_points + (matches_remaining * 2)] %&amp;gt;%
-  .[season &amp;gt; 1980, possible_points := season_points + (matches_remaining * 3)] %&amp;gt;%
-  #merge in the relegation spots and find what position each team needs to be safe
-  merge(., relegation_spots, by = c(&amp;quot;division&amp;quot;, &amp;quot;season&amp;quot;)) %&amp;gt;%
-  .[, lowest_safe_position := teams - relegation_spots] %&amp;gt;%
-  #the threshold for safety is the number of points the lowest safe team has
-  .[position == lowest_safe_position, lowest_safe_points := season_points]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then it’s a simple case of finding teams in the relegation zone and finding the point at which they can no longer catch the lowest safe team&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;relegation_secured &amp;lt;- possible_positions %&amp;gt;%
-  #filter out teams in relegation trouble
-  .[!is.na(lowest_safe_position)] %&amp;gt;%
-  .[position &amp;gt;= lowest_safe_position] %&amp;gt;%
-  .[, lowest_safe_points := na.locf(lowest_safe_points)] %&amp;gt;%
-  .[possible_points &amp;lt; lowest_safe_points] %&amp;gt;%
-    .[, c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;team&amp;quot;, &amp;quot;season_points&amp;quot;,
-          &amp;quot;matches_remaining&amp;quot;)] %&amp;gt;%
-  .[order(-matches_remaining)] %&amp;gt;%
-  #remove duplicates
-  .[!duplicated(paste0(season, division, team))]
-
-head(data.frame(relegation_secured), 15)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##    season division                team season_points matches_remaining
-## 1    1973        3            Rochdale            16                 8
-## 2    1984        1          Stoke City            17                 7
-## 3    2001        2    Stockport County            17                 7
-## 4    2003        2           Wimbledon            21                 7
-## 5    2016        2    Rotherham United            17                 7
-## 6    1961        3      Newport County            18                 7
-## 7    1984        3    Cambridge United            17                 7
-## 8    1993        3              Barnet            23                 7
-## 9    2000        3       Oxford United            22                 7
-## 10   1930        1   Manchester United            16                 6
-## 11   1954        1 Sheffield Wednesday            19                 6
-## 12   1975        1    Sheffield United            13                 6
-## 13   1994        1        Ipswich Town            23                 6
-## 14   2007        1        Derby County            11                 6
-## 15   1952        2            Barnsley            17                 6&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So Rochdale hold the questionable honour of being the team knowing they are doomed with the most matches to go (with 8 in division 3 in 1973). There’s quite a large chasing pack of teams who have known with 7 or 6 matches left too. Ipswich are currently ‘only’ 8 points off of safety with 16 games left to go so seems unlikely to beat 8 but it could be close…&lt;/p&gt;
-&lt;p&gt;I also wanted to see what the earliest a team has ever been certain of their final position is.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;certain_final_positions &amp;lt;- possible_positions %&amp;gt;%
-  #find the possible points for the teams above and below each team
-  .[, poss_points_nextworst := lead(possible_points), by = c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;match&amp;quot;)] %&amp;gt;%
-  .[, points_nextbest := lag(season_points), by = c(&amp;quot;season&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;match&amp;quot;)] %&amp;gt;%
-  #filter out teams that cannot beat/fall below the next best/worst teams
-  .[(is.na(poss_points_nextworst) | season_points &amp;gt; poss_points_nextworst) &amp;amp; 
-      (is.na(points_nextbest) | possible_points &amp;lt; points_nextbest) &amp;amp;
-      matches_remaining &amp;gt; 0] %&amp;gt;%
-  #order and select columns
-  .[order(-matches_remaining)] %&amp;gt;%
-  .[, c(&amp;quot;division&amp;quot;, &amp;quot;season&amp;quot;, &amp;quot;team&amp;quot;, &amp;quot;position&amp;quot;, &amp;quot;matches_remaining&amp;quot;, &amp;quot;teams&amp;quot;)]
-
-head(data.frame(certain_final_positions), 15)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##    division season                 team position matches_remaining teams
-## 1         4   1968 Bradford Park Avenue       24                 7    24
-## 2         1   1984           Stoke City       22                 6    22
-## 3         2   1949    Tottenham Hotspur        1                 6    22
-## 4         2   1971              Watford       22                 6    22
-## 5         2   1973        Middlesbrough        1                 6    22
-## 6         2   2001     Stockport County       24                 6    24
-## 7         3   1966  Queens Park Rangers        1                 6    24
-## 8         3   1984     Cambridge United       24                 6    24
-## 9        3b   1952              Walsall       24                 6    24
-## 10        4   1968 Bradford Park Avenue       24                 6    24
-## 11        4   1977              Watford        1                 6    24
-## 12        4   1997         Notts County        1                 6    24
-## 13        1   1980       Crystal Palace       22                 5    22
-## 14        1   1982            Liverpool        1                 5    22
-## 15        1   1984              Everton        1                 5    22&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Spare a thought for fans of Bradford Park Avenue in 1968-1969 who knew their team would finish bottom of the 3rd Division North with 7 matches (of 46) remaining. Luckily they weren’t relegated as they were already in the bottom division of the football league and we re-elected for the next season. They repeated this feat, now in Division 4, 5 years later, finishing bottom with 6 games to go.&lt;/p&gt;
-&lt;p&gt;Most of these involve teams either winning or finishing bottom of their league. If we filter these out we’re left with:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;certain_final_positions %&amp;gt;%
-  #filter off bottom or top teams
-  .[position != 1 &amp;amp; position != teams] %&amp;gt;%
-  data.frame() %&amp;gt;%
-  head(., 15)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##    division season                team position matches_remaining teams
-## 1        3a   1931        New Brighton       20                 4    22
-## 2        3a   1931            Rochdale       21                 4    22
-## 3         2   2003       Bradford City       23                 3    24
-## 4         2   2005    Sheffield United        2                 3    24
-## 5        3a   1931        New Brighton       20                 3    22
-## 6        3a   1931            Rochdale       21                 3    22
-## 7        3b   1929           Brentford        2                 3    22
-## 8         4   1975    Northampton Town        2                 3    24
-## 9         1   1888         Aston Villa        2                 2    12
-## 10        1   1930         Aston Villa        2                 2    22
-## 11        1   1934          Sunderland        2                 2    22
-## 12        1   1946           Brentford       21                 2    22
-## 13        1   1957   Preston North End        2                 2    22
-## 14        1   1970             Burnley       21                 2    22
-## 15        1   1978 Queens Park Rangers       20                 2    22&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Which really emphasizes how only exceptionally good/bad teams are ever really certain of their position before the end of the season.&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div id=&#34;draw-me-like-one-of-your-top-flight-teams&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Draw Me Like One of Your Top Flight Teams&lt;/h1&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.theguardian.com/football/2019/feb/06/what-are-the-lowest-xg-scoring-football-matches-in-history-expected-goals-the-knowledge-football&#34;&gt;““Tottenham have currently played 29 consecutive Premier League games without drawing one,” notes Wouter van Dael. “What is the longest ever such league run?””&lt;/a&gt;&lt;/p&gt;
-&lt;div id=&#34;answer-aston-villa---50-games-in-18911892-but-otherwise-spurs-in-modern-football&#34; class=&#34;section level3&#34;&gt;
-&lt;h3&gt;Answer: Aston Villa - 50 games in 1891/1892, but otherwise Spurs in modern football&lt;/h3&gt;
-&lt;p&gt;(N.b. the engsoccerdata package only has data up until the 2016/2017 season, so Tottenham’s run won’t appear in the results below)&lt;/p&gt;
-&lt;p&gt;To do this we just need to select every game with a non-zero goal difference (i.e. a draw) and then find consecutive runs for teams.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;draws &amp;lt;- eng_data %&amp;gt;%
-  setDT() %&amp;gt;%
-  .[order(team, date)] %&amp;gt;%
-  #give each match a consecutive &amp;#39;id&amp;#39;
-  .[, game_id := 1:.N, by = team] %&amp;gt;%
-  #find matches with a non zero goal difference (not a draw)
-  .[goal_diff != 0] %&amp;gt;%
-  #find consecutive matches with non zero goal difference
-  .[, consecutive := lead(game_id) - game_id, by = team] %&amp;gt;%
-  .[consecutive != 1, consecutive := NA] %&amp;gt;%
-  #count all consecutive runs
-  .[, count := .N*!is.na(consecutive), rleid(!is.na(consecutive))] %&amp;gt;%
-  #find the start and end of each run
-  .[count != lead(count) | count != lag(count)] %&amp;gt;%
-  .[order(-count, team, date)] %&amp;gt;%
-  #set the start points and end point and spread to separate columns
-  .[, run_point := c(&amp;quot;start&amp;quot;, &amp;quot;end&amp;quot;)] %&amp;gt;%
-  spread(run_point, date) %&amp;gt;%
-  .[, start := na.locf(start)] %&amp;gt;%
-  .[!is.na(end) &amp;amp; !is.na(start)] %&amp;gt;%
-  #select columns to print
-  .[, c(&amp;quot;start&amp;quot;, &amp;quot;end&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;team&amp;quot;, &amp;quot;count&amp;quot;)] %&amp;gt;%
-  .[order(-count)]
-
-head(data.frame(draws), 25)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##         start        end division                    team count
-## 1  1891-01-01 1892-12-10        1             Aston Villa    50
-## 2  1895-03-30 1896-11-09        1              Stoke City    45
-## 3  1907-12-26 1909-02-27        1              Sunderland    45
-## 4  1913-01-01 1914-02-14        2    Bradford Park Avenue    43
-## 5  1909-01-30 1910-03-25        2          Leicester City    43
-## 6  1894-01-06 1896-09-05        2                 Walsall    43
-## 7  1892-12-10 1894-09-15        1         Birmingham City    42
-## 8  1896-03-21 1897-09-25        2                  Darwen    39
-## 9  1928-03-17 1929-02-02        1              Portsmouth    37
-## 10 1904-10-22 1905-11-11        1        Sheffield United    37
-## 11 1947-11-15 1948-09-25       3b          Bristol Rovers    36
-## 12 1930-05-03 1931-03-28        2 Wolverhampton Wanderers    36
-## 13 1894-03-23 1895-04-20        2            Lincoln City    35
-## 14 1946-10-12 1947-08-23       3a        Stockport County    35
-## 15 1904-01-30 1904-12-27        2            Bristol City    34
-## 16 1915-04-03 1920-02-21        1    West Bromwich Albion    34
-## 17 1934-12-01 1935-09-16        2        Doncaster Rovers    33
-## 18 1895-11-16 1896-11-28        2        Newcastle United    33
-## 19 1925-05-02 1926-02-22        2           Middlesbrough    32
-## 20 1935-08-31 1936-03-14       3b                 Reading    32
-## 21 1925-12-26 1926-10-02       3a                Rochdale    32
-## 22 1896-01-20 1897-02-13        2        Burton Wanderers    31
-## 23 1927-12-24 1928-09-15       3a      Accrington Stanley    30
-## 24 1905-11-04 1906-09-03        2    Gainsborough Trinity    30
-## 25 1946-11-23 1947-08-25        2         Plymouth Argyle    30&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Tottenham’s run without a draw doesn’t even make the top 25 such runs! And they still would have to wait until at least next season until they can match Aston Villa’s run from New Years Day 1891 until Christmas Eve in 1892, a run of 50 matches without a draw- a run that included 23 losses, and 27 wins. It is the longest for quite sometime though- there’s few similar runs in the post-war years.&lt;/p&gt;
-&lt;p&gt;We can restrict this easily to just runs in the top division my modifying one line&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;draws &amp;lt;- eng_data %&amp;gt;%
-  setDT() %&amp;gt;%
-  .[order(team, date)] %&amp;gt;%
-  .[, game_id := 1:.N, by = team] %&amp;gt;%
-  #filter out only the top division matches
-  .[division == 1] %&amp;gt;%
-  .[goal_diff != 0] %&amp;gt;%
-  .[, consecutive := lead(game_id) - game_id, by = team] %&amp;gt;%
-  .[consecutive != 1, consecutive := NA] %&amp;gt;%
-  .[, count := .N*!is.na(consecutive), rleid(!is.na(consecutive))] %&amp;gt;%
-  .[count != lead(count) | count != lag(count)] %&amp;gt;%
-  .[order(-count, team, date)] %&amp;gt;%
-  .[, run_point := c(&amp;quot;start&amp;quot;, &amp;quot;end&amp;quot;)] %&amp;gt;%
-  spread(run_point, date) %&amp;gt;%
-  .[, start := na.locf(start)] %&amp;gt;%
-  .[!is.na(end) &amp;amp; !is.na(start)] %&amp;gt;%
-  .[, c(&amp;quot;start&amp;quot;, &amp;quot;end&amp;quot;, &amp;quot;division&amp;quot;, &amp;quot;team&amp;quot;, &amp;quot;count&amp;quot;)] %&amp;gt;%
-  .[order(-count)]
-
-head(data.frame(draws), 10)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##         start        end division                    team count
-## 1  1891-01-01 1892-12-10        1             Aston Villa    50
-## 2  1895-03-30 1896-11-09        1              Stoke City    45
-## 3  1907-12-26 1909-02-27        1              Sunderland    45
-## 4  1928-03-17 1929-02-02        1              Portsmouth    37
-## 5  1904-10-22 1905-11-11        1        Sheffield United    37
-## 6  1915-04-03 1920-02-21        1    West Bromwich Albion    34
-## 7  1895-09-28 1896-09-12        1 Wolverhampton Wanderers    29
-## 8  1964-09-12 1965-03-31        1             Aston Villa    28
-## 9  1953-04-25 1954-01-02        1                 Burnley    28
-## 10 1891-03-14 1892-04-30        1              Sunderland    28&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Where we can see that Spurs’ run is at least the longest modern top flight drawless run.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 </description>

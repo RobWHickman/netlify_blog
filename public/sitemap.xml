@@ -4,8 +4,8 @@
     
     <url>
     
-      <loc>/post/advent_calendar_trivia/</loc>
-      <lastmod>2019-12-01T00:00:00+00:00</lastmod>
+      <loc>/post/from_hackney_to_haringey/</loc>
+      <lastmod>2020-01-09T00:00:00+00:00</lastmod>
     </url>
     
   
@@ -14,7 +14,7 @@
     <url>
     
       <loc>/</loc>
-      <lastmod>2019-12-01T00:00:00+00:00</lastmod>
+      <lastmod>2020-01-09T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -24,8 +24,37 @@
     <url>
     
       <loc>/tags/</loc>
-      <lastmod>2019-12-01T00:00:00+00:00</lastmod>
+      <lastmod>2020-01-09T00:00:00+00:00</lastmod>
       <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/maps/</loc>
+      <lastmod>2020-01-09T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/tags/politics/</loc>
+      <lastmod>2020-01-09T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/post/advent_calendar_trivia/</loc>
+      <lastmod>2019-12-01T00:00:00+00:00</lastmod>
     </url>
     
   
@@ -390,16 +419,6 @@
     
       <loc>/post/counties_league_points/</loc>
       <lastmod>2019-01-21T00:00:00+00:00</lastmod>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/tags/maps/</loc>
-      <lastmod>2019-01-21T00:00:00+00:00</lastmod>
-      <priority>0</priority>
     </url>
     
   

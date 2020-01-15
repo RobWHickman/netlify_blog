@@ -1,0 +1,523 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>politics on Robert Hickman</title>
+    <link>/tags/politics/</link>
+    <description>Recent content in politics on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Thu, 09 Jan 2020 00:00:00 +0000</lastBuildDate>
+    <atom:link href="/tags/politics/" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title></title>
+      <link>/post/from_hackney_to_haringey/</link>
+      <pubDate>Thu, 09 Jan 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/from_hackney_to_haringey/</guid>
+      <description>
+
+
+&lt;p&gt;A perculiar way in which the UK’s constituency-based electoral system shapes media coverage is that the names of certain towns/districts have an outsized effect. For instance, in the 2019 UK general election, much was made of &lt;a href=&#34;https://www.newstatesman.com/politics/uk/2019/10/which-voters-who-swing-election-2019-workington-man&#34;&gt;Workington&lt;/a&gt; &lt;a href=&#34;https://www.dailymail.co.uk/news/article-7640915/Workington-Man-backing-Boris-Johnson-Survey-finds-Tories-course-win-key-Labour-seat.html&#34;&gt;Man&lt;/a&gt;* in Cumbria- a seat that had fairly consistently returned Labour MPs in the modern era.&lt;/p&gt;
+&lt;p&gt;One particular media trend made possible by the variety of names for UK seats is to alliterate between constituencies that are seen as showing a range of geography/opinion/etc. This is best summed up in a great exchange between the absolute boy, and Health Secretary, Matt Hancock, and Kay Burley:&lt;/p&gt;
+&lt;blockquote class=&#34;twitter-tweet&#34; data-lang=&#34;en-gb&#34;&gt;
+&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
+On Sky, Matt Hanock says new cancer treatments are being rolled out “from Barnsley to Bassetlaw; from Wigan to Warrington.”&lt;br&gt;&lt;br&gt;Kay Burley: “That&#39;s not very far, you know.”&lt;br&gt;&lt;br&gt;Hancock: “It&#39;s also happening in Cornwall.”
+&lt;/p&gt;
+— Peter Walker (&lt;span class=&#34;citation&#34;&gt;@peterwalker99&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/peterwalker99/status/1189443331237003265?ref_src=twsrc%5Etfw&#34;&gt;30 October 2019&lt;/a&gt;
+&lt;/blockquote&gt;
+&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
+&lt;p&gt;Given that I had an afternoon off sick from work, and enjoy wasting my time on such things, I wanted to see what the best constituencies to use for ‘From Xx to Xy’ in British politics is. For this I’m going to use mostly data that is hosted on this website, however, where it isn’t I’ve made it pretty clear in comments where it can be downlaoded.&lt;/p&gt;
+&lt;p&gt;*for a good take on this, see &lt;a href=&#34;https://www.theguardian.com/commentisfree/2019/nov/22/workington-man-voter-caricature-essex-man&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;## OGR data source with driver: ESRI Shapefile 
+## Source: &amp;quot;C:\Users\rob-getty\Desktop\cleanup desktop\geo_data\boundary\Data\GB&amp;quot;, layer: &amp;quot;westminster_const_region&amp;quot;
+## with 632 features
+## It has 15 fields
+## Integer64 fields read as strings:  NUMBER NUMBER0 POLYGON_ID UNIT_ID&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;First, and easiest, let’s start with geographic distances between constituencies. For this I use the Ordnance Survey &lt;a href=&#34;https://www.ordnancesurvey.co.uk/business-government/products/boundaryline&#34;&gt;boundary line&lt;/a&gt; dataset which gives shapefile of each constituency in the UK.&lt;/p&gt;
+&lt;p&gt;After some string regex to match names between datasets, I also removed all constituencies beginning with North/South/East/West (as ‘From East Surry to East Hampshire’ doesn’t really have a ring to it) and also only took seats within England or Wales (more on why later). I also took out constituency names that were longer than two words, again for stylistic reasons.&lt;/p&gt;
+&lt;p&gt;We’re then left with 350 (out of 650 total) seats which we can plot, filled by the first letter of their name.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load tidyverse for munging
+library(tidyverse)
+
+#this data can be found at https://www.ordnancesurvey.co.uk/business-government/products/boundaryline
+#open as:
+# constituency_shapefiles &amp;lt;- readOGR(dsn = &amp;quot;where/you/downloaded&amp;quot;, 
+#                                    layer = &amp;quot;westminster_const_region&amp;quot;)
+#using rgdal and sf for geospatial work
+library(rgdal)
+library(sf)
+
+constituency_geography &amp;lt;- constituency_shapefiles %&amp;gt;%
+  st_as_sf() %&amp;gt;%
+  #some munging to line up datasets
+  mutate(name = gsub(&amp;quot; Co Const| Burgh Const| Boro Const&amp;quot;, &amp;quot;&amp;quot;, NAME)) %&amp;gt;%
+  mutate(name = case_when(
+    grepl(&amp;quot;London and Westminster&amp;quot;, name) ~ &amp;quot;Cities of London and Westminster&amp;quot;,
+    grepl(&amp;quot;-.*-&amp;quot;, name) ~ gsub(&amp;quot;(-)([a-z]{1})(.*-)&amp;quot;, perl = TRUE, &amp;quot;\\1\\U\\2\\E\\3&amp;quot;, name),
+    grepl(&amp;quot;St\\. &amp;quot;, name) ~ gsub(&amp;quot;St\\. &amp;quot;, &amp;quot;St &amp;quot;, name),
+    grepl(&amp;quot; of &amp;quot;, name) ~ gsub(&amp;quot; of &amp;quot;, &amp;quot; Of &amp;quot;, name),
+    grepl(&amp;quot;Newcastle upon &amp;quot;, name) ~ gsub(&amp;quot; upon &amp;quot;, &amp;quot; Upon &amp;quot;, name),
+    TRUE ~ name
+  )) %&amp;gt;%
+  #get the first letter
+  #removing compass directions
+  filter(!grepl(&amp;quot;North |East |South |West &amp;quot;, name) &amp;amp; !grepl(&amp;quot; .* &amp;quot;, name)) %&amp;gt;%
+  mutate(first_letter = gsub(&amp;quot;(.)(.*)&amp;quot;, &amp;quot;\\1&amp;quot;,  name)) %&amp;gt;%
+  #only going to play with English constituencies here
+  filter(grepl(&amp;quot;^E|^W&amp;quot;, CODE)) %&amp;gt;%
+  #remove Chorley (speaker&amp;#39;s seat)
+  filter(!grepl(&amp;quot;Chorley&amp;quot;, name)) %&amp;gt;%
+  #select and rename relevant columns
+  select(WSTid = CODE, WSTnm = name, first_letter)
+
+constituency_names &amp;lt;- constituency_geography %&amp;gt;%
+  `st_geometry&amp;lt;-`(NULL)
+
+#ggthemes for map theme
+library(ggthemes)
+
+#plot remaining constituencies coloured based on first letter
+first_letter_plot &amp;lt;- ggplot() +
+  geom_sf(data = constituency_geography, aes(fill = first_letter)) +
+  scale_fill_discrete(guide = FALSE) +
+  theme_map()
+
+plot(first_letter_plot)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-09-from_hackney_to_haringey_files/figure-html/get_data-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;To calculate the distance between any two constituencies, I use the center location of each, calculated using sf::st_centroid(). Grouping by first letter then creating a matrix from each to each is simple enough using sf::st_distance() as follows:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the coordinates of the center of each constituency
+geographic_centers &amp;lt;- constituency_geography %&amp;gt;%
+  st_centroid() %&amp;gt;%
+  split(f = .$first_letter)
+
+#function to find distances between center points
+get_distances &amp;lt;- function(letter_list) {
+  constituencies &amp;lt;- letter_list$WSTnm
+  first_letter &amp;lt;- unique(letter_list$first_letter)
+  
+  #get distance to/from every center point with same first letter
+  distance_matrix &amp;lt;- st_distance(letter_list, letter_list)
+  
+  distances_df &amp;lt;- distance_matrix %&amp;gt;%
+    as.data.frame()
+  names(distances_df) &amp;lt;- constituencies
+  
+  melted_df &amp;lt;- distances_df %&amp;gt;%
+    pivot_longer(., names(.), names_to = &amp;quot;to&amp;quot;, values_to = &amp;quot;distance&amp;quot;) %&amp;gt;%
+    mutate(from = rep(unique(to), each = length(unique(to)))) %&amp;gt;%
+    mutate(first_letter = first_letter)
+  
+  return(melted_df)
+}
+
+#run the function to get the distances between constituencies with same
+#first letter
+constituency_interdistances &amp;lt;- map_df(geographic_centers, get_distances)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then find the longest distance (in metres) between the centre of constituencies, grouped by the first letter of their name using some simple muning:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the longest distances 
+longest_distances &amp;lt;- constituency_interdistances %&amp;gt;%
+  #arrange by longest first
+  arrange(-distance) %&amp;gt;%
+  #take the longest per first letter
+  filter(!duplicated(first_letter)) %&amp;gt;%
+  filter(distance != 0)
+
+#show the ongest 10 interdistances
+head(longest_distances %&amp;gt;% arrange(-distance))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 4
+##   to                 distance from               first_letter
+##   &amp;lt;chr&amp;gt;                 &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;              &amp;lt;chr&amp;gt;       
+## 1 St Ives             601117. Sunderland Central S           
+## 2 Tynemouth           540605. Totnes             T           
+## 3 Berwick-Upon-Tweed  528160. Brighton, Kemptown B           
+## 4 Worthing West       490544. Wansbeck           W           
+## 5 Hove                488181. Hexham             H           
+## 6 Carlisle            483127. Canterbury         C&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Perhaps not surprisingly, St Ives (in the far South West on England) to Sunderland Central (in the far North East) is the furthest distance (601km). We can see though that there’s a fair few first letter for which we have a pair of constituencies that are pretty far away from each other.&lt;/p&gt;
+&lt;p&gt;To plot the longest distance between a pair of constituencies that alliterate is simple enough. I also load a shapefile of the outline of England and Wales to pretty up the plots and create lines between each constituency. Where constituencies are too small to be plotted on this scale, I use a red dot.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#shapefile of England and Wales for plotting
+eng_wal &amp;lt;- &amp;quot;C:/Users/rob-getty/Desktop/netlify_blog/static/files/constituency_distances/england_wales_shape.rds&amp;quot; %&amp;gt;%
+  readRDS()
+
+#filter the longest journey per letter
+selected_constituencies &amp;lt;- constituency_geography %&amp;gt;%
+  filter(WSTnm %in% pivot_longer(longest_distances, cols = c(&amp;quot;to&amp;quot;, &amp;quot;from&amp;quot;))$value) %&amp;gt;%
+  left_join(., 
+            longest_distances %&amp;gt;% 
+              mutate(journey = paste(to, from, sep = &amp;quot; to\n&amp;quot;)) %&amp;gt;% 
+              select(first_letter, journey),
+            by = &amp;quot;first_letter&amp;quot;)
+
+#get the center coordinates of constituencies
+#to help plotting small constituencies
+plotting_points &amp;lt;- do.call(rbind, geographic_centers) %&amp;gt;%
+  filter(WSTnm %in% selected_constituencies$WSTnm) %&amp;gt;%
+  left_join(., 
+            longest_distances %&amp;gt;% 
+              mutate(journey = paste(to, from, sep = &amp;quot; to\n&amp;quot;)) %&amp;gt;% 
+              select(first_letter, journey),
+            by = &amp;quot;first_letter&amp;quot;) %&amp;gt;%
+  st_transform(crs = st_crs(eng_wal))
+
+#calculate straight lines between two constituencies
+plotting_lines &amp;lt;- plotting_points %&amp;gt;%
+  split(f = .$journey) %&amp;gt;%
+  map_df(., function(data) {
+    coords &amp;lt;- rbind(st_coordinates(data[1,]), st_coordinates(data[2,]))
+    line &amp;lt;- st_linestring(coords)
+    df &amp;lt;- st_sfc(line, crs = st_crs(&amp;quot;+init=epsg:27700&amp;quot;)) %&amp;gt;%
+      as.data.frame() %&amp;gt;%
+      mutate(journey = unique(data$journey))
+  }) %&amp;gt;%
+  st_as_sf(crs = st_crs(plotting_points))
+
+#plot the longest journey between constituencies with the same first letter
+alliterative_journeys_plot &amp;lt;-  ggplot() +
+  geom_sf(data = eng_wal, fill = &amp;quot;white&amp;quot;) +
+  geom_sf(data = plotting_lines, colour = &amp;quot;darkblue&amp;quot;) +
+  #some constituencies are too small to plot as shapefiles
+  geom_sf(data = plotting_points, colour = &amp;quot;red&amp;quot;, size = 2.5) +
+  geom_sf(data = selected_constituencies, fill = &amp;quot;red&amp;quot;) +
+  theme_map() +
+  #split by first letter
+  facet_wrap(~journey)
+
+plot(alliterative_journeys_plot)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-09-from_hackney_to_haringey_files/figure-html/plot_interdistances-1.png&#34; width=&#34;1344&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load data on voting in the 2019 general election
+#2016 brexit vote based on Hanretty work also included
+votes_data &amp;lt;- readRDS(&amp;quot;../../static/files/constituency_distances/ge2019_results.rds&amp;quot;) %&amp;gt;%
+  select(WSTnm = constituency_name, winner = first_party, votes = electorate, 
+         con, lab, ld, brexit, green, other, brexit_hanretty) %&amp;gt;%
+  #convert to vote fractions
+  modify_at(c(&amp;quot;con&amp;quot;, &amp;quot;lab&amp;quot;, &amp;quot;ld&amp;quot;, &amp;quot;brexit&amp;quot;, &amp;quot;green&amp;quot;, &amp;quot;other&amp;quot;), function(x) x/.$votes) %&amp;gt;%
+  #take only relevant constituencies
+  filter(WSTnm %in% constituency_geography$WSTnm)
+
+head(votes_data)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##                 WSTnm winner votes       con       lab         ld
+## 1            Aberavon    Lab 50750 0.1284335 0.3351330 0.02112315
+## 2           Aberconwy    Con 44699 0.3285756 0.2830712 0.04073917
+## 3           Aldershot    Con 72617 0.3853092 0.1553631 0.09529449
+## 4 Aldridge-Brownhills    Con 60138 0.4631015 0.1332602 0.03942599
+## 5        Amber Valley    Con 69976 0.4157997 0.1744884 0.04105693
+## 6               Arfon     PC 42215 0.1048916 0.2452446 0.00000000
+##       brexit       green      other brexit_hanretty
+## 1 0.06124138 0.008866995 0.01440394       0.6012448
+## 2 0.00000000 0.000000000 0.00000000       0.5219712
+## 3 0.00000000 0.024099040 0.00000000       0.5789777
+## 4 0.00000000 0.012820513 0.00558715       0.6779635
+## 5 0.00000000 0.019835372 0.00000000       0.6529912
+## 6 0.02745470 0.000000000 0.00000000       0.3584544&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find the largest gap in 2016 brexit vote between constituencies
+#which same first letter
+brexit_differences &amp;lt;- votes_data %&amp;gt;%
+  left_join(., constituency_names, by = &amp;quot;WSTnm&amp;quot;) %&amp;gt;%
+  split(f = .$first_letter) %&amp;gt;%
+  map_df(., function(data) {
+    difference &amp;lt;- outer(data$brexit_hanretty, data$brexit_hanretty, &amp;quot;-&amp;quot;) %&amp;gt;%
+      as.data.frame() %&amp;gt;%
+      mutate(from = data$WSTnm)
+    names(difference)[1:(ncol(difference) - 1)] &amp;lt;- data$WSTnm
+    df &amp;lt;- difference %&amp;gt;%
+      pivot_longer(cols = -starts_with(&amp;quot;from&amp;quot;),
+                   names_to = &amp;quot;to&amp;quot;,
+                   values_to = &amp;quot;brexit_2016_difference&amp;quot;) %&amp;gt;%
+      mutate(first_letter = unique(data$first_letter))
+  }) %&amp;gt;%
+  #arrange by greatest difference
+  arrange(-brexit_2016_difference)
+
+head(brexit_differences, n = 10)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 10 x 4
+##    from                 to           brexit_2016_difference first_letter
+##    &amp;lt;chr&amp;gt;                &amp;lt;chr&amp;gt;                         &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;       
+##  1 Stoke-On-Trent North Streatham                     0.516 S           
+##  2 Stoke-On-Trent South Streatham                     0.506 S           
+##  3 Barnsley East        Bristol West                  0.503 B           
+##  4 Bolsover             Bristol West                  0.497 B           
+##  5 Barnsley East        Battersea                     0.489 B           
+##  6 Bolsover             Battersea                     0.483 B           
+##  7 Scunthorpe           Streatham                     0.481 S           
+##  8 Bassetlaw            Bristol West                  0.476 B           
+##  9 Barnsley Central     Bristol West                  0.475 B           
+## 10 Blackpool South      Bristol West                  0.471 B&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot the distances between constituencies of same first letter with
+#greatest difference in 2016 brexit vote
+brexit_distance_plot &amp;lt;- brexit_differences %&amp;gt;%
+  filter(!duplicated(first_letter)) %&amp;gt;%
+  left_join(constituency_interdistances, by = c(&amp;quot;to&amp;quot;, &amp;quot;from&amp;quot;)) %&amp;gt;%
+  mutate(journey = paste(to, from, sep = &amp;quot;-&amp;quot;)) %&amp;gt;%
+  select(journey, first_letter.x, brexit_2016_difference, distance) %&amp;gt;%
+  ggplot(aes(x = brexit_2016_difference, y = distance, label = journey)) +
+  geom_text() +
+  theme_minimal()
+
+brexit_distance_plot&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-09-from_hackney_to_haringey_files/figure-html/plot_brexit_differences-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load the raw values from the census data for each output area
+census_oa_data &amp;lt;- census_oa_data %&amp;gt;%
+  #select only integer data (counts not percentages)
+  select(OAid = GeographyCode, which(sapply(.,class)==&amp;quot;integer&amp;quot;))
+
+#load the lookup between output areas to westminster constituency
+oa_to_westminster &amp;lt;- readRDS(&amp;quot;../../static/files/constituency_distances/oa_to_westminster.rds&amp;quot;) %&amp;gt;%
+  select(OAid = OA11CD, WSTid = PCON11CD, WSTnm = PCON11NM, WSTperc = OA11PERCENT) %&amp;gt;%
+  #select only english constituencies
+  filter(WSTid %in% constituency_names$WSTid)
+
+
+#gather the census data by westminster constituency
+census_data_westminster &amp;lt;- left_join(census_oa_data, oa_to_westminster, by = &amp;quot;OAid&amp;quot;) %&amp;gt;%
+  filter(!is.na(WSTid)) %&amp;gt;%
+  #for output areas split between constituencies guesstimate the correct amounts
+  mutate_if(is.integer, funs(round(. * (WSTperc/100)))) %&amp;gt;%
+  select(-WSTnm, -WSTperc, -OAid) %&amp;gt;%
+  #sum the counts per constituency for each statistic
+  group_by(WSTid) %&amp;gt;%
+  summarise_if(is.numeric, sum, na.rm = TRUE) %&amp;gt;%
+  #turn into percentages from the total number of people (KS101)
+  modify_if(is.numeric, function(x) x/.$KS101EW0001) %&amp;gt;%
+  #arrange by name
+  arrange(WSTid)
+
+#only preview the first few columns as we have ~400 total
+head(census_data_westminster[1:8])&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 8
+##   WSTid KS101EW0001 KS101EW0002 KS101EW0003 KS101EW0004 KS101EW0005
+##   &amp;lt;chr&amp;gt;       &amp;lt;dbl&amp;gt;       &amp;lt;dbl&amp;gt;       &amp;lt;dbl&amp;gt;       &amp;lt;dbl&amp;gt;       &amp;lt;dbl&amp;gt;
+## 1 E140~           1       0.499       0.501       0.980     0.0195 
+## 2 E140~           1       0.489       0.511       0.994     0.00574
+## 3 E140~           1       0.492       0.508       0.991     0.00885
+## 4 E140~           1       0.492       0.508       0.989     0.0111 
+## 5 E140~           1       0.485       0.515       0.992     0.00791
+## 6 E140~           1       0.492       0.508       0.992     0.00766
+## # ... with 2 more variables: KS101EW0006 &amp;lt;dbl&amp;gt;, KS102EW0001 &amp;lt;dbl&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#load the terminology for each census statistic
+census_index &amp;lt;- readRDS(&amp;quot;../../static/files/constituency_distances/census_names.rds&amp;quot;)
+
+head(select(census_index, Code, Meaning))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##          Code
+## 2 KS101EW0001
+## 3 KS101EW0002
+## 4 KS101EW0003
+## 5 KS101EW0004
+## 6 KS101EW0005
+## 7 KS101EW0006
+##                                                                           Meaning
+## 2                                                             All categories: Sex
+## 3                                                                           Males
+## 4                                                                         Females
+## 5                                                            Lives in a household
+## 6                                               Lives in a communal establishment
+## 7 Schoolchild or full-time student aged 4 and over at their non term-time address&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;census_data_westminster &amp;lt;- census_data_westminster %&amp;gt;%
+  #a few codes missing from the index
+  .[-which(!names(.)[2:ncol(.)] %in% census_index$Code)] %&amp;gt;%
+  .[c(1, which(!apply(.[2:ncol(.)],2,function(x) var(x,na.rm=T)==0))+1)]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;get_correlations_tidy &amp;lt;- function(demography, dependent_var) {
+  #first split up the demography data by variable so we can independently
+  #correlate each against the dependent variable
+  split_demog &amp;lt;- demography %&amp;gt;%
+    column_to_rownames(&amp;quot;WSTid&amp;quot;) %&amp;gt;%
+    t() %&amp;gt;%
+    split(f = rownames(.))
+  
+  #run the values for each variables against the dependent_var
+  correlations &amp;lt;- map_df(split_demog, function(x) {
+    regression &amp;lt;- lm(dependent_var ~ x)
+    adj_r_squared &amp;lt;- summary(regression)$adj.r.squared
+    f_stat &amp;lt;- summary(regression)$fstatistic[1]
+    df &amp;lt;- summary(regression) %&amp;gt;%
+      #tidy it to bind to df
+      broom::tidy() %&amp;gt;%
+      filter(term != &amp;quot;(Intercept)&amp;quot;) %&amp;gt;%
+      mutate(adj_r = adj_r_squared, f_stat)
+  })
+  
+  tidy_df &amp;lt;- correlations %&amp;gt;%
+    #left join in the meaning for each variable
+    mutate(Code = names(demography[2:ncol(demography)])) %&amp;gt;%
+    left_join(., select(census_index, Code, Meaning), by = &amp;quot;Code&amp;quot;) %&amp;gt;%
+    arrange(-abs(statistic)) %&amp;gt;%
+    select(-term)
+  
+  #return this data frame
+  return(tidy_df)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;lr_margin &amp;lt;- votes_data %&amp;gt;%
+  left_join(constituency_names, by = &amp;quot;WSTnm&amp;quot;) %&amp;gt;%
+  #must line up in order with census data
+  arrange(WSTid) %&amp;gt;%
+  #assuming a simple left vs right decision for voters
+  mutate(left = lab + ld + green,
+         right = con + brexit) %&amp;gt;%
+  #take the difference between left and right sum votes for each constituency
+  mutate(margin = left - right) %&amp;gt;%
+  .$margin
+
+#run in the above function
+lr_correlations &amp;lt;- get_correlations_tidy(census_data_westminster, lr_margin)
+
+head(select(lr_correlations, Code, Meaning, statistic, p.value))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 4
+##   Code      Meaning                                      statistic  p.value
+##   &amp;lt;chr&amp;gt;     &amp;lt;fct&amp;gt;                                            &amp;lt;dbl&amp;gt;    &amp;lt;dbl&amp;gt;
+## 1 KS104EW0~ Not living in a couple: Single (never marri~      26.0 1.86e-83
+## 2 KS404EW0~ All categories: Car or van availability          -23.4 1.67e-73
+## 3 KS104EW0~ Living in a couple: Married or in a registe~     -23.2 1.44e-72
+## 4 KS105EW0~ One family only: Married or same-sex civil ~     -22.2 1.78e-68
+## 5 KS103EW0~ Married                                          -22.0 4.93e-68
+## 6 KS404EW0~ 2 cars or vans in household                      -22.0 5.77e-68&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;lr_correlations &amp;lt;- lr_correlations %&amp;gt;%
+  #lots of these stats are self-correlated
+  #e.g. 3 cars in household vs 4+ cars in household
+  mutate(stat_category = gsub(&amp;quot;(.{5})(.*)&amp;quot;, &amp;quot;\\1&amp;quot;, Code)) %&amp;gt;%
+  group_by(stat_category) %&amp;gt;%
+  #take only the strongest correlated variable from each &amp;#39;category&amp;#39;
+  mutate(duplicate_n = 1:n()) %&amp;gt;%
+  ungroup() %&amp;gt;%
+  filter(duplicate_n == 1 &amp;amp; abs(statistic) &amp;gt; 10 &amp;amp; !duplicated(Meaning))
+
+right_variables &amp;lt;- lr_correlations %&amp;gt;%
+  mutate(census_info = paste(Code, Meaning)) %&amp;gt;%
+  filter(statistic &amp;lt; 0) %&amp;gt;%
+  .$census_info
+
+left_variables &amp;lt;- lr_correlations %&amp;gt;%
+  mutate(census_info = paste(Code, Meaning)) %&amp;gt;%
+  filter(statistic &amp;gt; 0) %&amp;gt;%
+  .$census_info
+
+right_variables&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##  [1] &amp;quot;KS404EW0007 All categories: Car or van availability&amp;quot;                                   
+##  [2] &amp;quot;KS105EW0005 One family only: Married or same-sex civil partnership couple: No children&amp;quot;
+##  [3] &amp;quot;KS103EW0003 Married&amp;quot;                                                                   
+##  [4] &amp;quot;KS501EW0004 Highest level of qualification: Level 2 qualifications&amp;quot;                    
+##  [5] &amp;quot;KS102EW0013 Age 60 to 64&amp;quot;                                                              
+##  [6] &amp;quot;KS401EW0008 Whole house or bungalow: Detached&amp;quot;                                         
+##  [7] &amp;quot;KS603EW0002 Economically active: Employee: Part-time&amp;quot;                                  
+##  [8] &amp;quot;KS609EW0006 5. Skilled trades occupations&amp;quot;                                             
+##  [9] &amp;quot;KS605EW0007 F Construction&amp;quot;                                                            
+## [10] &amp;quot;KS402EW0002 Owned: Owned outright&amp;quot;                                                     
+## [11] &amp;quot;KS301EW0014 Provides 1 to 19 hours unpaid care a week&amp;quot;                                 
+## [12] &amp;quot;KS209EW0002 Christian&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;left_variables&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##  [1] &amp;quot;KS104EW0004 Not living in a couple: Single (never married or never registered a same-sex civil partnership)&amp;quot;
+##  [2] &amp;quot;KS403EW0004 Occupancy rating (rooms) of -1 or less&amp;quot;                                                         
+##  [3] &amp;quot;KS201EW0007 Mixed/multiple ethnic group: White and Black African&amp;quot;                                           
+##  [4] &amp;quot;KS604EW0008 Males: Part-time: 16 to 30 hours worked&amp;quot;                                                        
+##  [5] &amp;quot;KS612EW0012 L14.1 Never worked&amp;quot;                                                                             
+##  [6] &amp;quot;KS613EW0014 Not classified&amp;quot;                                                                                 
+##  [7] &amp;quot;KS202EW0039 Other identities only&amp;quot;                                                                          
+##  [8] &amp;quot;KS206EW0005 No people in household have English as a main language (English or Welsh in Wales)&amp;quot;             
+##  [9] &amp;quot;KS204EW0010 Other countries&amp;quot;                                                                                
+## [10] &amp;quot;KS205EW0008 Middle East and Asia&amp;quot;                                                                           
+## [11] &amp;quot;KS107EW0012 Female lone parent: Not in employment&amp;quot;                                                          
+## [12] &amp;quot;KS106EW0002 No adults in employment in household: With dependent children&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;brexit_vote &amp;lt;- votes_data %&amp;gt;%
+  left_join(constituency_names, by = &amp;quot;WSTnm&amp;quot;) %&amp;gt;%
+  #must line up in order with census data
+  arrange(WSTid) %&amp;gt;%
+  .$brexit_hanretty
+
+brexit_correlations &amp;lt;- get_correlations_tidy(census_data_westminster, brexit_vote) %&amp;gt;%
+  #lots of these stats are self-correlated
+  #e.g. 3 cars in household vs 4+ cars in household
+  mutate(stat_category = gsub(&amp;quot;(.{5})(.*)&amp;quot;, &amp;quot;\\1&amp;quot;, Code)) %&amp;gt;%
+  group_by(stat_category) %&amp;gt;%
+  #take only the strongest correlated variable from each &amp;#39;category&amp;#39;
+  mutate(duplicate_n = 1:n()) %&amp;gt;%
+  ungroup() %&amp;gt;%
+  filter(duplicate_n == 1 &amp;amp; abs(statistic) &amp;gt; 10 &amp;amp; !duplicated(Meaning))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## Warning: Column `Code` joining character vector and factor, coercing into
+## character vector&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;head(brexit_correlations) &lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 10
+##   estimate std.error statistic   p.value adj_r f_stat Code  Meaning
+##      &amp;lt;dbl&amp;gt;     &amp;lt;dbl&amp;gt;     &amp;lt;dbl&amp;gt;     &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt; &amp;lt;fct&amp;gt;  
+## 1     5.27     0.171      30.8 2.32e-101 0.731   948. KS50~ Highes~
+## 2     6.08     0.239      25.4 3.36e- 81 0.648   645. KS61~ 6. Sem~
+## 3    -3.14     0.126     -25.0 1.52e- 79 0.641   623. KS60~ 2. Pro~
+## 4     9.04     0.380      23.8 5.00e- 75 0.618   567. KS60~ 8. Pro~
+## 5     7.65     0.329      23.3 6.44e- 73 0.608   542. KS61~ 5. Low~
+## 6    -2.20     0.103     -21.3 5.47e- 65 0.564   453. KS30~ Very g~
+## # ... with 2 more variables: stat_category &amp;lt;chr&amp;gt;, duplicate_n &amp;lt;int&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;lr_correlations$Meaning[which(lr_correlations$Code %in% brexit_correlations$Code)]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] Not living in a couple: Single (never married or never registered a same-sex civil partnership)
+## [2] Economically active: Employee: Part-time                                                       
+## [3] Occupancy rating (rooms) of -1 or less                                                         
+## 793 Levels: 0 or multiple adults in household ... Widowed or surviving partner from a same-sex civil partnership&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;pca_census &amp;lt;- census_data_westminster %&amp;gt;%
+  #take only the variable that strongly correlate with 2019/brexit vote
+  select(unique(c(lr_correlations$Code, brexit_correlations$Code))) %&amp;gt;%
+  #scale before pca
+  scale()
+
+#run the pca
+#take first 3 components
+demographic_pca &amp;lt;- prcomp(pca_census)$x %&amp;gt;%
+  as.data.frame() %&amp;gt;%
+  .[1:3] %&amp;gt;%
+  #add back in ID column
+  mutate(WSTid = census_data_westminster$WSTid) %&amp;gt;%
+  #join in additional dta for plotting
+  left_join(., constituency_names, by = &amp;quot;WSTid&amp;quot;) %&amp;gt;%
+  left_join(., select(votes_data, WSTnm, winner), by = &amp;quot;WSTnm&amp;quot;)
+
+#plot
+demographic_pca_plot &amp;lt;- demographic_pca %&amp;gt;%
+  ggplot(aes(x = PC1, y = PC2, label = gsub(&amp;quot;a|e|i|o|u&amp;quot;, &amp;quot;&amp;quot;, WSTnm), colour = winner)) +
+  geom_point() +
+  geom_text() +
+  scale_colour_manual(values = c(&amp;quot;mediumblue&amp;quot;, &amp;quot;green&amp;quot;, &amp;quot;red&amp;quot;, &amp;quot;goldenrod&amp;quot;, &amp;quot;darkgreen&amp;quot;)) +
+  labs(x = &amp;quot;PC1 - Urban, Young &amp;amp; Diverse -&amp;gt;&amp;quot;,
+       y = &amp;quot;PC2 - Economically &amp;#39;Left Behind&amp;#39; -&amp;gt;&amp;quot;) +
+  facet_wrap(~first_letter)
+
+demographic_pca_plot&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-09-from_hackney_to_haringey_files/figure-html/do_census_pca-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;distances &amp;lt;- demographic_pca %&amp;gt;%
+  split(f = .$first_letter) %&amp;gt;%
+  map_df(., function(data) {
+    distances &amp;lt;- (outer(data$PC1, data$PC1, &amp;quot;-&amp;quot;)^2 + outer(data$PC2, data$PC2, &amp;quot;-&amp;quot;)^2) %&amp;gt;%
+    sqrt() %&amp;gt;%
+    as.data.frame() %&amp;gt;%
+    mutate(from = data$WSTnm)
+    names(distances)[1:(ncol(distances)-1)] &amp;lt;- as.character(data$WSTnm)
+    df &amp;lt;- pivot_longer(distances, -starts_with(&amp;quot;from&amp;quot;),
+                       names_to = &amp;quot;to&amp;quot;,
+                       values_to = &amp;quot;pca_distance&amp;quot;) %&amp;gt;%
+      mutate(pca_distance = abs(pca_distance))
+    return(df)
+  }) %&amp;gt;%
+  filter(!duplicated(pca_distance) &amp;amp; pca_distance != 0)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(ggrepel)
+all_distances &amp;lt;- distances %&amp;gt;%
+  left_join(brexit_differences, by = c(&amp;quot;from&amp;quot;, &amp;quot;to&amp;quot;)) %&amp;gt;%
+  mutate(brexit_2016_difference = abs(brexit_2016_difference)) %&amp;gt;%
+  select(-first_letter) %&amp;gt;%
+  left_join(constituency_interdistances, by = c(&amp;quot;from&amp;quot;, &amp;quot;to&amp;quot;)) %&amp;gt;%
+  mutate(label = case_when(
+    distance &amp;gt; 400000 &amp;amp; pca_distance &amp;gt; 15 &amp;amp; brexit_2016_difference &amp;gt; 0.3 ~ paste(to, from, sep = &amp;quot;-&amp;quot;)
+  )) %&amp;gt;%
+  mutate(distance = distance / 1000)
+
+p &amp;lt;- ggplot(all_distances, aes(x = distance, y = pca_distance, size = brexit_2016_difference)) +
+  geom_point(alpha = 0.2) +
+  geom_point(data = filter(all_distances, !is.na(label))) +
+  geom_text_repel(aes(label = label)) +
+  scale_size_continuous(name = &amp;quot;diff Brexit\n 2016 vote&amp;quot;, range = c(0.5, 5)) +
+  labs(x = &amp;quot;Geographic Distances between Constituences (/km&amp;quot;,
+       y = &amp;quot;&amp;#39;Distance&amp;#39; between Constituencies Demograph (2011 Census)&amp;quot;) +
+  theme_minimal()
+
+plot(p)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## Warning: Removed 4608 rows containing missing values (geom_text_repel).&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-01-09-from_hackney_to_haringey_files/figure-html/unnamed-chunk-3-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

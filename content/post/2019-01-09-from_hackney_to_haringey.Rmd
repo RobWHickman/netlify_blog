@@ -13,28 +13,46 @@ header:
   image: ''
 ---
 
-https://twitter.com/peterwalker99/status/1189443331237003265?fbclid=IwAR1-vc2yA6blkhC7OthxrpbTKEG_ShyZ4_-NErWHYIPqCvqgcQYVVH1S7mA
 
-```{r libraries, warning=FALSE,message=FALSE}
-library(tidyverse)
-library(sf)
-library(rgdal)
-library(broom)
-library(ggthemes)
-```
+A perculiar way in which the UK's constituency-based electoral system shapes media coverage is that the names of certain towns/districts have an outsized effect. For instance, in the 2019 UK general election, much was made of [Workington](https://www.newstatesman.com/politics/uk/2019/10/which-voters-who-swing-election-2019-workington-man) [Man](https://www.dailymail.co.uk/news/article-7640915/Workington-Man-backing-Boris-Johnson-Survey-finds-Tories-course-win-key-Labour-seat.html)* in Cumbria- a seat that had fairly consistently returned Labour MPs in the modern era.
+
+One particular media trend made possible by the variety of names for UK seats is to alliterate between constituencies that are seen as showing a range of geography/opinion/etc. This is best summed up in a great exchange between the absolute boy, and Health Secretary, Matt Hancock, and Kay Burley:
+
+<blockquote class="twitter-tweet" data-lang="en-gb"><p lang="en" dir="ltr">On Sky, Matt Hanock says new cancer treatments are being rolled out &quot;from Barnsley to Bassetlaw; from Wigan to Warrington.&quot;<br><br>Kay Burley: &quot;That&#39;s not very far, you know.&quot;<br><br>Hancock: &quot;It&#39;s also happening in Cornwall.&quot;</p>&mdash; Peter Walker (@peterwalker99) <a href="https://twitter.com/peterwalker99/status/1189443331237003265?ref_src=twsrc%5Etfw">30 October 2019</a></blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+Given that I had an afternoon off sick from work, and enjoy wasting my time on such things, I wanted to see what the best constituencies to use for 'From Xx to Xy' in British politics is. For this I'm going to use mostly data that is hosted on this website, however, where it isn't I've made it pretty clear in comments where it can be downlaoded.
+
+*for a good take on this, see [here](https://www.theguardian.com/commentisfree/2019/nov/22/workington-man-voter-caricature-essex-man)
 
 ```{r load_data_secret, warning=FALSE,message=FALSE,echo=FALSE}
+library(rgdal)
+
 #some of these files are large so I store the locally
 #I've provided links to where you can find them below
 census_oa_data <- readRDS("C:/Users/rob-getty/Desktop/cleanup desktop/geo_data/census_data/census_data.rds")
 constituency_shapefiles <- readOGR(dsn = "C:/Users/rob-getty/Desktop/cleanup desktop/geo_data/boundary/Data/GB", layer = "westminster_const_region")
 ```
 
+## Geographic Distance
+First, and easiest, let's start with geographic distances between constituencies. For this I use the Ordnance Survey [boundary line](https://www.ordnancesurvey.co.uk/business-government/products/boundaryline) dataset which gives shapefile of each constituency in the UK.
+
+After some string regex to match names between datasets, I also removed all constituencies beginning with North/South/East/West (as 'From East Surry to East Hampshire' doesn't really have a ring to it) and also only took seats within England or Wales (more on why later). I also took out constituency names that were longer than two words, again for stylistic reasons.
+
+We're then left with 350 (out of 650 total) seats which we can plot, filled by the first letter of their name.
+
 ```{r get_data, warning=FALSE,message=FALSE}
+#load tidyverse for munging
+library(tidyverse)
+
 #this data can be found at https://www.ordnancesurvey.co.uk/business-government/products/boundaryline
 #open as:
 # constituency_shapefiles <- readOGR(dsn = "where/you/downloaded", 
 #                                    layer = "westminster_const_region")
+#using rgdal and sf for geospatial work
+library(rgdal)
+library(sf)
+
 constituency_geography <- constituency_shapefiles %>%
   st_as_sf() %>%
   #some munging to line up datasets
@@ -52,7 +70,7 @@ constituency_geography <- constituency_shapefiles %>%
   filter(!grepl("North |East |South |West ", name) & !grepl(" .* ", name)) %>%
   mutate(first_letter = gsub("(.)(.*)", "\\1",  name)) %>%
   #only going to play with English constituencies here
-  filter(grepl("^E", CODE)) %>%
+  filter(grepl("^E|^W", CODE)) %>%
   #remove Chorley (speaker's seat)
   filter(!grepl("Chorley", name)) %>%
   #select and rename relevant columns
@@ -61,7 +79,19 @@ constituency_geography <- constituency_shapefiles %>%
 constituency_names <- constituency_geography %>%
   `st_geometry<-`(NULL)
 
+#ggthemes for map theme
+library(ggthemes)
+
+#plot remaining constituencies coloured based on first letter
+first_letter_plot <- ggplot() +
+  geom_sf(data = constituency_geography, aes(fill = first_letter)) +
+  scale_fill_discrete(guide = FALSE) +
+  theme_map()
+
+plot(first_letter_plot)
 ```
+
+To calculate the distance between any two constituencies, I use the center location of each, calculated using sf::st_centroid(). Grouping by first letter then creating a matrix from each to each is simple enough using sf::st_distance() as follows:
 
 ```{r geographic_center_distance, warning=FALSE,message=FALSE}
 #get the coordinates of the center of each constituency
@@ -92,7 +122,11 @@ get_distances <- function(letter_list) {
 #run the function to get the distances between constituencies with same
 #first letter
 constituency_interdistances <- map_df(geographic_centers, get_distances)
+```
 
+We can then find the longest distance (in metres) between the centre of constituencies, grouped by the first letter of their name using some simple muning:
+
+```{r show_longest_distances, warning=FALSE,message=FALSE}
 #find the longest distances 
 longest_distances <- constituency_interdistances %>%
   #arrange by longest first
@@ -102,19 +136,24 @@ longest_distances <- constituency_interdistances %>%
   filter(distance != 0)
 
 #show the ongest 10 interdistances
-head(constituency_interdistances %>% arrange(-distance))
+head(longest_distances %>% arrange(-distance))
 ```
 
-```{r plot_interdistances, warning=FALSE,message=FALSE}
-#shapefile of England for plotting
-eng <- readRDS("../../static/files/constituency_distances/england_shape.rds")
+Perhaps not surprisingly, St Ives (in the far South West on England) to Sunderland Central (in the far North East) is the furthest distance (601km). We can see though that there's a fair few first letter for which we have a pair of constituencies that are pretty far away from each other.
+
+To plot the longest distance between a pair of constituencies that alliterate is simple enough. I also load a shapefile of the outline of England and Wales to pretty up the plots and create lines between each constituency. Where constituencies are too small to be plotted on this scale, I use a red dot.
+
+```{r plot_interdistances, warning=FALSE,message=FALSE,, fig.width=14, fig.height=12}
+#shapefile of England and Wales for plotting
+eng_wal <- "../../static/files/constituency_distances/england_wales_shape.rds" %>%
+  readRDS()
 
 #filter the longest journey per letter
 selected_constituencies <- constituency_geography %>%
   filter(WSTnm %in% pivot_longer(longest_distances, cols = c("to", "from"))$value) %>%
   left_join(., 
             longest_distances %>% 
-              mutate(journey = paste(to, from, sep = " to ")) %>% 
+              mutate(journey = paste(to, from, sep = " to\n")) %>% 
               select(first_letter, journey),
             by = "first_letter")
 
@@ -124,10 +163,10 @@ plotting_points <- do.call(rbind, geographic_centers) %>%
   filter(WSTnm %in% selected_constituencies$WSTnm) %>%
   left_join(., 
             longest_distances %>% 
-              mutate(journey = paste(to, from, sep = " to ")) %>% 
+              mutate(journey = paste(to, from, sep = " to\n")) %>% 
               select(first_letter, journey),
             by = "first_letter") %>%
-  st_transform(crs = st_crs(eng))
+  st_transform(crs = st_crs(eng_wal))
 
 #calculate straight lines between two constituencies
 plotting_lines <- plotting_points %>%
@@ -143,7 +182,7 @@ plotting_lines <- plotting_points %>%
 
 #plot the longest journey between constituencies with the same first letter
 alliterative_journeys_plot <-  ggplot() +
-  geom_sf(data = eng, fill = "white") +
+  geom_sf(data = eng_wal, fill = "white") +
   geom_sf(data = plotting_lines, colour = "darkblue") +
   #some constituencies are too small to plot as shapefiles
   geom_sf(data = plotting_points, colour = "red", size = 2.5) +
@@ -155,6 +194,11 @@ alliterative_journeys_plot <-  ggplot() +
 plot(alliterative_journeys_plot)
 ```
 
+## Brexit Difference
+
+We can also find the alliterative 
+
+
 ```{r load_vote_data, warning=FALSE,message=FALSE}
 #load data on voting in the 2019 general election
 #2016 brexit vote based on Hanretty work also included
@@ -162,6 +206,7 @@ votes_data <- readRDS("../../static/files/constituency_distances/ge2019_results.
   select(WSTnm = constituency_name, winner = first_party, votes = electorate, 
          con, lab, ld, brexit, green, other, brexit_hanretty) %>%
   #convert to vote fractions
+  #for later
   modify_at(c("con", "lab", "ld", "brexit", "green", "other"), function(x) x/.$votes) %>%
   #take only relevant constituencies
   filter(WSTnm %in% constituency_geography$WSTnm)
@@ -379,9 +424,9 @@ demographic_pca_plot <- demographic_pca %>%
   ggplot(aes(x = PC1, y = PC2, label = gsub("a|e|i|o|u", "", WSTnm), colour = winner)) +
   geom_point() +
   geom_text() +
-  scale_colour_manual(values = c("mediumblue", "green", "red", "goldenrod")) +
-  labs(x = "PC1 - Urband, Young & Diverse",
-       y = "PC2 - Economically 'Left Behind'") +
+  scale_colour_manual(values = c("mediumblue", "green", "red", "goldenrod", "darkgreen")) +
+  labs(x = "PC1 - Urban, Young & Diverse ->",
+       y = "PC2 - Economically 'Left Behind' ->") +
   facet_wrap(~first_letter)
 
 demographic_pca_plot

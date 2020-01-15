@@ -6,8 +6,26 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
-    <lastBuildDate>Sun, 01 Dec 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 09 Jan 2020 00:00:00 +0000</lastBuildDate>
     <atom:link href="/tags/" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>maps</title>
+      <link>/tags/maps/</link>
+      <pubDate>Thu, 09 Jan 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/maps/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>politics</title>
+      <link>/tags/politics/</link>
+      <pubDate>Thu, 09 Jan 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/politics/</guid>
+      <description></description>
+    </item>
     
     <item>
       <title>football</title>
@@ -123,24 +141,6 @@
       <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/javascript/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>scraping</title>
-      <link>/tags/scraping/</link>
-      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/scraping/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>models</title>
-      <link>/tags/models/</link>
-      <pubDate>Thu, 30 May 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/models/</guid>
       <description></description>
     </item>
     
