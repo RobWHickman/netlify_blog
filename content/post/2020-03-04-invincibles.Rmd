@@ -1,0 +1,290 @@
+---
+title: Five Minute Football Trivia - Invincibles
+author: Robert Hickman
+date: '2020-03-04'
+slug: five_min_trivia_invincibles
+output: pdf_document
+categories: []
+tags:
+  - fivemintrivia
+  - football
+header:
+  caption: ''
+  image: ''
+---
+
+```{r libraries, warning=FALSE,message=FALSE}
+library(tidyverse)
+library(ggrepel)
+library(engsoccerdata)
+library(regista)
+library(rvest)
+```
+
+```{r get_footie_data, warning=FALSE,message=FALSE}
+data <- engsoccerdata::england %>%
+  dplyr::filter(Season > 1991 & Season < 2019 & division == 1) %>%
+  select(season = Season, home, away = visitor, hgoal, agoal = vgoal)
+
+league_winners <- data %>%
+  pivot_longer(c("home", "away"), names_to = "location", values_to = "team") %>%
+  mutate(g_for = case_when(
+    location == "home" ~ hgoal,
+    location == "away" ~ agoal
+  )) %>%
+  mutate(g_ag = case_when(
+    location == "home" ~ agoal,
+    location == "away" ~ hgoal
+  )) %>%
+  mutate(points = case_when(
+    g_for > g_ag ~ 3,
+    g_for == g_ag ~ 1,
+    g_ag > g_for ~ 0
+  )) %>%
+  mutate(gd = g_for - g_ag) %>%
+  group_by(team, season) %>%
+  summarise(total_points = sum(points),
+            total_gd = sum(gd)) %>%
+  arrange(season, -total_points, -total_gd) %>%
+  group_by(season) %>%
+  mutate(league_position = 1:n()) %>%
+  ungroup() %>%
+  mutate(winner = case_when(
+    league_position == 1 ~ "y",
+    TRUE ~ "n"
+  ))
+ 
+fit_data <- data %>%
+  split(f = .$season) %>%
+  lapply(., function(x) x %>% mutate(home = factor(home), away = factor(away)))
+```
+
+```{r fit_dc, warning=FALSE,message=FALSE}
+fits <- lapply(fit_data, function(x) dixoncoles(hgoal, agoal, home, away, x))
+```
+
+```{r get_dc_parameters, warning=FALSE,message=FALSE}
+parameters <- fits %>%
+  lapply(., function(f) {
+    par_data <- f$par[grepl("def_|off_", names(f$par))]
+    teams <- unique(gsub("def_*|off_*", "", names(par_data)))
+    par_df <- matrix(par_data, ncol = 2) %>%
+      as.data.frame() %>%
+      rename(attack = V1, defence = V2)
+    rownames(par_df) <- teams
+    return(par_df)
+  }) %>%
+  do.call(rbind, .) %>%
+  rownames_to_column() %>%
+  separate(rowname, c("season", "team"), sep = "\\.") %>%
+  mutate(season = as.numeric(season)) %>%
+  mutate(defence = defence * -1) %>%
+  left_join(., league_winners, by = c("season", "team"))
+
+```
+
+```{r plot_dc_parameters, warning=FALSE,message=FALSE}
+p1 <- parameters %>%
+  ggplot(aes(x = attack, y = defence, fill = total_points, colour = winner)) +
+  geom_point(shape = 21, size = 3, alpha = 0.7, stroke = 2) +
+  geom_text_repel(data = filter(parameters, winner == 1 | attack + defence > 1),
+            aes(label = paste(team, season))) +
+  scale_colour_manual(values = c("blue", "red")) +
+  theme_minimal()
+
+p1
+```
+
+```{r backpredict_results, warning=FALSE,message=FALSE}
+matches <- data %>%
+  select(season, home, away) %>%
+  split(f = .$season)
+
+predict_matches <- function(dc_fit, fixtures) {
+  augment.dixoncoles(x = dc_fit, newdata = fixtures, type = "outcomes") %>% 
+    unnest() %>%
+    spread(outcome, prob)
+}
+
+predictions <- map2_df(fits, matches,
+                       predict_matches)
+
+head(predictions)
+```
+
+```{r invincible_chance, warning=FALSE,message=FALSE}
+invincible_chance <- predictions %>%
+  pivot_longer(c("home", "away"), names_to = "location", values_to = "team") %>%
+  mutate(nonloss_chance = case_when(
+    location == "home" ~ 1 - away_win,
+    location == "away" ~ 1 - home_win
+  )) %>%
+  select(season, team, nonloss_chance) %>%
+  group_by(team, season) %>%
+  summarise(invincible_chance = prod(nonloss_chance)) %>%
+  arrange(-invincible_chance)
+
+head(invincible_chance, n = 10)
+```
+
+```{r simulate_all_matches, warning=FALSE,message=FALSE}
+result_probs <- predictions %>%
+    pivot_longer(c("home", "away"), names_to = "location", values_to = "team") %>%
+  mutate(win = case_when(
+    location == "home" ~ home_win,
+    location == "away" ~ away_win
+  )) %>%
+  mutate(lose = 1 - draw - win) %>%
+  select(season, team, win, lose, draw) %>%
+  group_by(team, season) %>%
+  mutate(game = 1:n()) %>%
+  nest(probs = c(win, lose, draw))
+
+selected_teams <- parameters %>%
+  filter(attack > 0.25 & defence > 0.25) %>%
+  select(season, team) %>%
+  left_join(., result_probs, by = c("team", "season"))
+
+sim_result <- function(probabilities) {
+  chosen_results <- gather(probabilities) %>%
+    sample_n(., 1, weight = value)
+  result <- chosen_results$key
+}
+
+simulate_all_games <- function(data) {
+  data$result <- unlist(lapply(data$probs, sim_result))
+  return(data)
+}
+
+n_sims <- 1000
+
+simulated_results <- rerun(n_sims, simulate_all_games(selected_teams))
+```
+
+```{r centurion_probs, warning=FALSE,message=FALSE}
+simulated_points <- simulated_results %>%
+  lapply(., function(data) {
+    data <- data %>%
+      mutate(points = case_when(
+        result == "win" ~ 3,
+        result == "draw" ~ 1,
+        result == "lose" ~ 0
+      )) %>%
+      group_by(season, team) %>%
+      mutate(total_points = sum(points)) %>%
+      select(season, team, total_points) %>%
+      unique()
+  }) %>%
+  do.call(rbind, .)
+
+centurion_probs <- simulated_points %>%
+  filter(total_points > 99) %>%
+  group_by(season, team) %>%
+  summarise(centurion_prob = n() / 1000) %>%
+  arrange(-centurion_prob)
+```
+
+```{r man_city_acheivment, warning=FALSE,message=FALSE}
+p2 <- top_n(simulated_points, 1) %>%
+  ggplot(., aes(x = total_points)) +
+  geom_histogram(colour = "skyblue", alpha = 0.8)
+
+
+invincible_equivalent <- top_n(simulated_points, 1) %>%
+  top_frac(max(invincible_chance$invincible_chance)) %>%
+  arrange(total_points)
+```
+
+```{r get_2020_data, warning=FALSE,message=FALSE}
+fixtures_2020 <- "https://fbref.com/en/comps/9/schedule/Premier-League-Fixtures" %>%
+  read_html() %>%
+  html_nodes("#sched_ks_3232_1") %>%
+  html_table() %>%
+  as.data.frame() %>%
+  separate(Score, into = c("hgoal", "agoal"), sep = "–") %>%
+  select(home = Home, away = Away, home_xg = xG, away_xg = xG.1, hgoal, agoal) %>%
+  filter(home != "") %>%
+  mutate(home = factor(home), away = factor(away)) %>%
+  mutate_at(c("home_xg", "away_xg", "hgoal", "agoal"), .funs = funs(round(as.numeric(.))))
+
+played_matches <- fixtures_2020 %>%
+  filter(!is.na(home_xg))
+
+unplayed_matches <- fixtures_2020 %>%
+  filter(is.na(home_xg)) %>%
+  select_if(negate(is.numeric))
+
+fit_2020 <- dixoncoles(home_xg, away_xg, home, away, data = played_matches)
+```
+```{r 2020_dc_parameters, warning=FALSE,message=FALSE}
+p3 <- fit_2020 %>%
+  lapply(., function(f) {
+    par_data <- f$par[grepl("def_|off_", names(f$par))]
+    teams <- unique(gsub("def_*|off_*", "", names(par_data)))
+    par_df <- matrix(par_data, ncol = 2) %>%
+      as.data.frame() %>%
+      rename(attack = V1, defence = V2)
+    rownames(par_df) <- teams
+    return(par_df)
+  }) %>%
+  mutate(defence = 1 - defence) %>%
+  ggplot(aes(x = attack, y = defence, colour = attack + defence, label = team)) +
+  geom_point(shape = 21, size = 3, alpha = 0.7, stroke = 2) +
+  geom_point() +
+  geom_text_repel()
+
+```
+
+
+```{r liverpool_103_chance, warning=FALSE,message=FALSE}
+liverpool_points <- played_matches %>%
+  filter(home == "Liverpool" | away == "Liverpool") %>%
+  mutate(points = case_when(
+    hgoal == agoal ~ 1,
+    home == "Liverpool" & (hgoal > agoal) ~ 3,
+    away == "Liverpool" & (agoal > hgoal) ~ 3,
+    TRUE ~ 0
+  )) %>%
+  summarise(total_points = sum(points))
+
+unplayed_scorelines <-
+  augment.dixoncoles(fit_2020, unplayed_matches, type.predict = "scorelines") %>%
+  unnest() %>%
+  filter(home == "Liverpool" | away == "Liverpool") %>%
+  filter(prob > 0.01)
+
+simulate_season <- function(scoreline_probabilities) {
+  scoreline_probabilities %>%
+    nest(hgoal, agoal, prob, .key = "scorelines") %>%
+    mutate(sampled = map(scorelines, ~ sample_n(., 1, weight = prob))) %>%
+    select(-scorelines) %>%
+    unnest()
+}
+
+liverpool_2020_simulated <- rerun(n_sims, simulate_season(unplayed_scorelines)) %>%
+  bind_rows(.id = "simulation_id") %>%
+  mutate(points = case_when(
+    hgoal == agoal ~ 1,
+    home == "Liverpool" & (hgoal > agoal) ~ 3,
+    away == "Liverpool" & (agoal > hgoal) ~ 3,
+    TRUE ~ 0
+  )) %>%
+  group_by(simulation_id) %>%
+  summarise(total_points = sum(points) + as.numeric(liverpool_points))
+
+```
+
+```{r liverpool_expected_points, warning=FALSE,message=FALSE}
+length(which(simulated_tables$total_points > 102)) / 1000
+
+```
+
+```{r plot_liverpool_expectation, warning=FALSE,message=FALSE}
+p4 <- simulated_tables %>%
+  ggplot(., aes(x = total_points)) +
+  geom_histogram(fill = "red", alpha = 0.8)
+
+p4
+```
+
+
