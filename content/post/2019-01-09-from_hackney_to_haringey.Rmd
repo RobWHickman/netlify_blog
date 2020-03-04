@@ -14,6 +14,8 @@ header:
 ---
 
 
+_[note: this post was just a few sickday afternoons work on an idea I had from Twitter and is not in any way a serious political analysis. Really it's just a first past at trying to solve a very specific question, which I think it does to a greater or lesser extent. It's also full of the [Ecological Fallacy](https://en.wikipedia.org/wiki/Ecological_fallacy) so just bear all that in mind throughout]_
+
 A perculiar way in which the UK's constituency-based electoral system shapes media coverage is that the names of certain towns/districts have an outsized effect. For instance, in the 2019 UK general election, much was made of [Workington](https://www.newstatesman.com/politics/uk/2019/10/which-voters-who-swing-election-2019-workington-man) [Man](https://www.dailymail.co.uk/news/article-7640915/Workington-Man-backing-Boris-Johnson-Survey-finds-Tories-course-win-key-Labour-seat.html)* in Cumbria- a seat that had fairly consistently returned Labour MPs in the modern era.
 
 One particular media trend made possible by the variety of names for UK seats is to alliterate between constituencies that are seen as showing a range of geography/opinion/etc. This is best summed up in a great exchange between the absolute boy, and Health Secretary, Matt Hancock, and Kay Burley:
@@ -196,8 +198,7 @@ plot(alliterative_journeys_plot)
 
 ## Brexit Difference
 
-We can also find the alliterative 
-
+We can also find the alliterative constituencies that vary across the forever cultural war over Brexit. To do this, I use [Chris Hanretty's estimates of brexit vote share](https://medium.com/@chrishanretty/final-estimates-of-the-leave-vote-or-areal-interpolation-and-the-uks-referendum-on-eu-membership-5490b6cab878) by constituency, that I've tacked onto a csv of the 2019 General Election results. (You can find the data in the source for this website).
 
 ```{r load_vote_data, warning=FALSE,message=FALSE}
 #load data on voting in the 2019 general election
@@ -213,6 +214,8 @@ votes_data <- readRDS("../../static/files/constituency_distances/ge2019_results.
 
 head(votes_data)
 ```
+
+Finding the biggest difference is then a simple question of subtraction of the brexit vote (in this case the % voting for leave) between two constituencies sharing the first name which is easy to calculate using the outer product of a vector.
 
 ```{r get_brexit_differences, warning=FALSE,message=FALSE}
 #find the largest gap in 2016 brexit vote between constituencies
@@ -231,26 +234,52 @@ brexit_differences <- votes_data %>%
                    values_to = "brexit_2016_difference") %>%
       mutate(first_letter = unique(data$first_letter))
   }) %>%
+  filter(to != from) %>%
   #arrange by greatest difference
   arrange(-brexit_2016_difference)
 
 head(brexit_differences, n = 10)
 ```
 
+It's tempting to think that Britain follows a nice geographic divide. That there's a 'metropolitan elite' remain-voting south, and a leave-voting north even though it should be pretty obvious that this is a [massive oversimplification](https://upload.wikimedia.org/wikipedia/commons/d/d5/United_Kingdom_EU_referendum_2016_area_results.svg).
+
+We can do a very quick unscientific test of this by plotting the geographic distances against the difference in brexit vote share for all constituencies*. It's fairly clear there's no real correlation, sometimes constituencies are far away from each other but quite similar. Sometimes, they are very close but have wildly different economies. For instance, I grew up in North London which is [sometimes thought of](https://www.msn.com/en-gb/news/other/this-daughter-of-immigrants-needs-no-lectures-from-the-north-london-metropolitan-liberal-elite-home-secretary-priti-patel-vows-to-end-freedom-of-movement-once-and-for-all-after-brexit/ar-AAI7Bnq) as some haven of metropolitan elitism, but also has [some of the worst deprivation in the whole UK](https://www.citymetric.com/sites/default/files/styles/nodeimage/public/article_2019/03/inequality_maps_head.png?itok=K1dTNrEm).
+
+*not actually all constituencies, just between ones with the same first letter because see the post header. I've overlaid the biggest Brexit vote differences between alliterative constituencies labelled in purple.
+
 ```{r plot_brexit_differences, warning=FALSE,message=FALSE}
+library(ggrepel)
+
 #plot the distances between constituencies of same first letter with
 #greatest difference in 2016 brexit vote
-brexit_distance_plot <- brexit_differences %>%
-  filter(!duplicated(first_letter)) %>%
+brexit_geo_differences <- brexit_differences %>%
+  #filter(!duplicated(first_letter)) %>%
   left_join(constituency_interdistances, by = c("to", "from")) %>%
-  mutate(journey = paste(to, from, sep = "-")) %>%
-  select(journey, first_letter.x, brexit_2016_difference, distance) %>%
-  ggplot(aes(x = brexit_2016_difference, y = distance, label = journey)) +
-  geom_text() +
+  mutate(journey = case_when(
+    !duplicated(first_letter.x) ~ paste(to, from, sep = "-\n"))) %>%
+  select(journey, first_letter.x, brexit_2016_difference, distance)
+
+brexit_difference_plot <- brexit_geo_differences %>%
+  ggplot(aes(x = distance/1000, 
+             y = abs(brexit_2016_difference),
+             label = journey)) +
+  geom_point(alpha = 0.1) +
+  #highlight biggest alliterative difference in brexit vote
+  geom_point(data = filter(brexit_geo_differences, !is.na(journey)), 
+             colour = "purple", size = 3) +
+  geom_text(size = 2.5, colour = "#702963") +
+  labs(x = "geographic distance /km",
+       y = "difference in 2016 Brexit vote share") +
   theme_minimal()
 
-brexit_distance_plot
+brexit_difference_plot
 ```
+
+## Census Data
+
+Having established the extremely obvious point that different constituencies can be quite different from each other, I thought I'd also have a go at looking at how constituencies vary. For this we're going to want to start delving into actual large data, using the results per constituency from the 2011 Census.
+
+Firstly, census data is released at [a variety of levels](https://www.ons.gov.uk/methodology/geography/ukgeographies/censusgeography), none of which are constituency level, so we're going to have to calculate this ourselves. Again, I use a very basic way to do this and your mileage may vary on more sophisticated techniques. At the end, we have the proportion of each constituency that falls into each measured census variable (of which there are ~400).
 
 ```{r load_census_data, warning=FALSE,message=FALSE}
 #load the raw values from the census data for each output area
@@ -263,7 +292,6 @@ oa_to_westminster <- readRDS("../../static/files/constituency_distances/oa_to_we
   select(OAid = OA11CD, WSTid = PCON11CD, WSTnm = PCON11NM, WSTperc = OA11PERCENT) %>%
   #select only english constituencies
   filter(WSTid %in% constituency_names$WSTid)
-
 
 #gather the census data by westminster constituency
 census_data_westminster <- left_join(census_oa_data, oa_to_westminster, by = "OAid") %>%
@@ -284,12 +312,16 @@ head(census_data_westminster[1:8])
 
 ```
 
+The census codes don't really tell us anything about what we're measuring, fortunately there's an index we can load to check:
+
 ```{r load_census_index, warning=FALSE,message=FALSE}
 #load the terminology for each census statistic
 census_index <- readRDS("../../static/files/constituency_distances/census_names.rds")
 
 head(select(census_index, Code, Meaning))
 ```
+
+WEe're only going to take census variables which appear in this index (all but about 5), and also remove any variables that are all equal to 1 or 0 (otherwise we'll be screwed later on).
 
 ```{r take_relevant_census_data, warning=FALSE,message=FALSE}
 census_data_westminster <- census_data_westminster %>%
@@ -451,7 +483,6 @@ distances <- demographic_pca %>%
 ```
 
 ```{r}
-library(ggrepel)
 all_distances <- distances %>%
   left_join(brexit_differences, by = c("from", "to")) %>%
   mutate(brexit_2016_difference = abs(brexit_2016_difference)) %>%
