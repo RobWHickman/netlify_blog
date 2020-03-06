@@ -170,6 +170,7 @@ invincible_chance <- predictions %>%
   )) %>%
   select(season, team, nonloss_chance) %>%
   group_by(team, season) %>%
+  #chance of going invincible = product sum of chance of not drawing
   summarise(invincible_chance = prod(nonloss_chance)) %>%
   arrange(-invincible_chance)
 
@@ -220,13 +221,15 @@ simulate_all_games <- function(data) {
 #will simulate 1000 seasons for each of these teams
 n_sims <- 1000
 
+#run simulations - will take ~10mins
 simulated_results <- rerun(n_sims, simulate_all_games(selected_teams))
 ```
 
-Calculating the total points won per season, we can work out the percentage of simulations in which each team exceed 100 points. 
+Calculating the total points won per season, we can work out the percentage of simulations in which each team exceed 100 points quite easily
 
 ```{r centurion_probs, warning=FALSE,message=FALSE}
 simulated_points <- simulated_results %>%
+  #for each sim, get the points won by each team
   lapply(., function(data) {
     data <- data %>%
       mutate(points = case_when(
@@ -241,6 +244,7 @@ simulated_points <- simulated_results %>%
   }) %>%
   do.call(rbind, .)
 
+#probability of reaching 100 points is no. of sims > 100 points / n_sims
 centurion_probs <- simulated_points %>%
   filter(total_points > 99) %>%
   group_by(season, team) %>%
@@ -250,7 +254,7 @@ centurion_probs <- simulated_points %>%
 print(centurion_probs)
 ```
 
-As expected, the two recent Manchester City teams come top, with the one that actually did reach 100 points (2017) given a 16.5% chance of reaching that milestone, given their strength. 
+As expected, the two recent Manchester City teams come top, with the one that actually did reach 100 points (2017) given a 14.5% chance of reaching that milestone, given their strength. 
 
 So now we have a baseline that the best team at accumulating points (Manchester City 2017/2018) has ~3x as much chance of winning 100 points in that season than the very best (potentially) invincible team (Chelsea 2004/2005). I.e. we have some (not super strong) evidence that it is ~3x as hard to go a season unbeaten than it is to become a 'centurion'.
 
@@ -263,7 +267,7 @@ invincible_equivalent <- simulated_points %>%
   top_frac(max(invincible_chance$invincible_chance)) %>%
   arrange(total_points)
 
-invincible_equivalent
+head(invincible_equivalent, n = 1)
 
 p2 <-  simulated_points %>%
   ungroup() %>%
