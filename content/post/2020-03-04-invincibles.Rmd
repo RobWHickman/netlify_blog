@@ -1,7 +1,7 @@
 ---
 title: Five Minute Football Trivia - Invincibles
 author: Robert Hickman
-date: '2020-03-04'
+date: '2020-03-07'
 slug: five_min_trivia_invincibles
 output: pdf_document
 categories: []
@@ -15,9 +15,9 @@ header:
 
 _generally as I have less and less time to waste on meaningless football stats I get halfway through a post and abandon it. To remedy this, I want to start pushing out posts that give a reasonable half-guess at an answer within an hour or so without needing to really check my working or write good prose. This is the first of these_
 
-Liverpool Football Club have had a pretty impressive season until recently, winning [26 of the first 27 games](https://www.google.com/search?client=firefox-b-d&q=premier+league+table#sie=lg;/g/11fj6snmjm;2;/m/02_tc;st;fp;1;;) and remaining unbeaten. Last weekend however, they lost [3-0 to Watford](https://www.bbc.co.uk/sport/football/51595064) which means that Arsenal remain the only team to have gone a full (modern) season of top flight English football unbeaten (in [2003-2004](https://en.wikipedia.org/wiki/The_Invincibles_(football))). 
+Liverpool Football Club have had a pretty impressive season until recently, winning [26 of the first 27 games](https://www.google.com/search?client=firefox-b-d&q=premier+league+table#sie=lg;/g/11fj6snmjm;2;/m/02_tc;st;fp;1;;) and remaining unbeaten. Last weekend however, they lost [3-0 to Watford](https://www.bbc.co.uk/sport/football/51595064) which means that Arsenal remain the only team to have gone a full (modern) season of top flight English football unbeaten (in [2003/2004](https://en.wikipedia.org/wiki/The_Invincibles_(football))). 
 
-Modern football twitter being what it is, a lot of debate has sprung up about which would be more impressive- going to whole season unbeaten like Arsenal, or winning 100 (out of a max 114) points in a single season, as Manchester City did in 2017-2018 and both Manchester City and Liverpool _almost_ did last season. (A third option also is the treble won by Manchester United in [1998-1999](https://en.wikipedia.org/wiki/1998%E2%80%9399_Manchester_United_F.C._season) but since Liverpool have also lost to Chelsea in the FA cup this week, that too remains unbeaten).
+Modern football twitter being what it is, a lot of debate has sprung up about which would be more impressive- going to whole season unbeaten like Arsenal, or winning 100 (out of a max 114) points in a single season, as Manchester City did in 2017-2018 and both Manchester City and Liverpool _almost_ did last season. (A third option also is the treble won by Manchester United in [1998/1999](https://en.wikipedia.org/wiki/1998%E2%80%9399_Manchester_United_F.C._season) but since Liverpool have also lost to Chelsea in the FA cup this week, that too remains unbeaten).
 
 As usual, first we need some libraries
 
@@ -36,7 +36,7 @@ library(regista)
 set.seed(22081992)
 ```
 
-Then we can get going loading up the data on English football results up until the end of the 2018/2019 season. We'll also take some time to find the winners each season which will be useful later. There's a lot of repetetive munging in this post so bear in mind the 3 main things we'll be doing are:
+Then we can get going loading up the data on English football results up until the end of the 2018/2019 season. We'll also take some time to find the winners each season which will be useful later. There's a lot of repetitive munging in this post so bear in mind the 3 main things we'll be doing are:
 + pivoting data to longer to get the results for each team (not each match)
 + working out the goals for and against each team using case_when()
 + working out the points for each team using case_when()
@@ -83,7 +83,7 @@ league_winners <- data %>%
 head(league_winners)
 ```
 
-We can then use the match data to calculate the offensive and defensive strength of each teams over the whole season using the [Dixon-Coles method](https://rss.onlinelibrary.wiley.com/doi/pdf/10.1111/1467-9876.00065). I've previously written an introduction to this method [here](https://www.robert-hickman.eu/post/dixon_coles_1/) (which I need to finish part two of) but suffice to say it takes the goals scored and goals conceeded per game and gives a good estimation of how good a team is. It's similar in concept to [fivethirtyeight's Soccer SPI](https://projects.fivethirtyeight.com/soccer-predictions/).
+We can then use the match data to calculate the offensive and defensive strength of each teams over the whole season using the [Dixon-Coles method](https://rss.onlinelibrary.wiley.com/doi/pdf/10.1111/1467-9876.00065). I've previously written an introduction to this method [here](https://www.robert-hickman.eu/post/dixon_coles_1/) (which I need to finish part two of) but suffice to say it takes the goals scored and goals conceded per game and gives a good estimation of how good a team is. It's similar in concept to [fivethirtyeight's Soccer SPI](https://projects.fivethirtyeight.com/soccer-predictions/).
 
 ```{r fit_dc, warning=FALSE,message=FALSE}
 #split data by seasons
@@ -97,7 +97,7 @@ fits <- lapply(fit_data, function(x) dixoncoles(hgoal, agoal, home, away, x))
 
 We can then extract the parameters from this model to see how teams have performed in each season of the Premier League. I also flip the defence axis (higher being a better defence) as I think it makes a little more sense
 
-```{r get_dc_parameters, warning=FALSE,message=FALSE}
+```{r get_dc_parameters, warning=FALSE,message=FALSE,fig.width=12,fig.height=10}
 parameters <- fits %>%
   #extract the team parameters per fit
   lapply(., function(f) {
@@ -158,7 +158,7 @@ head(predictions)
 ```
 So e.g. based on Dixon-Coles estimates, given how well Arsenal and Aston Villa did over the _whole_ of the 1992/1993 season, Arsenal had a 32.6% chance of beating Aston Villa at home on the opening day of the season.
 
-We can then use these probability estiamtes to calculate the chance of any one team going unbeaten over the whole league (multiply out the probabilities of not losing each game)
+We can then use these probability estimates to calculate the chance of any one team going unbeaten over the whole league (multiply out the probabilities of not losing each game)
 
 ```{r invincible_chance, warning=FALSE,message=FALSE}
 invincible_chance <- predictions %>%
@@ -185,7 +185,7 @@ So we can assume* that the very best 'unbeatable' teams have ~5% chance of finis
 
 *not really, but for this post yes
 
-We're going to simulate every Premier League season 1000 times and calculate the total points expected of a team based on their Dixon-Coles parameters. To narrow down the search a bit, Im going to limit it to only exceptional teams with an attack and defence parameter > 0.25 (which gives 33 season-teams).
+We're going to simulate every Premier League season 1000 times and calculate the total points expected of a team based on their Dixon-Coles parameters. To narrow down the search a bit, I'm going to limit it to only exceptional teams with an attack and defence parameter > 0.25 (which gives 33 season-teams).
 
 ```{r simulate_all_matches, warning=FALSE,message=FALSE}
 result_probs <- predictions %>%
@@ -261,47 +261,82 @@ So now we have a baseline that the best team at accumulating points (Manchester 
 We can calculate how many points our threshold needs to be set at to have an equal chance using top_frac() on our 1000 simulations. 
 
 ```{r man_city_acheivment, warning=FALSE,message=FALSE}
+#find the points threshold for Man City 2017 that would reach n points 
+#as often as Chelsea 2004 would go unbeaten
 invincible_equivalent <- simulated_points %>%
   ungroup() %>%
   filter(season == 2017 & team == "Manchester City") %>%
   top_frac(max(invincible_chance$invincible_chance)) %>%
   arrange(total_points)
 
+#print the lowest threshold
 head(invincible_equivalent, n = 1)
+```
 
+So we might presume that the equivalent achievement to going the season unbeaten is to win 103 points in the Premier League. To see how the 2017/2018 Manchester City team compare to this we can plot the expected final points total of that season (given league team strengths) in a histogram:
+
+```{r plot_threshold, warning=FALSE,message=FALSE}
 p2 <-  simulated_points %>%
   ungroup() %>%
   filter(season == 2017 & team == "Manchester City") %>%
   ggplot(., aes(x = total_points)) +
-  geom_histogram(fill = "skyblue", alpha = 0.8) +
-  geom_vline(xintercept = min(invincible_equivalent$total_points), colour = "red")
+  geom_histogram(fill = "skyblue", alpha = 0.7) +
+  #invincle equivalent achievement in red
+  geom_vline(xintercept = min(invincible_equivalent$total_points),
+             colour = "red", linetype = "dashed", size = 2) +
+  #actual achievement in blue
+  geom_vline(xintercept = filter(league_winners, season == 2017 & league_position == 1)$total_points,
+             colour = "blue", linetype = "dashed", size = 2) +
+  labs("Man C. expected 2017/2018 performance c.f. invincible equivalent threshold",
+       subtitle = "invincible equivalent achievement = 103 points, actual = 100 points",
+       x = "season expected total points",
+       y = paste("times achieved over", n_sims, "simulations")) +
+  theme_minimal()
 
-
+p2
 ```
 
+The original question was really if this years Liverpool team might achieve this 103 point threshold (given they have now failed to go unbeaten). We can test this by doing exactly the same procedure on their season so far.
+
+First we need to download all the match data from fbref. Handily, fbref doesn't just gives us the goals scored per match but the [_expected goals_](https://fbref.com/en/expected-goals-model-explained/) each team managed to put up. We're going to use that to model team strengths as we might assume* this is a better measure of how good a team really is. In order to fit the model using the regista package I need to supply an integer, so I've simply rounded those xG numbers to the nearest whole number**
+
+*lets ignore game state and other such important thing- this is _five minute_ football trivia
+**you actually can use expected goals in a regista::dixoncoles model, see [here](https://www.robert-hickman.eu/post/wsl-prediction-1/), but this is _five minute_ football trivia
+
 ```{r get_2020_data, warning=FALSE,message=FALSE}
+#download the match data from 2019/2020
 fixtures_2020 <- "https://fbref.com/en/comps/9/schedule/Premier-League-Fixtures" %>%
   read_html() %>%
   html_nodes("#sched_ks_3232_1") %>%
   html_table() %>%
   as.data.frame() %>%
   separate(Score, into = c("hgoal", "agoal"), sep = "–") %>%
+  #only care about goals and expected goals
   select(home = Home, away = Away, home_xg = xG, away_xg = xG.1, hgoal, agoal) %>%
   filter(home != "") %>%
   mutate(home = factor(home), away = factor(away)) %>%
+  #round expected goals to nearest integer
   mutate_at(c("home_xg", "away_xg", "hgoal", "agoal"), .funs = funs(round(as.numeric(.))))
 
+#matches with a known result
+#used for modelling
 played_matches <- fixtures_2020 %>%
   filter(!is.na(home_xg))
 
+#matches with an unknown result
+#used for simulation
 unplayed_matches <- fixtures_2020 %>%
   filter(is.na(home_xg)) %>%
   select_if(negate(is.numeric))
 
+#fit the dixon coles model
 fit_2020 <- dixoncoles(home_xg, away_xg, home, away, data = played_matches)
 ```
 
+And as before we can plot the team strength in attacking and defending dimensions
+
 ```{r 2020_dc_parameters, warning=FALSE,message=FALSE}
+#extract parameters from the model
 pars_2020 <- fit_2020$par %>%
   .[grepl("def_|off_", names(.))] %>%
   matrix(., ncol = 2) %>%
@@ -309,7 +344,7 @@ pars_2020 <- fit_2020$par %>%
   rename(attack = V1, defence = V2)
 pars_2020$team <- unique(gsub("def_*|off_*", "", names(fit_2020$par)))[1:20]
 
-
+#plot as before
 p3 <- pars_2020 %>%
   mutate(defence = 1 - defence) %>%
   ggplot(aes(x = attack, y = defence, colour = attack + defence, label = team)) +
@@ -319,12 +354,21 @@ p3 <- pars_2020 %>%
        x = "attacking strength",
        y = "defensive strength") +
   scale_colour_continuous(guide = FALSE) +
+  labs(title = "Dixon Coles parameters per team for the 2019/2020 Premier League Season",
+       x = "attacking strength",
+       y = "defensive strength") +
   theme_minimal()
+
+p3
 
 ```
 
+Surprisingly, a distant 2nd place Manchester City actually rate higher than Liverpool using this model, and Manchester United (by all accounts having a very middling season) aren't far off either.
+
+Now we just need to simulate the remaining games of Liverpool's season to see how likely they are to hit are 103 points target. We can then add the points we expect Liverpool to win to the number of points we know they already have to get an estimate of final total points.
 
 ```{r liverpool_103_chance, warning=FALSE,message=FALSE}
+#calculate points we know Liverpool have
 liverpool_points <- played_matches %>%
   filter(home == "Liverpool" | away == "Liverpool") %>%
   mutate(points = case_when(
@@ -335,44 +379,62 @@ liverpool_points <- played_matches %>%
   )) %>%
   summarise(total_points = sum(points))
 
-unplayed_scorelines <-
-  augment.dixoncoles(fit_2020, unplayed_matches, type.predict = "scorelines") %>%
+#estimate the chance of results in all remaining games
+unplayed_results <-
+  augment.dixoncoles(fit_2020, unplayed_matches, type.predict = "outcomes") %>%
   unnest() %>%
-  filter(home == "Liverpool" | away == "Liverpool") %>%
-  filter(prob > 0.01)
+  #filter out the liverpool ones
+  filter(home == "Liverpool" | away == "Liverpool")
 
-simulate_season <- function(scoreline_probabilities) {
-  scoreline_probabilities %>%
-    nest(hgoal, agoal, prob, .key = "scorelines") %>%
-    mutate(sampled = map(scorelines, ~ sample_n(., 1, weight = prob))) %>%
-    select(-scorelines) %>%
+#function to simulate a season by making weighted samples
+simulate_season <- function(result_probabilities) {
+  result_probabilities %>%
+    nest(outcome, prob, .key = "results") %>%
+    mutate(sampled = map(results, ~ sample_n(., 1, weight = prob))) %>%
+    select(-results) %>%
     unnest()
 }
 
-liverpool_2020_simulated <- rerun(n_sims, simulate_season(unplayed_scorelines)) %>%
+#simulate the rest of liverpool's season
+liverpool_2020_simulated <- rerun(n_sims, simulate_season(unplayed_results)) %>%
   bind_rows(.id = "simulation_id") %>%
+  #find the sampled points won per game
   mutate(points = case_when(
-    hgoal == agoal ~ 1,
-    home == "Liverpool" & (hgoal > agoal) ~ 3,
-    away == "Liverpool" & (agoal > hgoal) ~ 3,
+    home == "Liverpool" & outcome == "home_win" ~ 3,
+    away == "Liverpool" & outcome == "away_win" ~ 3,
+    outcome == "draw" ~ 1,
     TRUE ~ 0
   )) %>%
   group_by(simulation_id) %>%
+  #calculate Liverpool's total season points for this simulation
   summarise(total_points = sum(points) + as.numeric(liverpool_points))
 
 ```
+
+It's then very easy to find the fraction of sims in which Liverpool break this 103 point challenge 
 
 ```{r liverpool_expected_points, warning=FALSE,message=FALSE}
 length(which(liverpool_2020_simulated$total_points > 102)) / 1000
 
 ```
 
+Finally, we can plot it as before to see how many points we expect Liverpool to win this season:
+(this time the 103 point threshold is in blue to stand out against the red that Liverpool play in)
+
 ```{r plot_liverpool_expectation, warning=FALSE,message=FALSE}
 p4 <- liverpool_2020_simulated %>%
   ggplot(., aes(x = total_points)) +
-  geom_histogram(fill = "red", alpha = 0.8)
+  geom_histogram(fill = "red", alpha = 0.7) +
+  #invincle equivalent achievement in red
+  geom_vline(xintercept = min(invincible_equivalent$total_points),
+             colour = "blue", linetype = "dashed", size = 2) +
+  labs("Liverpool's expected 2019/2020 performance c.f. invincible equivalent threshold",
+       subtitle = "invincible equivalent achievement = 103 points in blue this time",
+       x = "season expected total points",
+       y = paste("times achieved over", n_sims, "simulations")) +
+  theme_minimal()
 
 p4
 ```
 
-
+Anyway, that's that for the first of these (hopefully? of many!). Did we learn anything? probably not. But did we at least do something interesting? also probably not. But I do like doing these silly little analyses in my spare time and by not limiting myself to things like rigor, I can pump them out faster. I'll probably aim for one post (smaller than this) a week to start building a little bit of a public portfolio up again (I'm unemployed in 5 months- hire me!!). Hope you enjoyed reading it :)
