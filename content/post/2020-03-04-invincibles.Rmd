@@ -287,7 +287,7 @@ p2 <-  simulated_points %>%
   #actual achievement in blue
   geom_vline(xintercept = filter(league_winners, season == 2017 & league_position == 1)$total_points,
              colour = "blue", linetype = "dashed", size = 2) +
-  labs("Man C. expected 2017/2018 performance c.f. invincible equivalent threshold",
+  labs(title = "Man C. expected 2017/2018 performance c.f. invincible equivalent threshold",
        subtitle = "invincible equivalent achievement = 103 points, actual = 100 points",
        x = "season expected total points",
        y = paste("times achieved over", n_sims, "simulations")) +
@@ -428,7 +428,7 @@ p4 <- liverpool_2020_simulated %>%
   #invincle equivalent achievement in red
   geom_vline(xintercept = min(invincible_equivalent$total_points),
              colour = "blue", linetype = "dashed", size = 2) +
-  labs("Liverpool's expected 2019/2020 performance c.f. invincible equivalent threshold",
+  labs(title = "Liverpool's expected 2019/2020 performance c.f. invincible equivalent threshold",
        subtitle = "invincible equivalent achievement = 103 points in blue this time",
        x = "season expected total points",
        y = paste("times achieved over", n_sims, "simulations")) +
