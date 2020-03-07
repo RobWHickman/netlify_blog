@@ -298,7 +298,7 @@ head(invincible_equivalent, n = 1)&lt;/code&gt;&lt;/pre&gt;
   #actual achievement in blue
   geom_vline(xintercept = filter(league_winners, season == 2017 &amp;amp; league_position == 1)$total_points,
              colour = &amp;quot;blue&amp;quot;, linetype = &amp;quot;dashed&amp;quot;, size = 2) +
-  labs(&amp;quot;Man C. expected 2017/2018 performance c.f. invincible equivalent threshold&amp;quot;,
+  labs(title = &amp;quot;Man C. expected 2017/2018 performance c.f. invincible equivalent threshold&amp;quot;,
        subtitle = &amp;quot;invincible equivalent achievement = 103 points, actual = 100 points&amp;quot;,
        x = &amp;quot;season expected total points&amp;quot;,
        y = paste(&amp;quot;times achieved over&amp;quot;, n_sims, &amp;quot;simulations&amp;quot;)) +
@@ -416,7 +416,7 @@ liverpool_2020_simulated &amp;lt;- rerun(n_sims, simulate_season(unplayed_result
   #invincle equivalent achievement in red
   geom_vline(xintercept = min(invincible_equivalent$total_points),
              colour = &amp;quot;blue&amp;quot;, linetype = &amp;quot;dashed&amp;quot;, size = 2) +
-  labs(&amp;quot;Liverpool&amp;#39;s expected 2019/2020 performance c.f. invincible equivalent threshold&amp;quot;,
+  labs(title = &amp;quot;Liverpool&amp;#39;s expected 2019/2020 performance c.f. invincible equivalent threshold&amp;quot;,
        subtitle = &amp;quot;invincible equivalent achievement = 103 points in blue this time&amp;quot;,
        x = &amp;quot;season expected total points&amp;quot;,
        y = paste(&amp;quot;times achieved over&amp;quot;, n_sims, &amp;quot;simulations&amp;quot;)) +
