@@ -31,11 +31,25 @@ We'll then load our data to compare players' ability. For this I'm using a datab
 
 *it's still very beta version at the moment and needs a lot more munging but should work for most applications
 
-```{r load_data, warning=FALSE,message=FALSE}
+```{r load_data_hidden, warning=FALSE,message=FALSE,echo=FALSE}
 player_data <- map_df(
   #load female and male player data from the github repo
-  c("female_players.rds", "male_players.rds"), function(x) {
-    data <- readRDS(paste0("../../static/files/fifa_data/", x)) %>%
+  c("male_players.rds"), function(x) {
+    data <- readRDS(paste0("../../../fifa_data/", x)) %>%
+      mutate(version = as.character(version), dob = as.Date(dob, "%Y-%B-%D"))
+    return(data)
+}) %>%
+  #munge date of birth in day and month of birth (don't care about year)
+  mutate(day_of_birth = gsub("^[0-9]{4}-", "", dob)) %>%
+  separate(day_of_birth, into = c("month", "day"), sep = "-", remove = FALSE) %>%
+  mutate(month = as.numeric(month), day = as.numeric(day), ability = as.numeric(ability))
+
+```
+```{r load_data, warning=FALSE,message=FALSE,eval=FALSE}
+player_data <- map_df(
+  #load female and male player data from the github repo
+  c("male_players.rds"), function(x) {
+    data <- readRDS(paste0("path/to/file/", x)) %>%
       mutate(version = as.character(version), dob = as.Date(dob, "%Y-%B-%D"))
     return(data)
 }) %>%
@@ -298,7 +312,8 @@ best_teams <-
            )
            
            #for loop through the positions to be picked
-           #probably a better way to write this but by now my brain was melting
+           #probably a better way to write this but
+           #by now my brain was melting
            for(position in position_order) {
              #select the best player for that position
              selected_player <- bday_dat %>%
@@ -356,7 +371,9 @@ p4 <- best_teams %>%
                  fill   = "white",
                  limits = FALSE) +
   coord_flip(xlim = c(0, 60)) +
-  geom_text(aes(label = gsub(" ", "\n", paste(name, version, sep = "-")), colour = ability), size = 5.5) +
+  geom_text(aes(
+    label = gsub("( )([A-Z])", "\n\\2", paste(name, version, sep = "-")),
+    colour = ability), size = 5.5) +
   scale_colour_gradient(low = "darkblue", high = "red", name = "player\n ability") +
   labs(title = "Ten Best Birthday Teams") +
   theme_pitch() +
