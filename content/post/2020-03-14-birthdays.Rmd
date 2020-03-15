@@ -1,0 +1,398 @@
+---
+title: Five Minute Football Trivia - Birthday Five-A-Side
+author: Robert Hickman
+date: '2020-03-14'
+slug: five_min_trivia_birthdays
+output: pdf_document
+categories: []
+tags:
+  - fivemintrivia
+  - football
+header:
+  caption: ''
+  image: ''
+---
+
+_generally as I have less and less time to waste on meaningless football stats I get halfway through a post and abandon it. To remedy this, I want to start pushing out posts that give a reasonable half-guess at an answer within an hour or so without needing to really check my working or write good prose. This is the second of these_
+
+A semi-common question I've come across when doing stupid football trivia is 'Which Birthday could field the best 5-a-side team?'. That is, if you could only select 5 players all born on the same date, which date would you pick in order to allow for the strongest team. For an example, see [the Guardian's knowledge blog](https://www.theguardian.com/football/2014/feb/19/best-team-players-born-same-day) from 2014. However, this was based on gut feel of the team, and this blog (however flawed) deals in data, so let's go.
+
+As always, we'll start by loading some libraries
+```{r libraries, warning=FALSE,message=FALSE}
+#munging
+library(tidyverse)
+#regression (later)
+library(glmnet)
+#plots (at the end)
+library(ggsoccer)
+```
+
+We'll then load our data to compare players' ability. For this I'm using a database I put together of every character in the FIFA database I scraped from [FIFAindex.com](https://www.fifaindex.com/). The database goes back 15 years to the '05' version of the game so we won't have to limit ourselves to current players. The scraped db can be found at [my github](https://github.com/RobWHickman/fifadb)*
+
+*it's still very beta version at the moment and needs a lot more munging but should work for most applications
+
+```{r load_data_hidden, warning=FALSE,message=FALSE,echo=FALSE}
+player_data <- map_df(
+  #load female and male player data from the github repo
+  c("male_players.rds"), function(x) {
+    data <- readRDS(paste0("../../../fifa_data/", x)) %>%
+      mutate(version = as.character(version), dob = as.Date(dob, "%Y-%B-%D"))
+    return(data)
+}) %>%
+  #munge date of birth in day and month of birth (don't care about year)
+  mutate(day_of_birth = gsub("^[0-9]{4}-", "", dob)) %>%
+  separate(day_of_birth, into = c("month", "day"), sep = "-", remove = FALSE) %>%
+  mutate(month = as.numeric(month), day = as.numeric(day), ability = as.numeric(ability))
+
+```
+```{r load_data, warning=FALSE,message=FALSE,eval=FALSE}
+player_data <- map_df(
+  #load female and male player data from the github repo
+  c("male_players.rds"), function(x) {
+    data <- readRDS(paste0("path/to/file/", x)) %>%
+      mutate(version = as.character(version), dob = as.Date(dob, "%Y-%B-%D"))
+    return(data)
+}) %>%
+  #munge date of birth in day and month of birth (don't care about year)
+  mutate(day_of_birth = gsub("^[0-9]{4}-", "", dob)) %>%
+  separate(day_of_birth, into = c("month", "day"), sep = "-", remove = FALSE) %>%
+  mutate(month = as.numeric(month), day = as.numeric(day), ability = as.numeric(ability))
+
+```
+
+This should give us a 145536 observation df for 65 variables (!). I.e. the information on, and stats of, every character to appear over the last decade and half. We can then look at the spread of birthdays in the dataset:
+
+```{r plot_birthdays, warning=FALSE,message=FALSE}
+#plot the numbers of players per day of birth in the dataset
+p1 <- ggplot(player_data, aes(x = day, fill = factor(month))) +
+  geom_histogram(stat = "count") +
+  scale_fill_discrete(guide = FALSE) +
+  labs(title = "Number of players sharing birthday by day of year",
+       x = "day of month") +
+  facet_wrap(~month) +
+  theme_minimal()
+
+p1
+```
+
+Two peaks that pop out are the massive spike on February 29th and the smaller one of January 1st. On inspection, it looks like these are used as placeholders when true date of birth isn't known. FOr the reaminer of the post we're going to exclude them
+
+```{r plot_birthdays2, warning=FALSE,message=FALSE}
+#filter out 1st January and 29th February (placeholders for unknown dob?)
+player_data <- filter(player_data,
+                      !(day == 1 & month == 1) & !(day == 29 & month == 2))
+
+#replot
+p2 <- player_data %>%
+  ggplot(., aes(x = day, fill = factor(month))) +
+  geom_histogram(stat = "count") +
+  scale_fill_discrete(guide = FALSE) +
+  labs(title = "Number of players sharing birthday by day of year",
+       subtitle = "placeholder dates removed",
+       x = "day of month") +
+  facet_wrap(~month) +
+  theme_minimal()
+
+p2
+```
+
+Then we can put teams together by taking the top 5 players by the 'overall ability' stat for each date of birth:
+
+```{r get_day_teams, warning=FALSE,message=FALSE}
+by_day <- player_data %>%
+  #take only relevant data
+  select(name = name2, ability, day, month, version) %>%
+  arrange(-ability) %>%
+  #group by day and take each players best ability score
+  group_by(day, month) %>%
+  filter(!duplicated(name)) %>%
+  #get the top five by day
+  split(f = paste(.$day, .$month)) %>%
+  map(., function(dat) dat[1:5,] %>% mutate(team_ability = sum(ability)))
+
+#glimpse the first two teams (1/10 and 1/11)
+by_day[1:2]
+```
+Then to find the best 5 of these teams, we can push it through two quick functions as follows:
+
+```{r top_team_teams, warning=FALSE,message=FALSE}
+#get the top 5 teams by summed ability
+top_teams <- by_day %>%
+  #sum the ability per team
+  map_dbl(., function(dat) return(unique(dat$team_ability))) %>%
+  sort() %>%
+  #return the top n teams
+  tail(n = 5) %>%
+  names(.) %>%
+  map(., function(date) return(by_day[date]))
+
+top_teams
+```
+
+So our top team is comprised of [2017 Carli Lloyd](https://en.wikipedia.org/wiki/Carli_Lloyd), [2005 Vincente](https://en.wikipedia.org/wiki/Vicente_Rodr%C3%ADguez), [2017 Gareth Bale](https://en.wikipedia.org/wiki/Gareth_Bale), [2019 Sergio Busquets](https://en.wikipedia.org/wiki/Sergio_Busquets), and [2018 Moussa Dembele](https://en.wikipedia.org/wiki/Mousa_Demb%C3%A9l%C3%A9_(Belgian_footballer)), all of whom were born on July 16th.
+
+However, it's pretty clear this isn't a very satisfactory answer; the best team here has 5 midfielders. To get a little deeper, we need to bust out a bit of machine learning. First we want to see what are all the positions in the dataset:
+
+```{r show_pos, warning=FALSE,message=FALSE}
+#take the primary position for each player
+unique(as.character(sapply(player_data$positions, "[[", 1)))
+
+```
+
+So a fair few, but a lot of these (e.g. RW and LW) are basically the same position, just played of the opposite side of the pitch. We'd expect a left winger to _mostly_ have the same skills as a right winger.
+
+To fix this we can make these positions 'symmetric' by replacin the left/right with a W (for wide):
+
+```{r make_positions_symmetric, warning=FALSE,message=FALSE}
+#add in the symmetric position column
+player_data$position <- sapply(player_data$positions, "[[", 1)
+player_data <- player_data %>%
+  mutate(symmetric_position = gsub("L|R", "W", position))
+
+unique(player_data$symmetric_position)
+```
+
+We then want to use the attributes for each player at various skills (e.g. Shot Power, Ball Control, GK Rushing [out], Free Kicks,...) to work out how they interact with the palyer's chosen position to create their overall ability score in the game. 
+
+For example, in [FIFA 2020, Lionel Messi](https://www.fifaindex.com/player/158023/lionel-messi/fifa20/) has rather poor defensive stats (e.g. only 26/100 for sliding tackles). Any reasonable person would reognise that sliding tackles just _aren't important_ for Lionel Messi's role in the Barcelona team. However, we can use these stats to work out what his overall ability would be _if he were a defender_.
+
+
+```{r get_player_info, warning=FALSE,message=FALSE}
+#attribute variables we'll need to use to work out player position ability
+attribute_vars <- grep("Ball_Control", names(player_data)):
+  grep("GK_Rushing", names(player_data))
+
+names(player_data)[attribute_vars]
+```
+
+We'll then run a [LASSO regression](https://www.statisticshowto.datasciencecentral.com/lasso-regression/) to calculate exactly how important each of these variables are to players of each position, and then use these weights to calculate the hypothetical ability of players in positions they would never play. For some more explanation, a lot of this is taken from some old blog posts [here](https://www.robert-hickman.eu/post/yorkshire_world_cup_2/)
+
+```{r run_lasso, warning=FALSE,message=FALSE}
+#function to do the lasso regression
+get_player_position_abilities <- function(model_pos, model_vers) {
+  #id players by their link to fifaindex
+  ids <- player_data$player_link[player_data$version == model_vers]
+  
+  #train on players who play each position
+  train_data <- player_data %>%
+    filter(symmetric_position == model_pos & version == model_vers) %>%
+    select("ability", attribute_vars) %>%
+    mutate(ability = as.numeric(ability)) %>%
+    #some variables aren't in all versions of FIFA
+    #get rid of any that are all NA
+    purrr::discard(~all(is.na(.)))
+  #if no examples of this position for a version of FIFA, return NULL
+  if(length(train_data) == 0) return(NULL)
+  #convert to a matrix and train the regression
+  train_matrix <- model.matrix(ability~., train_data)
+  cv_model <- cv.glmnet(train_matrix, train_data$ability)
+  
+  #use these weights on every player from that version of FIFA
+  test_data <- player_data %>%
+    filter(version == model_vers) %>%
+    select("ability", attribute_vars) %>%
+    mutate(ability = as.numeric(ability)) %>%
+    purrr::discard(~all(is.na(.)))
+  #calculate the ability score for each player for that position
+  test_matrix <- model.matrix(ability~., test_data)
+  position_ability <- predict(cv_model, newx = test_matrix, s = "lambda.min", type="response")
+  
+  #return the positional scores
+  df <- data.frame(
+    player_link = ids,
+    ability = as.numeric(position_ability),
+    version = model_vers,
+    position = model_pos
+  )
+  return(df)
+}
+
+#get all combinations of position and FIFA version
+crossed_vars <- crossing(
+  pos = unique(player_data$symmetric_position), 
+  vers = unique(player_data$version)
+)
+
+#get all players ability in every position
+position_abilities <- map2_df(crossed_vars$pos, crossed_vars$vers, get_player_position_abilities) %>%
+  left_join(select(player_data, name = name2, day, month, player_link), by = "player_link") %>%
+  pivot_wider(names_from = position, values_from = ability) %>%
+  select(-player_link)
+
+```
+
+So once we've run that we can see how each player is expected to perform in any position. For instance, if we take the first three players in the dataset we can see how Thierry Henry 
+
+```{r glimpse_position_abilities, warning=FALSE,message=FALSE}
+head(position_abilities, n = 3)
+```
+
+We can also plot the relative abilities of each player to see if they make sense. In the below I've excluded the names of each playey on the y axis to save space, but every slither is a separate player:
+
+```{r plot_position_abilities, warning=FALSE,message=FALSE}
+p3 <- position_abilities %>%
+  #arrange ordering
+  arrange(-ST) %>%
+  filter(!duplicated(name)) %>%
+  mutate(name = factor(name, levels = unique(name),)) %>%
+  select(name, 5:ncol(.)) %>%
+  #melt data
+  pivot_longer(cols = c(2:ncol(.)), names_to = "position", values_to = "ability") %>%
+  arrange(name, -ability) %>%
+  mutate(position = factor(position, levels = unique(position))) %>%
+  ggplot(aes(y = name, x = position)) +
+  geom_tile(aes(fill = ability)) +
+  labs(title = "Relative abilities of all players in all positions",
+       x = "position",
+       y = "player") +
+  theme_minimal() +
+  #get rid of y axis text
+  theme(axis.text.y = element_blank()) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p3
+```
+
+And it's clear that players that excel in the attacking positions towards the left are weaker at the defensive positions towards the right (also not the big section of dark blue for weakness in the goalkeepers column).
+
+In building a 5-a-side team, I'm going to assume you want at least one defencer, one midfielder, one attacker, one goalkeeper, and then one extra outfield player in whatever position. It's important to note that this not have to be 'player traditionally thought of as a defender', a particularly skilled striker could very well take up the defensive space if they had the requisite abilities.
+
+To do this, we have to bin the positions into attack/defense and then find the highest value for each for every player
+
+```{r get_fiveaside_abilities, warning=FALSE,message=FALSE}
+gk_cols <- c("GK")
+def_cols <- c("CB", "SW", "WCB", "CDM", "WCDM", "WDM")
+mid_cols <- c("CM", "WCM", "CAM", "WCAM", "WM", "WWM", "WB", "WWB")
+attack_cols <- c("CF", "WF", "ST", "WS", "WAM", "WW")
+
+#find the best defensive/attack position for each player
+fiveaside_abilities <- map(list(gk_cols, def_cols, mid_cols, attack_cols),
+               function(cols) position_abilities %>% select(cols) %>% apply(., 1, max, na.rm = TRUE)) %>%
+  do.call(cbind, .) %>%
+  as.data.frame() %>%
+  #bind this back to the original data
+  cbind(position_abilities, .) %>%
+  #select the necessary columns
+  select(name, version, gk = V1, def = V2, mid = V3, att = V4, day, month)
+
+head(fiveaside_abilities)
+```
+
+Now we have the player abilities, combining them into a team is not quite trivial, but not far off
+
+```{r pick_teams, warning=FALSE,message=FALSE}
+#melt data back down for team selection
+team_selection_dat <- fiveaside_abilities %>%
+  pivot_longer(cols = names(fiveaside_abilities)[3:6],
+               names_to = "pos", values_to = "ability")
+
+#fun on a function to select optimal five a side teams
+best_teams <- 
+  #run for each date we want to select for
+  map_df(unique(paste(team_selection_dat$day, team_selection_dat$month, sep = "-")), 
+         function(select_dob, data) {
+           #filter only players with that birth date
+           bday_dat <- data %>%
+             mutate(dob = paste(day, month, sep = "-")) %>%
+             filter(dob == select_dob) %>%
+             arrange(-ability)
+           
+           #take positions in order of highest ability score
+           #in order to pick optimally
+           position_order <- unique(bday_dat$pos)
+           
+           #init a data frame
+           team <- data.frame(
+             name = NULL,
+             version = NULL,
+             day = NULL,
+             month = NULL,
+             pos = NULL,
+             ability = NULL
+           )
+           
+           #for loop through the positions to be picked
+           #probably a better way to write this but
+           #by now my brain was melting
+           for(position in position_order) {
+             #select the best player for that position
+             selected_player <- bday_dat %>%
+               filter(pos == position) %>%
+               top_n(1, ability) %>%
+               select(-dob)
+             team <- rbind(team, selected_player)
+             
+             #remove selected player from later choices
+             bday_dat <- bday_dat %>%
+               filter(!name %in% team$name)
+           }
+           
+           #pick the last last player
+           team <- bday_dat %>%
+             filter(pos != "gk") %>%
+             top_n(1, ability) %>%
+             select(-dob) %>%
+             rbind(team, .)
+           
+           return(team)
+  }, data = team_selection_dat)
+```
+
+We can then plot the best teams by taking the mean of each teams positional ability and finding the top 10 teams. I then plotted these on half pitches using Ben Torvaney's (mentoned in 2/2 posts so far...) [ggsoccer](https://github.com/Torvaney/ggsoccer) package:
+
+```{r plot_best_teams, warning=FALSE,message=FALSE,eval=FALSE}
+p4 <- best_teams %>%
+  #work out total ability by team
+  group_by(day, month) %>%
+  mutate(team_ability = mean(ability)) %>%
+  group_by(day, month, pos) %>%
+  mutate(total_pos = n(), pos_n = 1:n()) %>%
+  #calculate the x and y coordinates for each player on a pitch
+  mutate(x = case_when(
+    pos == "gk" ~ 5,
+    pos == "def" ~ 22,
+    pos == "mid" ~ 35,
+    pos == "att" ~ 52
+  )) %>%
+  mutate(y = case_when(
+    pos_n == 1 & total_pos == 2 ~ 20,
+    pos_n == 2 ~ 60,
+    TRUE ~ 40
+  )) %>%
+  ungroup() %>%
+  select(-pos_n, -total_pos) %>%
+  #take the 10 best teams
+  top_n(50, team_ability) %>%
+  #add in a column for the faceting
+  mutate(dob = paste0(day, "/", month, ": ", round(team_ability, 2))) %>%
+  ggplot(aes(x = x, y = y)) +
+  annotate_pitch(dimensions = pitch_statsbomb,
+                 colour = "black",
+                 fill   = "white",
+                 limits = FALSE) +
+  coord_flip(xlim = c(0, 60)) +
+  geom_text(aes(
+    label = gsub("( )([A-Z])", "\n\\2", paste(name, version, sep = "-")),
+    colour = ability), size = 5.5) +
+  scale_colour_gradient(low = "darkblue", high = "red", name = "player\n ability") +
+  labs(title = "Ten Best Birthday Teams") +
+  theme_pitch() +
+  theme(strip.text.x = element_text(size = 14)) +
+  facet_wrap(~dob) 
+
+
+```
+
+<img src="/img/birthday_teams.svg" />
+
+
+All the top 10 teams have fairly similar total abilities- around 86-87. These best of which is an average of 87.51 for a team of
+- 2006 Dida (GK)
+- 2005 Sami Hyypia (Def)
+- 2005 Gilberto Silva (Mid)
+- 2005 Santiago Solari (Att)
+- 2017 Diego Costa (Att)
+
+who all share a birthday on the 7th October. Many of the top teams we found earlier also show up, though surprisingly the 1st November which has players such as Neymar Jr., Christiano Ronaldo, Carlos Tevez, and Stefan De Vrij, doesn't make the cut.
+
+That's all for the second of these posts. The first one can be found [here](https://www.robert-hickman.eu/post/five_min_trivia_invincibles/). Hopefully it provides some relief from the madness that is a complete lack of football. Stay safe, and wash your hands.
