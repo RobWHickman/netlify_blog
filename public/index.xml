@@ -493,7 +493,7 @@ p2 &amp;lt;- ggplot() +
     strip.text = element_text(size = 10)
   ) +
   facet_wrap(~title)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.robert-hickman.eu/static/img/longest_distances_plot.svg&#34; title=&#34;plot of the longest UCL campaigns&#34;&gt;&lt;img src=&#34;/img/longest_distance_campaigns.png&#34; alt=&#34;plot of the longest UCL campaigns&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.robert-hickman.eu/img/longest_distances_plot.svg&#34; title=&#34;plot of the longest UCL campaigns&#34;&gt;&lt;img src=&#34;/img/longest_distance_campaigns.png&#34; alt=&#34;plot of the longest UCL campaigns&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;Click on the image for a higher-res version :)&lt;/p&gt;
 &lt;p&gt;Two quick finishing pieces:&lt;/p&gt;
 &lt;p&gt;Firstly, what is the single longest journey in the history of the Champions League? Unsurprisingly it involves the 2015-2016 FK Astana season travelling to Benfica on the coast of Portugal (and of course the return fixture).&lt;/p&gt;
