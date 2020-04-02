@@ -1,0 +1,484 @@
+---
+title: Five Minute Football Trivia - Trans-Europe Express
+author: Robert Hickman
+date: '2020-04-03'
+slug: five_min_trivia_kraftwerk
+output: pdf_document
+categories: []
+tags:
+  - fivemintrivia
+  - football
+header:
+  caption: ''
+  image: ''
+---
+
+
+_generally as I have less and less time to waste on meaningless football stats I get halfway through a post and abandon it. To remedy this, I want to start pushing out posts that give a reasonable half-guess at an answer within an hour or so without needing to really check my working or write good prose. This is the third of these_
+
+
+For this weeks question, I'm stealing straight from the source of most of my posts, [The Knowledge column](https://www.theguardian.com/football/series/theknowledge) at The Guardian:
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">What is the shortest total distance a club has had to travel in a Champions League winning campaign? (Perhaps average distance per (away) fixture to balance out changes in format over the years.)</p>&mdash; JBfaeDundee (@JBfaeDundee) <a href="https://twitter.com/JBfaeDundee/status/1242529510735720448?ref_src=twsrc%5Etfw">March 24, 2020</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+I'm going to turn it on it's head a bit, and find the longest distance campaigns, mostly because I find it more interesting, but also because it reminded me of this tweet from a few years ago
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">The longest away trip in the world took place today as Baltika Kaliningrad travelled about 10,000 km to meet Luch Vladivostok in the second division in Russia. <br>The gamed ended 0-0, of course. <a href="https://t.co/EsSpmWzddk">pic.twitter.com/EsSpmWzddk</a></p>&mdash; Michael Yokhin (@Yokhin) <a href="https://twitter.com/Yokhin/status/980050993810493440?ref_src=twsrc%5Etfw">March 31, 2018</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+And generally I love weird quirks of geography that lead to commutes of 13 hours like this.
+
+As always, first load the libraries we need. Having looked around, the most organised dataset seemed to be at [worldfootball.net](https://www.worldfootball.net).
+
+```{r warning=FALSE,message=FALSE}
+#scrape
+library(rvest)
+#using data from worldfootbal.net
+base_url <- "https://www.worldfootball.net"
+
+#tidy
+library(tidyverse)
+library(magrittr)
+#map
+library(sf)
+library(rnaturalearth)
+library(ggthemes)
+
+
+```
+
+```{r secretly_load_data, warning=FALSE,message=FALSE,echo=FALSE}
+teams <- readRDS("../../static/files/ucl_distances/teams.rds")
+team_info <- readRDS("../../static/files/ucl_distances/team_info.rds")
+match_data <- readRDS("../../static/files/ucl_distances/match_data.rds")
+locations <- readRDS("../../static/files/ucl_distances/match_locations.rds")
+all_matches <- readRDS("../../static/files/ucl_distances/all_matches.rds")
+```
+
+To find the location of every team, we need a data.frame of every team to have competed in the Champions League (and Qualifying) since it's inception. We can get that by sprintf'ing a list of urls and scraping the links to each team page from there. For this, and most of the scraping jobs below, I saved the data from the first time I scrape so that I don't have to continually re-stress the worldfootball server. The datasets can be found in the static folder of my website GitHub.
+
+```{r get_links, warning=FALSE,message=FALSE,eval=FALSE}
+#the years each competition took place
+years <- 1955:2018
+qual_years <- c(1966, 1969:1971, 1978:1982, 1992:2018)
+
+#sprintf the correct urls together
+all_urls <- c(sprintf("/champions-league-%d-%d", years, years+1),
+      sprintf("/champions-league-qualifikation-%d-%d", qual_years, qual_years+1))
+
+#some exceptions
+all_urls[grepl("champions-league-2010-2011", all_urls)] %<>% paste0(., "_3")
+all_urls[grepl("champions-league-2008-2009", all_urls)] %<>% paste0(., "_2")
+all_urls[grepl("qualifikation-2008-2009", all_urls)] %<>% gsub("qualifikation", "qf", .)
+all_urls[grepl("qualifikation", all_urls) & as.numeric(gsub(".*-","",all_urls)>2009)]  %<>%
+  gsub("qualifikation", "qual", .)
+
+#scrape the list of each team's links
+teams <- map_df(all_urls, function(competition_link) {
+  #read once and scrape from there
+  read <- read_html(paste0(base_url, "/players", competition_link))
+  #get the useful info
+  competition <- read %>% html_nodes("h1") %>% html_text() %>% gsub(" » .*", "", .)
+  team_name <- read %>% html_nodes("td:nth-child(2) a") %>% html_text()
+  team_info <- read %>% html_nodes("td:nth-child(4) a") %>% html_attr("href")
+  #compile into a df to return
+  df <- data.frame(competition, team_name, team_info)
+  return(df)
+})
+
+```
+
+we can then take a look at what we have on our hands
+
+```{r glimpse_teams, warning=FALSE,message=FALSE}
+head(teams)
+```
+
+As a short aside, one of the things I really enjoy about posts like this one is it exposes you to lots of history from the 'early' days of organised football and the teams (some of which remain, some do not) that were present then.
+
+After this, we then want to scrape the data on every match played in the Champions League in a similar manner:
+
+```{r get_match_data, warning=FALSE,message=FALSE,eval=FALSE}
+match_data <- map_df(all_urls, function(competition_link) {
+  #read once
+  read <- read_html(paste0(base_url, "/all_matches", competition_link))
+  #get the competition/season id from the url
+  season <- gsub("(^.*-)([0-9]{4}-[0-9]{4})(.*)", "\\2", competition_link)
+  competition <- ifelse(grepl("-qual|-qf", competition_link), "ucl-quals", "ucl")
+  
+  #scrape the links to each match- we'll need some of these later
+  match_link <- read %>%
+    html_nodes("td:nth-child(6) a") %>%
+    html_attr("href")
+  
+  #save the champions league matches into a df
+  matches_df <- read %>% 
+    html_nodes("#site > div.white > div.content > div > div.box > div > table") %>% 
+    html_table(fill = TRUE, header = FALSE) %>%
+    as.data.frame() %>%
+    #rename
+    select(date = X1, round = X4, home = X3, away = X5, result = X6) %>%
+    #mutate the correct round to matches
+    mutate(round = case_when(
+      round != "-" ~ round
+    )) %>%
+    mutate(date = case_when(
+      date != "" ~ date
+    )) %>%
+    mutate(round = zoo::na.locf(round)) %>%
+    #filter out valid matches
+    filter(grepl("^[0-9]*:[0-9]*|abor.", result)) %>%
+    mutate(date = zoo::na.locf(date)) %>%
+    #few exceptions of matches that wern't played
+    filter(!(grepl("dec.", result) & date == "01/12/1965")) %>%
+    filter(!(home == "FK Partizani" & date == "30/09/1987")) %>%
+    mutate(match_link, season, competition)
+  return(matches_df)
+})
+
+
+```
+
+Which we can glimpse to see that there are 7206 matches listed across the competition proper and qualification rounds since the 1950s. This resolves down to 2875 unique team-seasons (from ~561 unique teams) who have been involved in either competition.
+
+```{r glimpse_match_data, warning=FALSE,message=FALSE}
+head(match_data)
+```
+
+To work out the distances travelled, we then need to find the locations of each of these matches. The easiest way would be to run through each of those match links and scrape the location data, but that would put a lot of load on the worldfootball servers, so we can be smarter than that.
+
+Matches generally take place at the home location (or in some exceptions, very close to) of every team (e.g. Arsenal's home matches take place in North London). However, in the history of the competition, 2-legged matches that ended as a draw used to go to a third leg at a neutral location (for example [Leeds United vs. VFB Stuttgart in 1992 took place at the Nou Camp](https://www.worldfootball.net/report/champions-league-1992-1993-1-runde-vfb-stuttgart-leeds-united_2/)). Also, each final is played at a pre-selected venue that is independent of the eventual finalists. 
+
+We can find the data for these matches and scrape the exact location from the match link, while taking the rest from the location of the home team in the tie.
+
+```{r get_neutral_match_location, warning=FALSE,message=FALSE,eval=FALSE}
+#split data by neutral venue or not
+match_locations <- match_data %>%
+  split(f = (.$round == "Final" | 
+               duplicated(paste(.$home, .$away, .$round, .$season))))
+
+#function for scraping the location of the neutral matches
+#uses a link to a specific match
+get_neutral_location <- function(link) {
+  full_url <- paste0(base_url, link)
+  
+  #get and munge the location
+  node <- ".standard_tabelle tr:nth-child(1) .dunkel~ .dunkel+ .dunkel"
+  read <- read_html(full_url)
+  location <- read %>% html_nodes(node) %>% html_text() %>%
+    gsub("\\(|\\)|\\/", "", .)
+  return(location)
+}
+
+#run through this function to locate all neutral matches
+neutral_matches <- match_locations[[2]] %>%
+  mutate(location = unlist(lapply(match_link, get_neutral_location))) %>%
+  mutate(type = "neutral") %>%
+  select(-match_link)
+
+```
+
+We can see we've gathered a few extra matches that wern't actually neutral, but given we get their correct location anyway, it's not big deal.
+
+We then have to use the information on each team to get the location of thier home ground. For larger teams we can get this to within an exct postcode if we so wish, but many (e.g. [former Polish champions Szombierki Bytom](https://www.worldfootball.net/teams/szombierki-bytom/1/)) all we can get from their page is the country. This is fine because we'll combine this with the team name to use a google search to get more exact locations later. (in any case it's probably fine because the proportion of teams with poor geographic data probably gets lost in noise overall).
+
+```{r get_team_locations, warning=FALSE,message=FALSE,eval=FALSE}
+#scrape the information on the teams location from their
+#worldfootball profile page
+get_team_location <- function(link) {
+  read <- read_html(paste0(base_url, link))
+  
+  stadium_link <- read %>%
+    html_nodes(".yellow tr:nth-child(5) a") %>%
+    html_attr("href")
+  
+  #if the link contains a link to a stadium scrape from there
+  if(length(stadium_link) > 0) {
+    stadium_link <- paste0(base_url, stadium_link)
+    location <- read_html(stadium_link) %>%
+      html_nodes(".yellow tr:nth-child(1) td , .yellow tr:nth-child(2) td") %>%
+      html_text() %>%
+      .[c(2,4)] %>%
+      gsub("\\r|\\t|\\n", "", .) %>%
+      paste0(collapse  = " ")
+    return(location)
+  #otherwise get a best approximation
+  } else {
+    country <- read %>%
+      html_nodes(".portfolio tr:nth-child(3) .hell+ .hell") %>%
+      html_text() %>%
+      gsub("\\r|\\t|\\n", "", .)
+    return(country)
+  }
+}
+
+#run the function over each team
+team_info <- teams %>%
+  filter(!duplicated(team_name)) %>%
+  mutate(location = unlist(lapply(team_info, get_team_location)))
+```
+
+```{r show_team_info, warning=FALSE,message=FALSE}
+head(team_info)
+```
+
+Now we have a rough location for each team we can join everything back together to get a complete list of matches and where (to a best approximation sometimes) they took place.
+
+```{r get_all_locations, warning=FALSE,message=FALSE,eval=FALSE}
+#join the team location into the non-neutral matches
+nonneutral_matches <- match_locations[[1]] %>%
+  left_join(., select(team_info, -competition), by = c("home" = "team_name")) %>%
+  mutate(type = "normal") %>%
+  select(names(neutral_matches)) 
+
+#join neutral and non neutral matches back together
+all_matches <- rbind(neutral_matches, nonneutral_matches) %>%
+  mutate(match_location = case_when(
+    type == "normal" ~ paste(home, "football club", location),
+    type == "neutral" ~ location
+  ))
+
+```
+
+Now we have the locations for each match, but not in a quantative form. For that, we'll use the [googleway](https://cran.r-project.org/web/packages/googleway/vignettes/googleway-vignette.html) package that provides access to a variety of Google APIs to access the map geolocation feature of Google Mapes. Obviously, I haven't included my unique key for this below, but you can get one for free using [this link](https://developers.google.com/maps/documentation/javascript/tutorial).
+
+For each location we'll return a latitude and longitude that will allow us to calculate exactly the distances between a teams home location and each match they played.
+
+```{r get_google_locations, warning=FALSE,message=FALSE,eval=FALSE}
+#fake key
+google_key <- "myGooGLeKEy1234567"
+
+#function to get lat/lon data from Google Maps
+googleway_geocode <- function(location, key){
+  data <- google_geocode(location, key = key)
+  latlon <- data$results$geometry$location[1,]
+  
+  if(length(latlon) == 0) {
+    return(data.frame(lat = NA, lng = NA, location))
+  } else {
+    return(latlon %>% mutate(location))
+  }
+}
+
+#run the function over each unique location
+locations <- unique(all_matches$match_location) %>%
+  map_df(., googleway_geocode, key = google_key)
+
+```
+
+This gets us 99% of the way there, though the API does miss a few smaller/less well formatted clubs (e.g. Monaco is not 'in' France per se, but an enclave in the French territory, which fucks Google Maps up)
+
+```{r show_missing_locations, warning=FALSE,message=FALSE}
+locations %>%
+  filter(is.na(lat))
+```
+
+To solve this, the best way sometimes is just the stupidest, so here are the manually found locations of these clubs
+
+```{r get_missing_locations, warning=FALSE,message=FALSE}
+#manually enter lat lon for the missing locations
+missing_locs <- data.frame(
+  lat = c(43.73, 53.34, 42.02, 39.86, 43.2, 46.96, 39.86, 52.44, 41.44, 43.93, 42.01, 43.93, 40.17, 43.93, 36.14, 41.98, 42.88, 36.14, 56.94, 42.07),
+  lng = c(7.41, -6.27, 21.44, 44.69, 17.7, 18.94, 44.69, 31.01, 44.53, 12.44, 20.97, 12.44, 44.52, 12.44, -5.35, 44.10, 20.86, -5.35, 23.61, 20.42),
+  location = locations$location[is.na(locations$lat)]
+)
+
+#bind everything together
+all_locations <- locations %>%
+  filter(!is.na(lat)) %>%
+  rbind(., missing_locs) %>%
+  #convert to an sf object with worldwide projection
+  st_as_sf(coords = c("lng", "lat"), crs = st_crs("+init=epsg:4326"))
+
+```
+
+At the end, I also cast the object to an [simple features](https://r-spatial.github.io/sf/articles/sf1.html) (sf) data.frame to allow for easier manipulation of geographic data and add the reference for Earth's lat/lon coordinate system (epsg:4326).
+
+We can then merge the geographic data into our dataframe of every match and see the location of every club to have played in (some stage) of the Champions League over the last ~60 years
+
+```{r plot_locations, warning=FALSE,message=FALSE}
+#join in the geographic information
+all_matches %<>% left_join(., all_locations, by = c("match_location" = "location"))
+
+#plot the home locations of all teams
+p1 <- all_matches %>%
+  filter(type == "normal") %>%
+  filter(!duplicated(home)) %>%
+  ggplot(.) +
+  geom_sf(data = st_as_sf(ne_countries(scale=110), st_crs("+init:epsg=4326")),
+          colour = NA) +
+  geom_sf_text(aes(label = home, geometry = geometry), alpha = 0.5) +
+  #taken from st_bbox(all_matches$geometry)
+  coord_sf(xlim = c(-24, 78), ylim = c(30, 67)) +
+  ggtitle("Home location of every Champions League team",
+          subtitle = "1955-2019, includes qualifying rounds") +
+  theme_map()
+
+#plot 
+p1
+```
+
+It's quite nice to see the distribution- hubs around large cities with competitive leagues (e.g. Denmark, Czech Republic, The Rhine), with extremes in the north in Iceland/Faroe Islands, to the south in Israel, and the far far East with the Central Asian UEFA countries.
+
+The first thing to then work out is the matches per team, which can be done via a simple gather. (in theory you'd want to use pivot_long which has deprecated gather but afaik it doesnt play well with geometry data yet). We also mutate in 2 variables for the home and away teams to keep the matches for data presentation purposes.
+
+Once we have that, we have each match played by each team, each season. A nice little result is we can see which teams have had the longest campaigns (in terms of number of matches), which it turns out are the Valencia and Bayer Leverkusen teams that qualified and got to the finals of the Champions League during the longer two-group-stage format at the turn of the century.
+
+```{r get_longest_campaigns, warning=FALSE,message=FALSE}
+#melt the mach data by team
+team_campaigns <- all_matches %>%
+  select(season, date, competition, round, home, away, result, geometry) %>%
+  #keep the home and away columns for later
+  mutate(home_keep = home, away_keep = away) %>%
+  gather("location", "team_name",
+         -season, -competition, -round, -result, -geometry, -date,
+         -home_keep, -away_keep)
+
+#get the longest campaigns in terms of n matches
+longest_campaigns <- team_campaigns %>%
+  group_by(season, team_name) %>%
+  summarise(matches = n()) %>%
+  arrange(-matches)
+
+head(longest_campaigns)
+```
+
+But we want to work out the distance to each match, not the number. To do this, first we want to work backwards and get the lat/lon of each clubs home ground. We can then merge this with the match location data and find the difference between these two locations (in metres). I.e. for every home game, a team will travel 0m to the game, whereas the away club will travel probably many kilometres.
+
+```{r get_match_travel_distance, warning=FALSE,message=FALSE}
+#work backwards and get the home location of each team
+team_locations <- all_matches %>%
+  filter(type == "normal") %>%
+  filter(!duplicated(home)) %>%
+  select(team_name = home, location = match_location) %>%
+  left_join(., all_locations, by = "location")
+
+#merge this in
+#for each team match have location of match and home location of team
+match_travel <- team_campaigns %>%
+  left_join(., select(team_locations, team_name, geometry), by = "team_name") %>%
+  #calculate the distance between each teams home location the match
+  mutate(distance = st_distance(geometry.x, geometry.y, by_element = TRUE))
+
+head(match_travel)
+```
+
+Then all we need to do is group by each team and season and calculate the total distance travelled by that team. I then printed the top 10 total distances (in km) that team had to travel to complete all of their matches
+
+```{r get_long_distance_campaigns, warning=FALSE,message=FALSE}
+longest_distance_campaigns <- match_travel %>%
+  group_by(season, team_name) %>%
+  mutate(total_travel = sum(distance), 
+         date = as.Date(gsub("\\/", "-", date), "%d-%m-%Y")) %>%
+  select(season, date, competition, round, team = team_name,
+         home = home_keep, away = away_keep, result, distance, total_travel) %>%
+  arrange(-total_travel, date) 
+
+longest_distance_campaigns %>%
+  filter(!duplicated(paste(season, team))) %>%
+  select(season, team, total_travel) %>%
+  mutate(total_travel = total_travel / 1000) %>%
+  head(., n = 10)
+```
+
+Perhaps unsurprisingly [FK Astana](https://en.wikipedia.org/wiki/2015_FC_Astana_season) from the capital of Kazakhstan come out top (by far), having worked through the qualifying round and making it to the group stages (where they were unbeaten at home). After that, succesful teams from the far corners of Europe (Benfica, APOEL, Hapoel Tel Aviv) come out on top. I was surprised that Lokomotiv are the only Russian team in the list, and as far back as 2002-2003. Also that all of these seasons are from this century (perhaps due to the ever increasing number of fixtures in the Champions League).
+
+I select the matches FK Astana played in their record-breaking 2015-2016 below:
+
+```{r FK_astana_season, warning=FALSE,message=FALSE}
+longest_distance_campaigns %>%
+  filter(season == "2015-2016" & team == "FK Astana") %>%
+  select(-team)
+```
+
+Finally, one of the real niche joys in my love is making maps and what better oppurtunity than to map these long distance Champions League campaigns. It's a bit of a munge to get the lines from point data but sf does at least make it possible. 
+
+```{r map_campaigns, warning=FALSE,message=FALSE}
+#get the top ten longest campaigns
+data <- filter(longest_distance_campaigns,
+               !duplicated(paste(season, team)))[1:10,] %>%
+  ungroup() %>%
+  select(season, team_name = team, total_travel) %>%
+  left_join(., match_travel) %>%
+  #munge the geometry
+  filter(st_geometry(.$geometry.x) != st_geometry(.$geometry.y)) %>%
+    mutate(versus = case_when(
+        location == "home" ~ away_keep,
+        location == "away" ~ home_keep
+    )) %>%
+    select(season, team_name, versus, round, total_travel,
+           geometry.x, geometry.y) %>%
+  split(f = rownames(.)) %>%
+  #calculate lines from points
+  lapply(., function(row) {
+    coords1 <- st_coordinates(row$geometry.x) %>%
+      split(f = rownames(.))
+    coords2 <- st_coordinates(row$geometry.y) %>%
+      split(f = rownames(.))
+    
+    lines <- map2(coords1, coords2, ~st_linestring(rbind(.x, .y)))
+    row$lines <- st_as_sfc(lines, crs = st_crs("+init=epsg:4326"))
+    return(row)
+  }) %>%
+  do.call(rbind, .) %>%
+  mutate(title = paste(season, team_name, "=", round(total_travel/1000), "km"))
+
+#plot the travel of each team
+p2 <- ggplot() +
+  geom_sf(data = st_as_sf(ne_countries(scale=110), st_crs("+init:epsg=4326")), 
+          colour = NA) +
+  geom_sf(data = data, aes(geometry = lines),
+          colour = "red", size = 2) +
+  geom_sf_text(data = data, aes(geometry = geometry.x, label = versus),
+               size = 4, nudge_y = 2) +
+  #again taken from st_bbox
+  coord_sf(xlim = c(-23, 77), ylim = c(66, 30)) +
+  theme_map() +
+  theme(
+    strip.background = element_rect(fill = "white"),
+    strip.text = element_text(size = 10)
+  ) +
+  facet_wrap(~title)
+
+```
+
+[![plot of the longest UCL campaigns](/img/longest_distance_campaigns.png)](https://www.robert-hickman.eu/img/longest_distances_plot.svg "plot of the longest UCL campaigns")
+
+Click on the image for a higher-res version :)
+
+Two quick finishing pieces:
+
+Firstly, what is the single longest journey in the history of the Champions League? Unsurprisingly it involves the 2015-2016 FK Astana season travelling to Benfica on the coast of Portugal (and of course the return fixture).
+
+```{r longest_single_journey, warning=FALSE,message=FALSE}
+match_travel[which.max(match_travel$distance),]
+```
+
+And secondly, answering the original question- what  the shortest average commute for a winning side?
+
+```{r shortest_winning_commutes, warning=FALSE,message=FALSE}
+#get UCL champions
+winners <- match_travel %>%
+  filter(round == "Final") %>%
+  mutate(result = gsub(" .*", "", result)) %>%
+  separate(result, into = c("h_goal", "a_goal"), sep = ":") %>%
+  filter((location == "home" & h_goal > a_goal) | (location == "away" & a_goal > h_goal)) %>%
+  select(season, team_name)
+
+#find the matches played by champions
+winners_matches <- left_join(winners, match_travel, by = c("season", "team_name")) %>%
+  group_by(season, team_name) %>%
+  mutate(matches = n(), total_travel = sum(distance/1000)) %>%
+  ungroup() %>%
+  #calculate average travel per game
+  mutate(average_travel = total_travel / matches,
+         date = as.Date(gsub("\\/", "-", date), "%d-%m-%Y")) %>%
+  select(season, date, round, home = home_keep, away = away_keep, result, distance, average_travel) %>%
+  arrange(average_travel, date)
+
+#print the 3 campaigns with the lowest average travel
+head(winners_matches, n = 27)
+  
+  
+```
+
+Where the top three are Inter's 1963-1964, Ajax's 1971-1972, and Bayern Munich's  1973-1974 seasons all of which have an average travel of just over 400km per game. It's fairly striking how many more Central European teams there are further in the competitions in these seasons comapred to today.
+
+And that's all for now! Thanks for reading and I'll try and put out another post soon :)

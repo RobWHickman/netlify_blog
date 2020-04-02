@@ -274,7 +274,7 @@ position_abilities &lt;- map2_df(crossed_vars$pos, crossed_vars$vers, get_player
 ##   version name    day month   CAM    CB   CDM    CF    CM    GK    ST    SW
 ##   &lt;chr&gt;   &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
 ## 1 05      Thie…    17     8  88.8  53.1  70.9  96.5  76.4  24.2  96.5  55.2
-## 2 05      Gian…    28     1  34.3  39.5  34.7  39.0  34.3  96.3  39.2  34.6
+## 2 05      Gian…    28     1  34.3  39.5  34.7  39.0  34.3  96.3  39.2  34.5
 ## 3 05      Zine…    23     6  96.1  72.1  86.8  93.9  91.1  26.7  93.9  75.2
 ## # … with 13 more variables: WAM &lt;dbl&gt;, WB &lt;dbl&gt;, WCAM &lt;dbl&gt;, WCB &lt;dbl&gt;,
 ## #   WCDM &lt;dbl&gt;, WCM &lt;dbl&gt;, WDM &lt;dbl&gt;, WF &lt;dbl&gt;, WM &lt;dbl&gt;, WS &lt;dbl&gt;,
@@ -322,12 +322,12 @@ fiveaside_abilities &lt;- map(list(gk_cols, def_cols, mid_cols, attack_cols),
 
 head(fiveaside_abilities)</code></pre>
 <pre><code>##                  name version       gk      def      mid      att day
-## 1       Thierry Henry      05 24.24627 70.91822 88.91257 96.60456  17
+## 1       Thierry Henry      05 24.24627 70.91822 88.87479 96.60456  17
 ## 2    Gianluigi Buffon      05 96.29510 40.01513 39.58011 39.76021  28
 ## 3     Zinedine Zidane      05 26.66050 86.77503 96.06867 96.11257  23
-## 4 Ruud van Nistelrooy      05 22.75526 75.99536 86.60513 94.70145   1
-## 5          Roy Makaay      05 23.52925 65.63241 78.18574 93.82865   9
-## 6       Iker Casillas      05 94.11531 54.33178 44.72277 51.61508  20
+## 4 Ruud van Nistelrooy      05 22.75526 75.99536 86.59128 94.70145   1
+## 5          Roy Makaay      05 23.52925 65.63241 78.20789 93.82865   9
+## 6       Iker Casillas      05 94.11531 54.33178 45.29751 51.61508  20
 ##   month
 ## 1     8
 ## 2     1
