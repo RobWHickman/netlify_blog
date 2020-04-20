@@ -33,7 +33,7 @@ This is really the idea behind a lot of modern football analytics research, but 
 
 _It is probably more valuable to be able to create and exploit space, than it is to be able to technically execute a pass. The reverse is also clearly true for defenders; consider Maldini's famous quote: "If I have to make a tackle then I have already made a mistake."_
 
-The paper, while very clearly written, does not explain it's maths as accessibly as I might like, so I thought a post going through exactly what the paper is doing might be of value. All the hard work for this post is reall done by [Will Thompson's](https://twitter.com/AnEnglishGoat) whose implementation of the algorithm in python [here](https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU) forms the basis (and only has minor tweaks in my final code).
+The paper, while very clearly written, does not explain it's maths as accessibly as I might like, so I thought a post going through exactly what the paper is doing might be of value. All the hard work for this post is reall done by [Will Thomson's](https://twitter.com/AnEnglishGoat) whose implementation of the algorithm in python [here](https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU) forms the basis (and only has minor tweaks in my final code).
 
 As always, let's first load some libraries we'll need:
 
@@ -413,7 +413,7 @@ get_srat <- function(speed_x, speed_y) {
 srat <- get_srat(speed_x, speed_y)
 ```
 
-And we can also find the constant Ri- the radius of a players influence- which isn't listed in the paper but gives rise to figure 9. Given the formula isn't listed, the numeric constants in the equation might be slightly off. They're all taken from Will Thompson's work [here](https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU?pli=1).
+And we can also find the constant Ri- the radius of a players influence- which isn't listed in the paper but gives rise to figure 9. Given the formula isn't listed, the numeric constants in the equation might be slightly off. They're all taken from Will Thomson's work [here](https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU?pli=1).
 
 $$R_{i}(t) = 
 \begin{cases} 

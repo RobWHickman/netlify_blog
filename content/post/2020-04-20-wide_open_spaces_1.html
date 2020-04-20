@@ -26,7 +26,7 @@ header:
 <p>Some of these computational models seem to work, even with simple inputs. The xG a striker produces per season does for instance align quite well with how good the human eye test thinks a striker is. However, many are <em>quite bad</em>, especially as you move back through play away from shots on goal. To fix this, we need machines who understand the game better, and in the same ways humans do.</p>
 <p>This is really the idea behind a lot of modern football analytics research, but I think especially behind <a href="http://www.sloansportsconference.com/wp-content/uploads/2018/03/1003.pdf">Wide Open Spaces</a>, a 2019 Sloan conference paper by Javier Fernandez and Luke Bornn. I’m not going to review the whole paper, but the key takeaway is that for every ‘event’ that a player takes, there are actually many more uncaptured events where players are continually creating and destroying space. Combining these gives us a better approximation of what the human brain does when evaluating players. If this seems confusing, a simpler way to think about this is consider <a href="https://www.youtube.com/watch?v=sZsJo7ZKdjQ">this Tifo football video on Thomas Mueller</a>.</p>
 <p><em>It is probably more valuable to be able to create and exploit space, than it is to be able to technically execute a pass. The reverse is also clearly true for defenders; consider Maldini’s famous quote: “If I have to make a tackle then I have already made a mistake.”</em></p>
-<p>The paper, while very clearly written, does not explain it’s maths as accessibly as I might like, so I thought a post going through exactly what the paper is doing might be of value. All the hard work for this post is reall done by <a href="https://twitter.com/AnEnglishGoat">Will Thompson’s</a> whose implementation of the algorithm in python <a href="https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU">here</a> forms the basis (and only has minor tweaks in my final code).</p>
+<p>The paper, while very clearly written, does not explain it’s maths as accessibly as I might like, so I thought a post going through exactly what the paper is doing might be of value. All the hard work for this post is reall done by <a href="https://twitter.com/AnEnglishGoat">Will Thomson’s</a> whose implementation of the algorithm in python <a href="https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU">here</a> forms the basis (and only has minor tweaks in my final code).</p>
 <p>As always, let’s first load some libraries we’ll need:</p>
 <pre class="r"><code>set.seed(3459)
 #libraries
@@ -328,7 +328,7 @@ The 13m/s constant is the assumed maximum possible speed of a player (averaging 
 }
 
 srat &lt;- get_srat(speed_x, speed_y)</code></pre>
-<p>And we can also find the constant Ri- the radius of a players influence- which isn’t listed in the paper but gives rise to figure 9. Given the formula isn’t listed, the numeric constants in the equation might be slightly off. They’re all taken from Will Thompson’s work <a href="https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU?pli=1">here</a>.</p>
+<p>And we can also find the constant Ri- the radius of a players influence- which isn’t listed in the paper but gives rise to figure 9. Given the formula isn’t listed, the numeric constants in the equation might be slightly off. They’re all taken from Will Thomson’s work <a href="https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU?pli=1">here</a>.</p>
 <p><span class="math display">\[R_{i}(t) = 
 \begin{cases} 
 4 + \frac{(p_{i}(t) - p_{b}(t))^3}{18^3 / 6} &amp; \text{if &lt; 10} \\
@@ -661,10 +661,10 @@ microbenchmark(
 )</code></pre>
 <pre><code>## Unit: milliseconds
 ##              expr    min      lq     mean  median      uq      max neval
-##      pmap_calc_pc 4.3607 5.99980 7.579649 6.51190 7.31490 158.9147  1000
-##  pmap_calc_pc_cpp 3.8144 4.95880 5.886481 5.34445 5.94850 128.1792  1000
-##           calc_pc 2.9928 4.16665 5.508070 4.56385 5.17685 144.1378  1000
-##       calc_pc_cpp 2.4794 3.19235 4.274140 3.43360 3.80715 240.8224  1000</code></pre>
+##      pmap_calc_pc 4.5347 5.95505 7.129008 6.30795 6.84670 125.7230  1000
+##  pmap_calc_pc_cpp 3.8280 4.93920 5.608463 5.20625 5.64985 126.1780  1000
+##           calc_pc 3.1482 4.16710 5.136463 4.38575 4.82170 127.3604  1000
+##       calc_pc_cpp 2.4537 3.15150 4.023492 3.31625 3.63570 212.4050  1000</code></pre>
 <p>That’s all for this post! As I said at some point (soon? later? who knows) I’d like to include the value term because conceptually it’s not hard to get a stupid version of it going. Hopefully this is of use to some people. As I said up top, written in evenings locked inside during quarantine so probably maths mistakes/ huge coding errors etc. If people point them out and get in touch I’ll fix them.</p>
 <p>Best!</p>
 </div>
