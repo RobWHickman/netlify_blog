@@ -713,9 +713,8 @@ arma::vec dmvnrm_arma_fast(arma::mat const &x,
 //outputs a vector
 // [[Rcpp::export]]
 arma::vec calc_I_cpp(arma::vec coords, arma::vec next_coords, arma::vec ball_coords, double t, double next_t, arma::mat pitch, arma::mat coord_mat) {
-  //arma::vec rng = runif(1);
-  //arma::vec velocity = ((next_coords - coords) + (rng[0] / 10000)) / (next_t - t);
-  arma::vec velocity = ((next_coords - coords)) / (next_t - t);
+  arma::vec rng = runif(1);
+  arma::vec velocity = ((next_coords - coords) + (rng[0] / 10000)) / (next_t - t);
   double speed = norm(velocity);
   double srat =pow((speed / 13), 2.0);
   double theta = acos(velocity[0] / speed);
@@ -809,7 +808,7 @@ microbenchmark(
   pmap_calc_pc_cpp = pmap_df(animation_data[1,], calc_PC_cpp, pitch_area = pitch),
   calc_pc = calc_PC(animation_data$time[1], animation_data$next_time[1], animation_data$ball_x[1], animation_data$ball_y[1], animation_data$x[1], animation_data$y[1], animation_data$next_x[1], animation_data$next_y[1], "teamA", "playera", pitch),
   calc_pc_cpp = calc_PC_cpp(animation_data$time[1], animation_data$next_time[1], animation_data$ball_x[1], animation_data$ball_y[1], animation_data$x[1], animation_data$y[1], animation_data$next_x[1], animation_data$next_y[1], "teamA", "playera", pitch),
-  times = 100
+  times = 1000
 )
 
 

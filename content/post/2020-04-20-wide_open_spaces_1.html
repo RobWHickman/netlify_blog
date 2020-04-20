@@ -577,9 +577,8 @@ arma::vec dmvnrm_arma_fast(arma::mat const &amp;x,
 //outputs a vector
 // [[Rcpp::export]]
 arma::vec calc_I_cpp(arma::vec coords, arma::vec next_coords, arma::vec ball_coords, double t, double next_t, arma::mat pitch, arma::mat coord_mat) {
-  //arma::vec rng = runif(1);
-  //arma::vec velocity = ((next_coords - coords) + (rng[0] / 10000)) / (next_t - t);
-  arma::vec velocity = ((next_coords - coords)) / (next_t - t);
+  arma::vec rng = runif(1);
+  arma::vec velocity = ((next_coords - coords) + (rng[0] / 10000)) / (next_t - t);
   double speed = norm(velocity);
   double srat =pow((speed / 13), 2.0);
   double theta = acos(velocity[0] / speed);
@@ -658,14 +657,14 @@ microbenchmark(
   pmap_calc_pc_cpp = pmap_df(animation_data[1,], calc_PC_cpp, pitch_area = pitch),
   calc_pc = calc_PC(animation_data$time[1], animation_data$next_time[1], animation_data$ball_x[1], animation_data$ball_y[1], animation_data$x[1], animation_data$y[1], animation_data$next_x[1], animation_data$next_y[1], &quot;teamA&quot;, &quot;playera&quot;, pitch),
   calc_pc_cpp = calc_PC_cpp(animation_data$time[1], animation_data$next_time[1], animation_data$ball_x[1], animation_data$ball_y[1], animation_data$x[1], animation_data$y[1], animation_data$next_x[1], animation_data$next_y[1], &quot;teamA&quot;, &quot;playera&quot;, pitch),
-  times = 100
+  times = 1000
 )</code></pre>
 <pre><code>## Unit: milliseconds
 ##              expr    min      lq     mean  median      uq      max neval
-##      pmap_calc_pc 4.8069 5.83295 6.797742 6.37940 6.98075  28.6561   100
-##  pmap_calc_pc_cpp 4.3761 5.10395 6.962958 5.44705 6.15175 127.5309   100
-##           calc_pc 3.2239 4.11095 4.663530 4.42565 5.03470   9.3288   100
-##       calc_pc_cpp 2.8022 3.28430 3.917375 3.53420 4.18490  10.8299   100</code></pre>
+##      pmap_calc_pc 4.3607 5.99980 7.579649 6.51190 7.31490 158.9147  1000
+##  pmap_calc_pc_cpp 3.8144 4.95880 5.886481 5.34445 5.94850 128.1792  1000
+##           calc_pc 2.9928 4.16665 5.508070 4.56385 5.17685 144.1378  1000
+##       calc_pc_cpp 2.4794 3.19235 4.274140 3.43360 3.80715 240.8224  1000</code></pre>
 <p>That’s all for this post! As I said at some point (soon? later? who knows) I’d like to include the value term because conceptually it’s not hard to get a stupid version of it going. Hopefully this is of use to some people. As I said up top, written in evenings locked inside during quarantine so probably maths mistakes/ huge coding errors etc. If people point them out and get in touch I’ll fix them.</p>
 <p>Best!</p>
 </div>
