@@ -11,6 +11,661 @@
     <atom:link href="/" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>Papers Please! &#39;Wide Open Spaces A statistical technique for measuring space creation in professional soccer&#39; pt 1</title>
+      <link>/post/fall_back_in_to_space/</link>
+      <pubDate>Mon, 20 Apr 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/fall_back_in_to_space/</guid>
+      <description>
+
+
+&lt;p&gt;&lt;em&gt;written during lockdown so while I think it adds some value (and is useful to organise my thoughts on the paper for my own work on football) there are probably mistakes. E.g. the C++ code is still pretty inefficient and could well be improved and I’ve surely confused some maths concepts. To be honest, the post is just an excuse to practice writing LaTeX maths and some C++. Let me know my errors and I’ll correct&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.youtube.com/watch?v=f9X1C7pTu-M&#34;&gt;Beach House - Space Song&lt;/a&gt;&lt;/p&gt;
+&lt;div id=&#34;intropre-amble&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Intro/Pre-amble&lt;/h1&gt;
+&lt;p&gt;When analysing football (whether as a scout watching games, or an analyst using data), we want the greatest sample size possible. During a single match a player might well make fewer than 100 ‘events’ (passes, tackles, interceptions, shots, …) and still play well enough that he might be a worthwhile purchase. As we increase the number of matches we watch that player play, a more accurate ‘smoothed’ representation of their game should emerge. However, time is very obviously a limited resource. If we assume a very hardworking scout can watch 6 football matches a day, it will probably take them a week to cover all of the games of one team in a season, and over 3 months to cover an entire season of a league.&lt;/p&gt;
+&lt;p&gt;An obvious way to get around some of these limitations is augment scouting using data. If a player is obviously an &lt;a href=&#34;https://en.wikipedia.org/wiki/Filippo_Inzaghi&#34;&gt;Filipo Inzaghi&lt;/a&gt; style poacher, its feasible we might watch 5-6 games of his to get a feel of his ability, then check some basic stats such a shots, xG, … etc. per game over his last few seasons to see how representative our sample was and flesh out our scouting.&lt;/p&gt;
+&lt;p&gt;When we build these models (even just counting shot numbers) we are in essence ‘teaching’ machines to do the scouting for us. We provide them with a model of how the game works and ask them to ‘watch’ a huge number of matches very quickly. The obvious pitfall of this is that ‘computers don’t play football’, and they don’t, so the output of our model is going to be proportional to the understanding of the game the computer has. For example, a computer who only counts shot numbers has a poorer understanding of football than a machine who weights these by xG per shot. Just as humans understand creating better shooting chances is important, the second computer has come to grasp that.&lt;/p&gt;
+&lt;p&gt;Some of these computational models seem to work, even with simple inputs. The xG a striker produces per season does for instance align quite well with how good the human eye test thinks a striker is. However, many are &lt;em&gt;quite bad&lt;/em&gt;, especially as you move back through play away from shots on goal. To fix this, we need machines who understand the game better, and in the same ways humans do.&lt;/p&gt;
+&lt;p&gt;This is really the idea behind a lot of modern football analytics research, but I think especially behind &lt;a href=&#34;http://www.sloansportsconference.com/wp-content/uploads/2018/03/1003.pdf&#34;&gt;Wide Open Spaces&lt;/a&gt;, a 2019 Sloan conference paper by Javier Fernandez and Luke Bornn. I’m not going to review the whole paper, but the key takeaway is that for every ‘event’ that a player takes, there are actually many more uncaptured events where players are continually creating and destroying space. Combining these gives us a better approximation of what the human brain does when evaluating players. If this seems confusing, a simpler way to think about this is consider &lt;a href=&#34;https://www.youtube.com/watch?v=sZsJo7ZKdjQ&#34;&gt;this Tifo football video on Thomas Mueller&lt;/a&gt;. It is probably more valuable to be able to create and exploit space, than it is to be able to technically execute a pass. The reverse is also clearly true for defenders; consider Maldini’s famous quote: “If I have to make a tackle then I have already made a mistake.”.&lt;/p&gt;
+&lt;p&gt;The paper, while very clearly written, does not explain it’s maths as clearly as I might like, so I thought a post going through exactly what the paper is doing might be of value. All the hard work for this post is reall done by &lt;a href=&#34;https://twitter.com/AnEnglishGoat&#34;&gt;Will Thompson’s&lt;/a&gt; whose implementation of the algorithm in python &lt;a href=&#34;https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU&#34;&gt;here&lt;/a&gt; forms the basis (and only has minor tweaks in my final code).&lt;/p&gt;
+&lt;p&gt;As always, let’s first load some libraries we’ll need:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;set.seed(3459)
+#libraries
+library(tidyverse)
+library(ggsoccer)
+library(mvtnorm) #might be possible with MASS
+library(zoo)&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-theory&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;The Theory&lt;/h1&gt;
+&lt;p&gt;Imagine two teams, I and J. Each of these has 11 players (hopefully) on the pitch at any time chasing after one ball. We want to know which team controls which parts of the pitch for each point in the match. As ‘control’ really only refers to “will player on my team get to a potential pass there first”, pitch control is just looking at where players i,j,k… are going to be at time t -&amp;gt; time t + n.&lt;/p&gt;
+&lt;p&gt;The easiest way to start to approximate this is to imagine a set of players who never change direction, they only speed up or slow down (and possible reverse). E.g. a full back running up and down the wings like a rook in a chess game. Their location at t + 1 will be their current location plus the expected value of their velocity.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#make up some movement data
+full_back_pos &amp;lt;- data.frame(x = 40, y = 70)
+full_back_movement &amp;lt;- data.frame(
+  pos = 40,
+  x = c(10, 100),
+  y_pos = 70)
+
+next_x &amp;lt;- rnorm(10000, 60, 5)
+next_x &amp;lt;- next_x - (next_x %% 5)
+full_back_next_pos &amp;lt;- data.frame(table(next_x)) %&amp;gt;%
+  mutate(y = 70, 
+         next_x = as.numeric(as.character(next_x)),
+         Freq = Freq / sum(Freq))
+  
+
+#plot fake movement data
+p &amp;lt;- ggplot() +
+  annotate_pitch(dimensions = pitch_statsbomb) +
+  geom_tile(data = full_back_next_pos, aes(x = next_x, y = y, fill = Freq), alpha = 0.7, height = 10) +
+  scale_fill_viridis_c(name = &amp;quot;confidence&amp;quot;) +
+  geom_segment(data = full_back_movement, aes(x = pos, xend = x, y = y_pos, yend = y_pos), size = 2) +
+  geom_point(data = full_back_pos, aes(x = x , y = y), shape = 21, colour = &amp;quot;black&amp;quot;, fill = &amp;quot;red&amp;quot;, size = 5) +
+  theme_pitch()
+
+p&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2020-04-20-wide_open_spaces_1_files/figure-html/player_example-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;We’re not fully confident in our assessment of how fast this full back is so aren’t 100% sure where his next position will be (at time t + n seconds), but given how quick we &lt;em&gt;expect&lt;/em&gt; him to be, we can produce produce an expected distribution of his next x coordinate (here binned into boxes of 5m worth). This estimate will vary according to two parameters, the mean speed (μ) and the standard deviation of that speed (σ). If we make 10000 such estimates (assuming no bias and forgetting our previous estimate etc.) these will form the normal distribution probability density function&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot histogram of fake movement data
+p2 &amp;lt;- ggplot(full_back_next_pos, aes(x = next_x, y = Freq)) +
+  geom_bar(stat = &amp;quot;identity&amp;quot;) +
+  ylab(&amp;quot;confidence&amp;quot;) +
+  xlab(&amp;quot;next x coordinate&amp;quot;) +
+  theme_minimal()
+
+p2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2020-04-20-wide_open_spaces_1_files/figure-html/player_example_hist-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;(here I’ve plotted the x axis as the next x coordinate which is just our estimate of the x speed + the original x coordinate [40]).&lt;/p&gt;
+&lt;p&gt;But this is obviously an oversimplification because players can travel in a myriad different directions across the pitch- we need our normal distribution confidence interval to generalise across more than 1 dimension.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#fake data in 2 dimensions now
+next_x &amp;lt;- rnorm(10000, 60, 5)
+next_x &amp;lt;- next_x - (next_x %% 5)
+next_y &amp;lt;- rnorm(10000, 65, 3)
+next_y &amp;lt;- next_y - (next_y %% 5)
+
+full_back_next_pos &amp;lt;- data.frame(next_x, next_y) %&amp;gt;%
+  group_by(next_x, next_y) %&amp;gt;%
+  summarise(Freq = n())
+
+full_back_movement &amp;lt;- data.frame(x = 40, y = 70, next_x = 60, next_y = 60)
+
+#plot
+p3 &amp;lt;- ggplot() +
+  annotate_pitch(dimensions = pitch_statsbomb) +
+  geom_tile(data = full_back_next_pos, aes(x = next_x, y = next_y, fill = Freq), alpha = 0.7, height = 10) +
+  scale_fill_viridis_c(name = &amp;quot;confidence&amp;quot;) +
+  geom_segment(data = full_back_movement, aes(x = x, xend = next_x, y = y, yend = next_y), size = 2, arrow = arrow(length = unit(0.03, &amp;quot;npc&amp;quot;))) +
+  geom_point(data = full_back_pos, aes(x = x , y = y), shape = 21, colour = &amp;quot;black&amp;quot;, fill = &amp;quot;red&amp;quot;, size = 5) +
+  theme_pitch()
+
+p3&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2020-04-20-wide_open_spaces_1_files/figure-html/player_example_2d-1.png&#34; width=&#34;672&#34; /&gt;
+So now we have a realistic of guess, based upon the players velocity vector, of where they will be in n seconds time. If we do the same for every player of the pitch, we get a (roughly) 22 layer raster detailing how likely any single player is to be able to be in location x, y at time t + n. If a football magically appeared at point x,y, we now know which player(s) are likely to be able to reach it. Therefore, we know we parts of the pitch team I or J ‘controls’- where their teammates can pass to and expect them to receive the ball.&lt;/p&gt;
+&lt;p&gt;This really is the fundamental idea of the pitch control metric presented in &lt;a href=&#34;http://www.sloansportsconference.com/wp-content/uploads/2018/03/1003.pdf&#34;&gt;Wide Open Spaces&lt;/a&gt;- we can use the expected 2d position of each player in the next n seconds, to work out which team would win the ball if it were dropped on a specific coordinate. This is what we mean by ‘pitch control’.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-math&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;The Math&lt;/h1&gt;
+&lt;p&gt;Now we have an idea of what we want to do, ‘we’ need to formalise it. Luckily the paper already does it for us and all we need to do is follow the derivation. First, need to define two terms. We’ll call the space of possible locations (120 x 80m for me) P(itch) and the range of times T(ime)&lt;/p&gt;
+&lt;p&gt;For every single p at time t pitch control (PC) is defined by equation 2&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[PC_{(p,t)} = \sigma \sum_{i} I_{(p,t)} - \sum_{j} I_{(p,t)}\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;where you sum across i (all the players on team I) and j (all the players on team J).&lt;/p&gt;
+&lt;p&gt;because this is a logistic function will be from 0 to 1 where &amp;lt;0.5 is control by team J and &amp;gt;0.5 is control by team I. E.g. if you drop a ball at place p at time t, if PC(p,t) is greater than 0.5, team I is likelier to get the ball, and viceversa for &amp;lt;0.5 (PC(p,t) is in the range 0-&amp;gt;1).&lt;/p&gt;
+&lt;p&gt;We’ll rewrite this with sigma replace with numbers as:&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[PC(p,t) = \frac{1}{1 + (\sum_{i} I(p,t) - \sum_{j} I(p,t))}\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;From here it should be obvious we need to calculate I(p,t) for each player. We do this in equation 1&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[I_{i}(p,t) = \frac{f_{i}(p,t)}{f_{i}(p_{i}(t), t)} \]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;The numerator here is the probability density function of the player influence. How much influence does a single player have over any single part of the pitch surface (p) at a time (t). This is normalised by the denominator which does the same thing only for the players current location at time t (p_i(t)).&lt;/p&gt;
+&lt;p&gt;Ok so so far so good. Equations 4 and 5 in the paper we’ll come back to later but they define the value of having the ball at these locations. Don’t worry about that for now. We won’t really go into that in this post.&lt;/p&gt;
+&lt;p&gt;If we then skip to the supplemental figures we hit the pretty rough equation 12 which tells us how to solve for f_i(p,t)&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[f_{i}(p,t) = \frac{1}{\sqrt{(2\pi)^2detCOV_{i}(t)}}exp(-\frac{1}{2}(p-\mu_{i}(\overrightarrow{s}_{i}(t)))^tCOV_{i}(t)^{-1}(p-\mu_{i}(t)))  \]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;It looks horrendous but it’s just the equation for the multivariate normal distribution. See for example &lt;a href=&#34;https://wikimedia.org/api/rest_v1/media/math/render/svg/c66e6f6abd66698181e114a4b00da97446efd3c4&#34;&gt;here&lt;/a&gt;. We know we need this from the example using our full back above!&lt;/p&gt;
+&lt;p&gt;All we need to do is find x, μ, and Σ, in that picture. Then we’re going to use mvtnorm::dmvnorm to sample from it. If you run&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;?mvtnorm::dmvnorm&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;you can see that ‘coincidentally’ this also requires 3 arguments (ignore the 4th log = FALSE), x, μ (mean), and sigma. All we have to do is find out what each of these arguments are equal to.&lt;/p&gt;
+&lt;p&gt;Firstly we want to find the covariance matrix (COV_i(t)). To calculate this, we can rewrite it as Sigma- the product of two matrices R and S such that:&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ \Sigma = R\cdot S \cdot S \cdot R^{-1}\]&lt;/span&gt;
+where R is the rotation matrix around the euclidean plane:&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[R = 
+\begin{bmatrix}
+cos(\theta) &amp;amp; -sin(\theta) \\
+sin(\theta) &amp;amp; cos(\theta) \\
+\end{bmatrix}
+\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;and S is a scaling matrix&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[S = 
+\begin{bmatrix}
+s_{x} &amp;amp; 0 \\
+0 &amp;amp; s_{y} \\
+\end{bmatrix}
+\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;The details of this transformation aren’t really important, but a good explanation can be found &lt;a href=&#34;https://www.visiondummy.com/2014/04/geometric-interpretation-covariance-matrix/&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;After resolving these matrices, we then only need to find the mean value of the distribution (μ_i(t)) which is defined in equation 21 of the paper&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\mu_{i}(t) = p_{i}(t) + \overrightarrow{\widehat{s}}_{i}(t) \cdot 0.5 \]&lt;/span&gt;
+(we’ll go over the details of this equation later)&lt;/p&gt;
+&lt;p&gt;and also the pitch area, p, which is just an area of the pitch we want to find the control a player exerts over. We define this by dividing the total pitch area into many ‘pixels’ sampling each in our multivariate normal function. For example, in you split a 120m x 80m pitch into 1m^2 boxes, there are 120 * 80 = 9600 ‘pixels’ to sample.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-data&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;The Data&lt;/h1&gt;
+&lt;p&gt;Now we’ve (briefly) gone through the theory, we can start working with the data and build our way back up. First we need to get our hands on the data itself. As part of the Friends of Tracking project during lockdown, Metrica Sports have kindly provided 2 sample matches (I’m using match 1 here) of tracking and event data which can be found &lt;a href=&#34;https://github.com/metrica-sports/sample-data&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The function below downloads, melts and organises the data.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#func to download and melt tracking data
+#will use game 1
+get_tracking_data &amp;lt;- function(file, directory = &amp;quot;metrica-sports/sample-data&amp;quot;, x_adj = 105, y_adj = 68) {
+  #build url
+  url &amp;lt;- paste0(&amp;quot;https://raw.githubusercontent.com/&amp;quot;, directory, &amp;quot;/master/data/&amp;quot;, file)
+  #read data
+  data &amp;lt;- read_csv(url, skip = 2)
+  
+  #fix names
+  names(data)[grep(&amp;quot;^X[0-9]*$&amp;quot;, names(data))-1] &amp;lt;- paste0(names(data)[grep(&amp;quot;^X[0-9]*$&amp;quot;, names(data))-1], &amp;quot;_x&amp;quot;)
+  names(data)[grep(&amp;quot;^X[0-9]*$&amp;quot;, names(data))] &amp;lt;- gsub(&amp;quot;_x$&amp;quot;, &amp;quot;_y&amp;quot;, names(data)[grep(&amp;quot;^X[0-9]*$&amp;quot;, names(data))-1])
+  
+  #melt it from long to wide
+  melted_data &amp;lt;- data %&amp;gt;%
+    pivot_longer(cols = starts_with(&amp;quot;Player&amp;quot;)) %&amp;gt;%
+    separate(name, into = c(&amp;quot;player&amp;quot;, &amp;quot;coord&amp;quot;), sep = &amp;quot;_&amp;quot;) %&amp;gt;%
+    pivot_wider(names_from = &amp;quot;coord&amp;quot;, values_from = &amp;quot;value&amp;quot;) %&amp;gt;%
+    rename(time = `Time [s]`) %&amp;gt;%
+    rename_all(tolower) %&amp;gt;%
+    #add the team info
+    #scale coords to statsbomb spec
+    mutate(team = gsub(&amp;quot;(.*)(Home_Team|Away_Team)(\\..*)&amp;quot;, &amp;quot;\\2&amp;quot;, file)) %&amp;gt;%
+    mutate_at(vars(ends_with(&amp;quot;x&amp;quot;)), ~.x * x_adj) %&amp;gt;%
+    mutate_at(vars(ends_with(&amp;quot;y&amp;quot;)), ~.x * y_adj) %&amp;gt;%
+    arrange(player, frame) %&amp;gt;%
+    #some missing values on the ball location
+    #will just say ball stays where it is when no location data
+    #could interpolate but w/e
+    mutate(ball_x = na.locf(ball_x),
+           ball_y = na.locf(ball_y))
+  return(melted_data)
+}
+
+#run
+tracking_data &amp;lt;- map_df(
+  c(&amp;quot;Sample_Game_1/Sample_Game_1_RawTrackingData_Away_Team.csv&amp;quot;, &amp;quot;Sample_Game_1/Sample_Game_1_RawTrackingData_Home_Team.csv&amp;quot;),
+  get_tracking_data) %&amp;gt;%
+  filter(!is.na(x) &amp;amp; !is.na(y))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To calculate pitch control, we only need 4 pieces on information on each player to calculate their relative pitch control:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;their x,y location on the pitch&lt;/li&gt;
+&lt;li&gt;the x,y location of the ball&lt;/li&gt;
+&lt;li&gt;the time at which they were at that location&lt;/li&gt;
+&lt;li&gt;and also, their location x,y at time t + n&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;head(tracking_data)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 9
+##   period frame  time ball_x ball_y player       x     y team     
+##    &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;    &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;    
+## 1      1     1  0.04   47.7   26.3 Player15  61.3  14.1 Away_Team
+## 2      1     2  0.08   52.1   27.6 Player15  61.3  14.1 Away_Team
+## 3      1     3  0.12   56.4   28.9 Player15  61.3  14.1 Away_Team
+## 4      1     4  0.16   58.1   28.7 Player15  61.3  14.2 Away_Team
+## 5      1     5  0.2    58.3   27.6 Player15  61.2  14.3 Away_Team
+## 6      1     6  0.24   58.5   26.5 Player15  61.1  14.4 Away_Team&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and from this we can build up everything we need. We’ll also want the team data at the end to sum across all players but for now that isn’t important.&lt;/p&gt;
+&lt;p&gt;First lets do the two simplest: the speed and trajectory of a player’s movement. To ease processing, first we’ll put all the information needed per frame on one line. Not strictly necessary, but allows for neater functions when we really get processing&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#first add in the lead x/y to ease processing 
+tracking_data &amp;lt;- tracking_data %&amp;gt;%
+  #hacky fix for speeds?
+  #dplyr::filter(time %in% seq(0, max(.$time), by = 0.2p)) %&amp;gt;%
+  group_by(player, team, period) %&amp;gt;%
+  #player x,y and time at t + n
+  mutate(next_x = lead(x), next_y = lead(y), next_time = lead(time)) %&amp;gt;%
+  #to develop velocity arrows per player
+  mutate(forward_x = lead(x, 10), forward_y = lead(y, 10)) %&amp;gt;%
+  ungroup() &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We calculate the speed in the x and y dimensions simply as the change in position divided by the time taken, and can calculate theta using either this speed vector, or the change in position (defined as the angle from the x axis the vector takes).&lt;/p&gt;
+&lt;p&gt;For an example, here is the data for 4 seconds on Player15 in the sample dataset. It’s taken from about 4 minutes into the match.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#filters for some data to plot
+player_spec &amp;lt;- &amp;quot;Player15&amp;quot;
+#each frame is 0.04s apart, take 100 frames worth from t = 250
+times_spec &amp;lt;- seq(250, by = 0.04, length.out = 100)
+
+#filter
+example_data &amp;lt;- tracking_data %&amp;gt;%
+  filter(player == player_spec &amp;amp; time %in% times_spec)
+
+#plot the players trajectory over this time
+#and the velocity and theta derived from it
+p4 &amp;lt;- ggplot(example_data) +
+  geom_point(aes(x = x, y = y, colour = time), alpha = 0.6, size = 3) +
+  #plot the x-axis as a green line
+  geom_hline(yintercept = first(example_data$y), colour = &amp;quot;green&amp;quot;, alpha = 0.5, size = 3) +
+  #plot the x-axis movement
+  geom_segment(aes(x = first(x), xend = last(x), y = first(y), yend = first(y)), 
+               arrow = arrow(length = unit(0.03, &amp;quot;npc&amp;quot;))) +
+  #plot the y axis movement
+  geom_segment(aes(x = last(x), xend = last(x), y = first(y), yend = last(y)), 
+               arrow = arrow(length = unit(0.03, &amp;quot;npc&amp;quot;))) +
+  #plot the hypotenuse
+  geom_segment(aes(x = first(x), xend = last(x), y = first(y), yend = last(y)),
+               size = 2, colour = &amp;quot;red&amp;quot;, arrow = arrow(length = unit(0.03, &amp;quot;npc&amp;quot;))) +
+  #anotate speeds and theta
+  annotate(&amp;quot;text&amp;quot;, x = 105.5, y = 17.3, label = &amp;quot;x speed = 0.95 m/s&amp;quot;) +
+  annotate(&amp;quot;text&amp;quot;, x = 106.75, y = 16.25, label = &amp;quot;y speed =\n0.56m/s&amp;quot;) +
+  annotate(&amp;quot;text&amp;quot;, x = 104.25, y = 16.9, label = &amp;quot;theta = -30.4°&amp;quot;) +
+  labs(x = &amp;quot;pitch x coord (/m)&amp;quot;,
+       y = &amp;quot;pitch y coord (/m)&amp;quot;,
+       title = &amp;quot;example player movement over 4 seconds&amp;quot;) +
+  #scale manually so it isn&amp;#39;t distorted
+  scale_x_continuous(limits = c(103.5, 107.5)) +
+  scale_y_continuous(limits = c(14, 18)) +
+  theme_minimal()
+
+p4&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2020-04-20-wide_open_spaces_1_files/figure-html/example_data-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;So we get a good idea of the players trajectory over those 4 seconds and the average velocity and angle he is travelling at.&lt;/p&gt;
+&lt;p&gt;We can now start building up all the calculations we need to do to work out the pitch control any one player (and then whole teams) exert from basics. Through this I’m going to define each sum as a function to make it &lt;em&gt;extremely&lt;/em&gt; clear what’s going on. Some of those functions will be ridiculously simple, but I don’t want to skip over anything.&lt;/p&gt;
+&lt;p&gt;Starting with the speed in any dimension and the angle from the x axis (theta) the player is travelling at:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#no real reason for these to be functions, but just to
+#make it more obvious what we&amp;#39;re doing
+get_speed &amp;lt;- function(coord, next_coord, time, next_time) {
+  #speed in meters per second
+  speed = (next_coord - coord) / (next_time - time)
+  return(speed)
+}
+
+#again very simple for illustrative purposes
+get_theta &amp;lt;- function(x_speed, y_speed) {
+  hypotenuse_speed = sqrt(x_speed^2 + y_speed^2)
+  theta = acos(x_speed / hypotenuse_speed)
+  return(theta)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;if we plug our data from graph p4 into these very verbose-ly we get&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;x_start &amp;lt;- first(example_data$x)
+x_end &amp;lt;- last(example_data$x)
+y_start &amp;lt;- first(example_data$y)
+y_end &amp;lt;- last(example_data$y)
+t_start &amp;lt;- first(example_data$time)
+t_end &amp;lt;- last(example_data$time)
+
+#in m/s
+speed_x &amp;lt;- get_speed(x_start, x_end, t_start, t_end)
+speed_y &amp;lt;- get_speed(y_start, y_end, t_start, t_end)
+
+#convert to degrees
+theta &amp;lt;- get_theta(speed_x, speed_y)
+theta_deg &amp;lt;- theta * (180/pi)
+
+results &amp;lt;- c(speed_x, speed_y, theta_deg)
+names(results) &amp;lt;- c(&amp;quot;speed_x&amp;quot;, &amp;quot;speed_y&amp;quot;, &amp;quot;theta&amp;quot;)
+print(results)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##    speed_x    speed_y      theta 
+##  0.8309848 -0.4739394 29.6976071&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;(the calculations will use theta in radians, but I think it makes more sense to show it here in degrees).&lt;/p&gt;
+&lt;p&gt;We can now very trivially solve equation 21 right off the bat&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\mu_{i}(t) = p_{i}(t) + \overrightarrow{\widehat{s}}_{i}(t) \cdot 0.5 \]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;Where p is the location of player i at time t, and s_hat is the speed of the player in either dimension. The mean of the distribution (where we expect the player to have the most pitch control) is his current position + (where he will be / 2)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#another simple function to find mu
+get_mu &amp;lt;- function(location, speed) {
+  mu = location + speed / 2
+  return(mu)
+}
+
+mu_x &amp;lt;- get_mu(x_start, speed_x)
+mu_y &amp;lt;- get_mu(y_start, speed_y)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Which means we now have the first of our variables for our big multivariate normal distribution equation (paper equation 12)&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[f_{i}(p,t) = \frac{1}{\sqrt{(2\pi)^2detCOV_{i}(t)}}exp(-\frac{1}{2}(p-\mu_{i}(\overrightarrow{s}_{i}(t)))^tCOV_{i}(t)^{-1}(p-\mu_{i}(t)))  \]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;and just need to define p, and calculate the covariance matrix COV.&lt;/p&gt;
+&lt;p&gt;We can start calculating the components of the covariance matrix with equation 18 (calculating the speed as a ratio of max speed) which is also trivial to solve now. Instead of using the speed in either direction, this relies on the total velocity , which we can find using school trigonometry&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ Srat_{i}(t) = \frac{s^2}{ 13^2 } \]&lt;/span&gt;
+The 13m/s constant is the assumed maximum possible speed of a player (averaging this over 100m would break the world record by ~2 seconds)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;get_srat &amp;lt;- function(speed_x, speed_y) {
+  #find total velocity
+  speed &amp;lt;- sqrt(speed_x^2 + abs(speed_y)^2)
+  srat = (speed / 13)^2
+  return(srat)
+}
+
+srat &amp;lt;- get_srat(speed_x, speed_y)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And we can also find the constant Ri- the radius of a players influence- which isn’t listed in the paper but gives rise to figure 9. Given the formula isn’t listed, the numeric constants in the equation might be slightly off. They’re all taken from Will Thompson’s work &lt;a href=&#34;https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU?pli=1&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[R_{i}(t) = 
+\begin{cases} 
+4 + \frac{(p_{i}(t) - p_{b}(t))^3}{18^3 / 6} &amp;amp; \text{if &amp;lt; 10} \\
+10 &amp;amp; \text{else}
+\end{cases}\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;It specifies that a player has an influence radius of 10 metres, unless they are within ~15metres of the ball, in which case their influence radius decreases with ball_distance to a minimum of 4 metres. The idea behind this is that a player nearer the ball is much more geographically focused in their movement- as they either posses the ball or are trying to win it back.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#allocate a few more variables from our example data
+ball_x &amp;lt;- first(example_data$ball_x)
+ball_y &amp;lt;- first(example_data$ball_y)
+
+#little bit more complicated but still easy
+get_ri &amp;lt;- function(x, y, ball_x, ball_y) {
+  ball_diff &amp;lt;- sqrt((x - ball_x) ^ 2 + (y - ball_y)^2)
+  ri = 4 + ((ball_diff^3) / ((18^3) / 6))
+  return(min(ri, 10))  
+}
+
+ri &amp;lt;- get_ri(x_start, y_start, ball_x, ball_y)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can test this function in the range of distance to the ball 0-30m and compare it to figure 9 in the paper&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p5 &amp;lt;- data.frame(
+  x = 0:30,
+  y = map_dbl(0:30, get_ri,
+    #set all other args to 0
+    y = 0, ball_x = 0, ball_y = 0)) %&amp;gt;%
+  ggplot(aes(x = x, y = y)) +
+  geom_line(colour = &amp;quot;maroon&amp;quot;, size = 2) +
+  geom_point(size = 3, alpha = 0.5) +
+  scale_y_continuous(limits = c(0, 12)) +
+  labs(title = &amp;quot;paper figure 9 (approx)&amp;quot;,
+       x = &amp;quot;distance to the ball (/m)&amp;quot;,
+       y = &amp;quot;influence radius (/m)&amp;quot;) +
+  theme_minimal() 
+
+p5&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2020-04-20-wide_open_spaces_1_files/figure-html/test_function-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;We’re really getting there now. We just need to define our covariance matrix and we’re done with equations. Remember earlier with redefined&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ \Sigma = R\cdot S \cdot S \cdot R^{-1}\]&lt;/span&gt;
+in paper equation 14, where R is the rotation matrix, and S is the scaling matrix.&lt;/p&gt;
+&lt;p&gt;To rotate in Euclidean space clockwise from the x-axis, the rotation matrix &lt;a href=&#34;https://en.wikipedia.org/wiki/Rotation_matrix&#34;&gt;is just&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[R = 
+\begin{bmatrix}
+cos(\theta) &amp;amp; -sin(\theta) \\
+sin(\theta) &amp;amp; cos(\theta) \\
+\end{bmatrix}
+\]&lt;/span&gt;
+as also defined in the paper in equation 16. Easy enough to define, we just need to put the right transform of theta in the right space&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;get_R &amp;lt;- function(theta) {
+  #R fills down first so these aren&amp;#39;t the wrong way round
+  R = matrix(c(cos(theta), sin(theta), -sin(theta), cos(theta)), nrow = 2)
+  return(R)
+}
+
+R &amp;lt;- get_R(theta)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For simplicity, I earlier said that the scaling matrix (S) was equivalent to the speed of the player in x and y dimensions, which was a bit of a white lie. It &lt;em&gt;is&lt;/em&gt; derived from that, but itself scaled by the influence radius of the player (Ri)&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[S = 
+\begin{bmatrix}
+s_{x} &amp;amp; 0 \\
+0 &amp;amp; s_{y} \\
+\end{bmatrix}
+\]&lt;/span&gt;
+&lt;span class=&#34;math display&#34;&gt;\[S_{i}(t) = 
+\begin{bmatrix}
+\frac{R_{i}(t) \cdot (1 + Srat_{i}(\overrightarrow{s}_{i}(t)))}{2} &amp;amp; 0 \\
+0 &amp;amp; \frac{R_{i}(t) \cdot (1-Srat_{i}(\overrightarrow{s}_{i}(t)))}{2} \\
+\end{bmatrix}
+\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;This is the same as equation 19, I’ve just taken the Ri outside the brackets. As with the rotation matrix R, this is just matrix building and putting the right variables in the right place&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;get_S &amp;lt;- function(ri, srat) {
+  top_left &amp;lt;- ri * (1 + srat) / 2
+  bottom_right &amp;lt;- ri * (1-srat) / 2
+  S = matrix(c(top_left, 0, 0, bottom_right), nrow = 2)
+}
+
+S &amp;lt;- get_S(ri, srat)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Once we have R and S, Σ is just equal to the dot product of these as in equation 15&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;get_Sigma &amp;lt;- function(R, S) {
+  inv_R &amp;lt;- solve(R)
+  Sigma = R %*% S %*% S %*% inv_R
+  return(Sigma)
+}
+
+Sigma &amp;lt;- get_Sigma(R, S)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So now we have the mean (μ), sigma (Σ) arguments to our dmvnorm function to calculate a players pitch control. We just to plug in the p term (corresponding to x in the R function arguments).&lt;/p&gt;
+&lt;p&gt;As in equation 1 (and 13), we actually need &lt;em&gt;two&lt;/em&gt; p terms:&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[I_{i}(p,t) = \frac{f_{i}(p,t)}{f_{i}(p_{i}(t), t)} \]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;the first (p) account for every ‘unit’ of the pitch (we divide the pitch up into each squares and calculate a players influence on each) and a second (p_i) which is the control of a player on their own area of pitch p. The denominator (control of pitch at player i’s x,y) is used to normalise the control they exert across the pitch from 0-1.&lt;/p&gt;
+&lt;p&gt;To create the matrix of pitch zones, we can simply use seq and expand.grid on the dimensions of the pitch. Splitting each dimension 200 ways leaves us with a 40000 x 2 data.frame to apply as p. For p_i, we just use the player’s x and y coordinates.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#use statsbomb coords - 120m x 80m pitch
+#split into 200x200 rectangles
+pitch &amp;lt;- expand.grid(seq(0, 120, length.out = 200), seq(0, 80, length.out = 200)) %&amp;gt;%
+    rename(x = Var1, y = Var2)
+
+#function to calculate I as in equation 1/13
+calc_I &amp;lt;- function(pitch_area, x, y, mu_x, mu_y, Sigma) {
+  #create vectors
+  mu &amp;lt;- c(mu_x, mu_y)
+  player_loc &amp;lt;- c(x, y)
+  
+  numerator &amp;lt;- dmvnorm(as.matrix(pitch_area), mu, Sigma)
+  denominator &amp;lt;- dmvnorm(t(matrix(player_loc)), mu, Sigma)
+  #and normalise
+  norm_pdf = numerator/denominator
+  return(norm_pdf)
+}
+
+#column I is the control on pitch area x,y of player I
+I &amp;lt;- calc_I(pitch, x_start, y_start, mu_x, mu_y, Sigma)
+head(mutate(pitch, I))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##           x y            I
+## 1 0.0000000 0 8.097891e-74
+## 2 0.6030151 0 7.108987e-73
+## 3 1.2060302 0 6.151215e-72
+## 4 1.8090452 0 5.246040e-71
+## 5 2.4120603 0 4.409808e-70
+## 6 3.0150754 0 3.653635e-69&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We of course need to do this across the whole team, summing the pitch influence per team then finding the difference between them as per equation 2 in the paper&lt;/p&gt;
+&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[PC_{(p,t)} = \sigma \sum_{i} I_{(p,t)} - \sum_{j} I_{(p,t)}\]&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;I’ve neatly nested all the functions we’ve written into one larger function which every row of a team is then applied to using pmap from the purrr package.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#test our functions on one frame of the tracking data
+testing_data &amp;lt;- tracking_data %&amp;gt;%
+  filter(time == 600) 
+
+#sum all our little functions into one bigger function
+calc_PC &amp;lt;- function(time, next_time, ball_x, ball_y, x, y, next_x, next_y, team, player, pitch_area) {
+  speed_x &amp;lt;- get_speed(x, next_x, time, next_time)
+  speed_y &amp;lt;- get_speed(y, next_y, time, next_time)
+  srat &amp;lt;- get_srat(speed_x, speed_y)
+  theta &amp;lt;- get_theta(speed_x, speed_y)
+  
+  mu_x &amp;lt;- get_mu(x, speed_x)
+  mu_y &amp;lt;- get_mu(y, speed_y)
+  
+  ri &amp;lt;- get_ri(x, y, ball_x, ball_y)
+
+  R &amp;lt;- get_R(theta)
+  S &amp;lt;- get_S(ri, srat)
+  
+  Sigma &amp;lt;- get_Sigma(R, S)
+  
+  pitch_area$I &amp;lt;- calc_I(as.matrix(pitch), x, y, mu_x, mu_y, Sigma)
+  pitch_area$team &amp;lt;- team
+  pitch_area$time &amp;lt;- time
+  pitch_area$player &amp;lt;- player
+  return(pitch_area)
+}
+
+#run the pitch control function
+pitch_control &amp;lt;- testing_data %&amp;gt;%
+  select(time, next_time, ball_x, ball_y, x, y, next_x, next_y, player, team) %&amp;gt;%
+  #run func
+  pmap_df(., calc_PC, pitch_area = pitch) %&amp;gt;%
+  #sum by team and area
+  group_by(team, x, y) %&amp;gt;%
+  summarise(team_sum = sum(I)) %&amp;gt;%
+  pivot_wider(names_from = team, values_from = team_sum) %&amp;gt;%
+  #σ - logistic function
+  mutate(PC = 1 / (1 + exp(Home_Team - Away_Team)))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;After calculating the individual pitch control metrics, we sum by team and pixel and then subtract the away team sum from the home team sum and run it through a simple logistic function (σ)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the position of the ball for this frame
+ball_location &amp;lt;- testing_data %&amp;gt;%
+  select(ball_x, ball_y) %&amp;gt;%
+  unique()
+
+#plot it all
+p6 &amp;lt;- ggplot() +
+  #pitch layout background
+  annotate_pitch(dimensions = pitch_statsbomb) +
+  #pitch control raster
+  geom_tile(data = pitch_control, aes(x = x, y = y, fill = PC), alpha = 0.7) +
+  scale_fill_gradient2(low = &amp;quot;blue&amp;quot;, high = &amp;quot;red&amp;quot;, mid = &amp;quot;white&amp;quot;, midpoint = 0.5) +
+  #players for each team
+  #also add in little vector arrows
+  geom_segment(data = testing_data, aes(x = x, y = y, xend = forward_x, yend = forward_y, colour = team),
+               size = 1, arrow = arrow(length = unit(0.01, &amp;quot;npc&amp;quot;))) +
+  geom_point(data = testing_data, aes(x = x, y = y, colour = team), size = 3) +
+  scale_colour_manual(values = c(&amp;quot;black&amp;quot;, &amp;quot;gold&amp;quot;), guide = FALSE) +
+  #ball location
+  geom_point(data = ball_location, aes(x = ball_x, y = ball_y),
+             colour = &amp;quot;black&amp;quot;, fill = &amp;quot;white&amp;quot;, shape = 21, size = 2.5, stroke = 2) +
+  theme_pitch()
+
+p6&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2020-04-20-wide_open_spaces_1_files/figure-html/plot_PC-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;It looks pretty good! We can see which areas on the pitch the yellow and black (blue and red areas respectively) control (the ball here is the white circle outlined in black). In theory we can now run this function over the whole tracking_data data frame and calculate the control of each time over every part of the pitch at any time.&lt;/p&gt;
+&lt;p&gt;If we know this, we can work out (e.g.) the potential of an attack by multiplying the pitch control by a second layer, the value of every area of the pitch. For a very good intro into why/how you might value pitch areas, see &lt;a href=&#34;https://karun.in/blog/expected-threat.html&#34;&gt;Karun Singh’s explanation of Expected Threat&lt;/a&gt;. The paper itself uses a neural network based on the ball location. It can be best understood as imaging that you only know the location of the ball and are asked where the best place to pass it to would be? Moving it towards the centre of the opposition goal (reducing distance and angle) is always better, but you also want to maximise the chance of the pass being successful. The paper includes a great mp4 of modeled real life play hosted on &lt;a href=&#34;http://www.lukebornn.com/sloan/field_value.mp4&#34;&gt;Luke Bornn’s website&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;This post is already long enough so I’m not going to go into pitch value more here, but will hopefully write a followup combining the two at some point.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;premature-optimisation&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;(premature) optimisation&lt;/h1&gt;
+&lt;p&gt;(There’s not really much gain from reading beyond here, but I attempted to implement it in Rcpp for some optimisation which worked a little bit- I’m sure this function could be vastly improved though so it might be of value leaving it here for others to run with)&lt;/p&gt;
+&lt;p&gt;So this is all fine and good, but we probably want to run this at least over every frame in the game, and possibly many games! To do this we’re really going to want to optimise the crap out of this function. I’ve had a first go at this using Rcpp and RcppArmadillo to implement the whole pitch control algorithm. It actually didn’t speed things up as much as I wanted*, but does remove 20-30% of the time the R function takes. (it’s also just good practice to write more C++ for myself).&lt;/p&gt;
+&lt;p&gt;*lots more low hanging fruit to take out of it, but it does the job for now&lt;/p&gt;
+&lt;p&gt;We’ll need a few Rcpp libraries to implement this:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(Rcpp)
+library(RcppArmadillo)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And then can use a Rcpp chunk to export a compiled function that R can access&lt;/p&gt;
+&lt;pre class=&#34;cpp&#34;&gt;&lt;code&gt;//namespaces
+#include &amp;lt;RcppArmadillo.h&amp;gt;
+// [[Rcpp::depends(RcppArmadillo)]]
+
+using namespace Rcpp;
+
+/* C++ version of the dtrmv BLAS function */
+// stolen from https://gallery.rcpp.org/articles/dmvnorm_arma/
+void inplace_tri_mat_mult(arma::rowvec &amp;amp;x, arma::mat const &amp;amp;trimat){
+  arma::uword const n = trimat.n_cols;
+  
+  for(unsigned j = n; j-- &amp;gt; 0;){
+    double tmp(0.);
+    for(unsigned i = 0; i &amp;lt;= j; ++i)
+      tmp += trimat.at(i, j) * x[i];
+    x[j] = tmp;
+  }
+}
+
+//set log(2pi) as a constant
+static double const log2pi = std::log(2.0 * M_PI);
+
+//replaces the dmvnorm() multivariate sampling
+arma::vec dmvnrm_arma_fast(arma::mat const &amp;amp;x,  
+                           arma::rowvec const &amp;amp;mean,  
+                           arma::mat const &amp;amp;sigma, 
+                           bool const logd = false) { 
+    using arma::uword;
+    uword const n = x.n_rows, 
+             xdim = x.n_cols;
+    arma::vec out(n);
+    arma::mat const rooti = arma::inv(trimatu(arma::chol(sigma)));
+    double const rootisum = arma::sum(log(rooti.diag())), 
+                constants = -(double)xdim/2.0 * log2pi, 
+              other_terms = rootisum + constants;
+    
+    arma::rowvec z;
+    for (uword i = 0; i &amp;lt; n; i++) {
+        z = (x.row(i) - mean);
+        inplace_tri_mat_mult(z, rooti);
+        out(i) = other_terms - 0.5 * arma::dot(z, z);     
+    }  
+      
+    if (logd)
+      return out;
+    return exp(out);
+}
+
+//does all the calculations in the paper
+//outputs a vector
+// [[Rcpp::export]]
+arma::vec calc_I_cpp(arma::vec coords, arma::vec next_coords, arma::vec ball_coords, double t, double next_t, arma::mat pitch, arma::mat coord_mat) {
+  //arma::vec rng = runif(1);
+  //arma::vec velocity = ((next_coords - coords) + (rng[0] / 10000)) / (next_t - t);
+  arma::vec velocity = ((next_coords - coords)) / (next_t - t);
+  double speed = norm(velocity);
+  double srat =pow((speed / 13), 2.0);
+  double theta = acos(velocity[0] / speed);
+  
+  //sometimes players reach &amp;#39;impossible&amp;#39; speeds
+  if(srat &amp;gt; 1) {
+    velocity = {(12.5 * cos(theta)), (12.5 * sin(theta))};
+    speed = norm(velocity);
+    srat = pow((speed / 13), 2.0);
+  }
+  
+  arma::mat R = {{+cos(theta), -sin(theta)},
+                 {+sin(theta), +cos(theta)}};
+  
+  arma::vec m = coords + velocity / 2;
+  arma::rowvec mu = arma::conv_to&amp;lt;arma::rowvec&amp;gt;::from(m);
+
+  
+  double ri_val = 4.0 + (pow(norm(ball_coords - coords), 3.0) / (pow(18.0, 3) / 6));
+  double ri = std::min(ri_val, 10.0);
+  arma::mat S = {{ri * (1 + srat) / 2, 0},
+                 {0, ri * (1 - srat) / 2}};
+  arma::mat inv_R = arma::inv(R);
+  arma::mat Sigma = R * S * S * inv_R;
+  
+  arma::vec numerator = dmvnrm_arma_fast(pitch, mu, Sigma);
+  arma::vec denominator = dmvnrm_arma_fast(coord_mat, mu, Sigma);
+  arma::vec I = numerator / denominator[0];
+  return I;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And we can now start running this over multiple frames. My laptop is pretty hideously falling apart at the moment, so I’ve limited it here, but really you could for sure run it over many frames. For plotting as a single object, remember, we’re using a 40000 (200 * 200) row df to store stuff which is surely less than optimal, but even cutting that down as much as feasible, with 25 frames a second, memory bloat is going to happen fast.&lt;/p&gt;
+&lt;p&gt;In a future post at some point I’d like to actually try some analysis using this work, and I think the key is really to analyse within frame and output a condensed pitch area controlled * value for each player.&lt;/p&gt;
+&lt;p&gt;For now though, I’ve posted a plot of ten seconds (not consecutive frames) of data. If you click on that, it links to an imgur of the gif of the proper combination of those frames.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#ugly packaged up function
+calc_PC_cpp &amp;lt;- function(time, next_time, ball_x, ball_y, x, y, next_x, next_y, team, player, pitch_area) {
+  #blargh terribly written- run out of energy to improve
+  pitch_area$I &amp;lt;- calc_I_cpp(c(x, y), c(next_x, next_y), c(ball_x, ball_y), time, next_time, as.matrix(pitch_area), t(c(x, y)))
+  pitch_area$team &amp;lt;- team
+  pitch_area$time &amp;lt;- time
+  pitch_area$player &amp;lt;- player
+  return(pitch_area)
+}
+
+#sample 10 seconds worth of data
+animation_data &amp;lt;- tracking_data %&amp;gt;%
+  filter(time %in% 600:610) %&amp;gt;%
+  dplyr::select(time, next_time, ball_x, ball_y, x, y, next_x, next_y, team, player) 
+
+#run the function over the data
+anim_pitch_control &amp;lt;- animation_data %&amp;gt;%
+  #run func
+  pmap_df(., calc_PC_cpp, pitch_area = pitch) %&amp;gt;%
+  #sum by team and area
+  group_by(team, x, y, time) %&amp;gt;%
+  summarise(team_sum = sum(I)) %&amp;gt;%
+  pivot_wider(names_from = team, values_from = team_sum) %&amp;gt;%
+  #σ - logistic function
+  mutate(PC = 1 / (1 + exp(Home_Team - Away_Team)))
+
+#plot
+p7 &amp;lt;- ggplot(anim_pitch_control, aes(x = x, y = y, colour = PC)) +
+  annotate_pitch(dimensions = pitch_statsbomb) +
+  geom_point(alpha = 0.7, shape = 15) +
+  scale_colour_gradient2(low = &amp;quot;blue&amp;quot;, high = &amp;quot;red&amp;quot;, mid = &amp;quot;white&amp;quot;, midpoint = 0.5) +
+  theme_pitch() +
+  labs(title = &amp;quot;pitch control rasters by match time (s)&amp;quot;) +
+  facet_wrap(~time)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;a href=&#34;https://i.imgur.com/fYIfjaR.mp4&#34; title=&#34;plot of surface control&#34;&gt;&lt;img src=&#34;/img/pitch_control_raster.png&#34; alt=&#34;plot of surface control&#34; /&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;(click for link to gif)&lt;/p&gt;
+&lt;p&gt;I actually really like these plots of just the surface control; they remind me of high dimensional (e.g. biological sample) sorting and I think just look pretty funky&lt;/p&gt;
+&lt;p&gt;I mentioned I benchmarked the functions themselves earlier, here’s some sample code of benchmarking. It’s not really apples to oranges because of the tweaks to the cpp function, and obviously calling pmap_df on a single row of a data.frame isn’t really what it’s for… it’s more just to document a little bit (also please ignore the spaghetti passing of functions).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(microbenchmark)
+microbenchmark(
+  pmap_calc_pc = pmap_df(animation_data[1,], calc_PC, pitch_area = pitch),
+  pmap_calc_pc_cpp = pmap_df(animation_data[1,], calc_PC_cpp, pitch_area = pitch),
+  calc_pc = calc_PC(animation_data$time[1], animation_data$next_time[1], animation_data$ball_x[1], animation_data$ball_y[1], animation_data$x[1], animation_data$y[1], animation_data$next_x[1], animation_data$next_y[1], &amp;quot;teamA&amp;quot;, &amp;quot;playera&amp;quot;, pitch),
+  calc_pc_cpp = calc_PC_cpp(animation_data$time[1], animation_data$next_time[1], animation_data$ball_x[1], animation_data$ball_y[1], animation_data$x[1], animation_data$y[1], animation_data$next_x[1], animation_data$next_y[1], &amp;quot;teamA&amp;quot;, &amp;quot;playera&amp;quot;, pitch),
+  times = 100
+)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## Unit: milliseconds
+##              expr      min       lq     mean   median       uq        max neval
+##      pmap_calc_pc 4.678101 6.016201 6.348389 6.450652 6.786201   8.110101   100
+##  pmap_calc_pc_cpp 4.193102 5.138201 6.532153 5.414801 5.683001 121.216300   100
+##           calc_pc 3.320500 4.267101 4.512472 4.559201 4.814401   5.803501   100
+##       calc_pc_cpp 2.743001 3.231902 3.498605 3.513801 3.704501   5.351702   100&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;That’s all for this post! As I said at some point (soon? later? who knows) I’d like to include the value term because conceptually it’s not hard to get a stupid version of it going. Hopefully this is of use to some people. As I said up top, written in evenings locked inside during quarantine so probably maths mistakes/ huge coding errors etc. If people point them out and get in touch I’ll fix them.&lt;/p&gt;
+&lt;p&gt;Best!&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Five Minute Football Trivia - Trans-Europe Express</title>
       <link>/post/five_min_trivia_kraftwerk/</link>
       <pubDate>Thu, 02 Apr 2020 00:00:00 +0000</pubDate>
@@ -4725,1003 +5380,6 @@ head(lowest_ranked_champs, n = 10)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;However! One notable omission is Christopher Wreh, who played in 16 matches for Arsenal in the 1997/1998 season. Wreh only played 26 times for his nation so I assumed he just hadn’t appeared for them that year, but &lt;a href=&#34;https://www.11v11.com/players/christopher-wreh-4/&#34;&gt;11v11.com&lt;/a&gt; lists him playing on July 27th 1997 (1997/1998 season) at which point Liberia were ranked 110th in the world.&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;../../img/archives.png&#34; alt=&#34;mfw incomplete data&#34; /&gt;&lt;/p&gt;
 &lt;/div&gt;
-&lt;/div&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>An Introduction to Modelling Soccer Matches in R (part 1)</title>
-      <link>/post/dixon_coles_1/</link>
-      <pubDate>Thu, 30 May 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/dixon_coles_1/</guid>
-      <description>
-
-
-&lt;p&gt;For anyone watching football, being able to predict matches is a key aspect of the hobby. Whether explicitly (e.g. when betting on matches, or deciding on recruitment for an upcoming season), or more implicitly when discussing favourites to win the league in the pub, almost all discussion of the sport on some level require predictions about some set of upcoming games.&lt;/p&gt;
-&lt;p&gt;The first step of prediction is some form of quantification of ability. We’d expect a better team to have a better chance of winning than a worse team. For an example of a more sophisticated set of rankings, see &lt;a href=&#34;https://projects.fivethirtyeight.com/soccer-predictions/&#34;&gt;fivethirtyeight’s Soccer Power Index&lt;/a&gt; which is explicitly used to predict the results of various football competitions.&lt;/p&gt;
-&lt;p&gt;The accuracy of our predictions therefore relies on the accuracy of our judgement on team’s ability. When discussing football with friends, we might use half-remembered match highlights to form some impression of how strong a team is. When programming however, we have free access to the results of teams thus far in a campaign and should be able to produce a model more grounded in truth.&lt;/p&gt;
-&lt;p&gt;Two seminal papers for using recent football results to assess the abilities of football teams (and then use this assessment to predict matches) are &lt;a href=&#34;https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1467-9574.1982.tb00782.x&#34;&gt;Maher’s 1982 paper&lt;/a&gt; on modelling football scores, which is complimented by &lt;a href=&#34;https://www.jstor.org/stable/pdf/2986290.pdf?casa_token=9deLgF7xOaEAAAAA:fGGfUQKOsezrWBvbmphK56HddtiaohxaUNPdkDBoTApL_beghKXFlru5USztLt7dDVEMSdhAfkg8yzubZsAs7eeyZvp307iAGwqAtVSMMhwk6xhUleM&#34;&gt;Mark Dixon and Stuart Coles’ 1997 paper&lt;/a&gt;. For R various packages to use the methods outlined in these papers exist including &lt;a href=&#34;https://github.com/Torvaney/regista&#34;&gt;Ben Torvaney’s regista&lt;/a&gt;, &lt;a href=&#34;https://github.com/opisthokonta/goalmodel&#34;&gt;opisthokonta’s goalmodel&lt;/a&gt;&lt;sup&gt;1&lt;/sup&gt;, and &lt;a href=&#34;https://cran.r-project.org/web/packages/fbRanks/index.html&#34;&gt;Eli Holmes’ fbRanks&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;However, the overlap between people obsessed enough with football to read mathematical papers on the sport, and those with the formal training in reading math notation to understand these models is fairly low, and I wasn’t able to find&lt;sup&gt;2&lt;/sup&gt; a good intuitive explanation for these models. Hopefully, building up these models from the most basic entry steps to a fully sophisticated model for predicting football matches might help some who want to start modelling football but don’t have the privilege of formal stats/modelling/coding training. As I want to start from pretty much zero, in this first post I make at least one or two claims that are not strictly true (indeed, this post does not actually implement some of the main points of the 1997 Dixon &amp;amp; Coles paper), but will try to point these out as I go, and correct them in later posts.&lt;/p&gt;
-&lt;p&gt;First, let’s load libraries and also set a seed for the reproducibility of this document&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# munging
-library(tidyverse)
-
-# seed for reproducibility
-set.seed(3459)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;##Set up&lt;/p&gt;
-&lt;p&gt;In reality, we’d probably want to model a whole league or cup. However, these can generally contain 20+ teams, many of which will have similar abilities. For simplicity here, lets instead imagine a summer league between 6 English football clubs where each team plays each other twice (once at home and once away)&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;teams &amp;lt;- c(&amp;quot;Arsenal&amp;quot;, # 5th in the 1st tier
-           &amp;quot;Blackburn_Rovers&amp;quot;, # 15th in 2nd tier
-           &amp;quot;Coventry_City&amp;quot;, # 8th in 3rd tier
-           &amp;quot;Dover_Athletic&amp;quot;, # 14th 5th tier 
-           &amp;quot;Enfield_Town&amp;quot;, # 10th in 7th tier
-           &amp;quot;Frimley_Green&amp;quot;) # 2nd in 9th tier&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We’ve managed to arrange a league that has a nice stratification between teams, so we’d expect each to be comfortably better than the next best (which will make sanity checking our results easier). Lucky for us, the teams are also in alphabetical order of strength so in case you don’t have any prior on a team, take the first letter of it’s name (A-F).&lt;/p&gt;
-&lt;p&gt;Each week each team play one game, so we’ll have a fixture list that looks like:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;head(fixtures, 8)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##               home             away gameweek
-## 1    Frimley_Green          Arsenal        1
-## 2     Enfield_Town Blackburn_Rovers        1
-## 3   Dover_Athletic    Coventry_City        1
-## 4          Arsenal     Enfield_Town        2
-## 5    Frimley_Green   Dover_Athletic        2
-## 6 Blackburn_Rovers    Coventry_City        2
-## 7   Dover_Athletic          Arsenal        3
-## 8    Coventry_City     Enfield_Town        3&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Obviously for this we’re going to have to make up our data. For the code used to generate it, see the bottom of the post.&lt;/p&gt;
-&lt;p&gt;Let’s say that we’ve had 8 weeks of games played so far, and the results have been as follows&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;head(results,8)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##               home             away hgoal agoal gameweek
-## 1   Dover_Athletic    Coventry_City     0     3        1
-## 2     Enfield_Town Blackburn_Rovers     0     3        1
-## 3    Frimley_Green          Arsenal     0     8        1
-## 4          Arsenal     Enfield_Town     5     0        2
-## 5 Blackburn_Rovers    Coventry_City     1     1        2
-## 6    Frimley_Green   Dover_Athletic     1     2        2
-## 7 Blackburn_Rovers    Frimley_Green     6     0        3
-## 8    Coventry_City     Enfield_Town     2     1        3&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;A better way to show this is to generate a matrix of home (y axis) vs. away (x axis) and show the goals scored in each match between them:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p1 &amp;lt;- results %&amp;gt;%
-  # remove unplayed games
-  filter(!is.na(hgoal)) %&amp;gt;%
-  ggplot(., aes(x = away, y = home, fill = hgoal-agoal)) +
-  geom_tile() +
-  # add the scorelines
-  geom_label(aes(label = paste(hgoal, agoal, sep = &amp;quot;-&amp;quot;)), fill = &amp;quot;white&amp;quot;) +
-  # colour where green shows home win and red an away win
-  scale_fill_gradient2(low = &amp;quot;darkred&amp;quot;, high = &amp;quot;green&amp;quot;, midpoint = 0, guide = FALSE) +
-  scale_x_discrete(limits = levels(results$home), position = &amp;quot;top&amp;quot;) +
-  scale_y_discrete(limits = rev(levels(results$away))) +
-  theme_minimal()
-
-# plot
-p1&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_results-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;As the colour gradient (from bottom right to top left) shows, the teams we’d expect to do better are. Given the stochastic nature of football though, there are some surprises. E.g. Blackburn only managing to draw at home to Coventry.&lt;/p&gt;
-&lt;p&gt;A good sense of teams relative abilities can be seen in the league table of results so far (assuming 3 points for a win, and 1 for a draw):&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# function to melt results
-# returns df with team and goals for and against for each match
-melt_results &amp;lt;- function(results_df) {
-  results_df %&amp;gt;%
-    # select only relevant columns
-    select(home, away, hgoal, agoal) %&amp;gt;%
-    gather(location, team,  -hgoal, -agoal) %&amp;gt;%
-    # calculate goals for/against the team
-    mutate(g_for = case_when(
-      location == &amp;quot;home&amp;quot; ~ hgoal,
-      location == &amp;quot;away&amp;quot; ~ agoal
-    )) %&amp;gt;%
-    mutate(g_ag = case_when(
-      location == &amp;quot;home&amp;quot; ~ agoal,
-      location == &amp;quot;away&amp;quot; ~ hgoal
-    )) 
-}
-
-# function to calculate points won and gd for each team
-results_to_table &amp;lt;- function(results_df) {
-  results_df %&amp;gt;%
-    # use above melting function
-    melt_results(.) %&amp;gt;%
-    # 3 points for a win, 1 for a draw
-    mutate(points = case_when(
-      g_for &amp;gt; g_ag ~ 3,
-      g_ag &amp;gt; g_for ~ 0,
-      g_for == g_ag ~ 1
-    )) %&amp;gt;%
-    # calculate goal difference for each match
-    mutate(gd = g_for - g_ag) %&amp;gt;%
-    group_by(team) %&amp;gt;%
-    # get the final statistics per team
-    summarise(games_played = n(),
-              gf = sum(g_for),
-              ga = sum(g_ag),
-              gd = sum(gd),
-              points = sum(points)) %&amp;gt;%
-    arrange(-points, -gd, -gf)
-}
-
-# calculate league table for our played fixtures
-league_table &amp;lt;- results  %&amp;gt;%
-  filter(!is.na(hgoal)) %&amp;gt;%
-  select(-gameweek) %&amp;gt;%
-  results_to_table(.) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 6
-##   team             games_played    gf    ga    gd points
-##   &amp;lt;chr&amp;gt;                   &amp;lt;int&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt;
-## 1 Arsenal                     8    39     4    35     24
-## 2 Blackburn_Rovers            8    23     6    17     19
-## 3 Coventry_City               8    14     8     6     16
-## 4 Dover_Athletic              8     8    15    -7      9
-## 5 Enfield_Town                8     6    22   -16      3
-## 6 Frimley_Green               8     2    37   -35      0&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Where teams positions are nicely rank ordered (the data for this example is fairly curated so it’s not that surprising).&lt;/p&gt;
-&lt;p&gt;##Predictions&lt;/p&gt;
-&lt;p&gt;With two rounds to go, there’s still 6 fixtures we might want to predict (to try and judge which team will end up where, or just to bet on the remaining games).&lt;/p&gt;
-&lt;p&gt;This are:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# get the yet to be played matches
-unplayed_games &amp;lt;- fixtures %&amp;gt;%
-  filter(gameweek &amp;gt; 8) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##               home             away gameweek
-## 1    Coventry_City          Arsenal        9
-## 2 Blackburn_Rovers   Dover_Athletic        9
-## 3    Frimley_Green     Enfield_Town        9
-## 4          Arsenal Blackburn_Rovers       10
-## 5    Coventry_City    Frimley_Green       10
-## 6   Dover_Athletic     Enfield_Town       10&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If we want to predict these results, we need to have data on the strength of the teams above, but also, a good prior on what sort of scores we should expect.&lt;/p&gt;
-&lt;p&gt;Using real data from the engsoccerdata package we can get the results of all 48840 English football league games between August 1992 and May 2016. If we melt this to get the goals scored by each team by their location we get a data.frame of 97680 records of a teams performance in a game:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# load real data from the english league
-real_data &amp;lt;- engsoccerdata::england %&amp;gt;%
-  # filter out &amp;#39;premier league era&amp;#39; matches
-  filter(Season &amp;gt; 1991) %&amp;gt;%
-  # select only relevant columns
-  select(home, away = visitor, hgoal, agoal = vgoal) %&amp;gt;%
-  # munge
-  melt_results() %&amp;gt;%
-  select(-hgoal, -agoal) %&amp;gt;%
-  mutate(data = &amp;quot;real&amp;quot;)
-
-head(real_data)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##   location           team g_for g_ag data
-## 1     home        Arsenal     2    4 real
-## 2     home        Chelsea     1    1 real
-## 3     home  Coventry City     2    1 real
-## 4     home Crystal Palace     3    3 real
-## 5     home        Everton     1    1 real
-## 6     home   Ipswich Town     1    1 real&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Here every row shows a team that played a match (as it’s sorted by league then alphabetically, the first 6 records are all for Arsenal). It also shows if the team played home or away. The data also shows the goals scored by (e.g.) Arsenal in g_for, and the goals they conceded in g_ag.&lt;/p&gt;
-&lt;p&gt;If we plot the goals scored for each game, we get a nice humped distribution with slightly offset peaks for home and away. That is to say, in most games teams will score 0, 1, or 2 goals, and that scoring more than 6 goals in a match is incredibly rare. The difference between the home and away distributions mean that teams are slightly more likely to score more if playing at home, compared to play away from home.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# plot goals scored home/away for real english football matches
-p2 &amp;lt;- real_data %&amp;gt;%
-  ggplot(., aes(x = g_for, fill = location)) +
-  # smooth densities
-  geom_density(adjust = 8, alpha = 0.5) +
-  scale_fill_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;)) +
-  scale_x_continuous(breaks = 0:6) +
-  labs(title = &amp;quot;Goals scored at home and away in English football&amp;quot;,
-       subtitle = &amp;quot;data from 48.8k matches 1992-2016&amp;quot;,
-       x = &amp;quot;goals scored&amp;quot;,
-       y = &amp;quot;density&amp;quot;) +
-  theme_minimal()
-
-# plot
-p2&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_real_goal_distributions-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;We can work out what the average difference between playing at home and away is by taking the means of goals scored at home, and when playing away:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# calculate mean home and away goals
-real_data_means &amp;lt;- real_data %&amp;gt;%
-    group_by(location) %&amp;gt;%
-    summarise(mean_scored = mean(g_for)) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 2 x 2
-##   location mean_scored
-##   &amp;lt;chr&amp;gt;          &amp;lt;dbl&amp;gt;
-## 1 away            1.12
-## 2 home            1.47&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Goals in games are both relatively sparse, and relatively stochastic; football is a low scoring game where goals are evenly distributed throughout the game. In theory any attack made by a team i has a probability of being scored dependent upon the strength of team i’s attack (α&lt;sub&gt;i&lt;/sub&gt;) which is independent of all the other attacks that team has made.&lt;/p&gt;
-&lt;p&gt;(there is some reason to doubt this may be the case&lt;sup&gt;3&lt;/sup&gt;, but for now this is a fine generalisation)&lt;/p&gt;
-&lt;p&gt;By grouping all teams together into “home” and “away” categories (in a league setting each team will play each other home and away so this should average out) and taking the average number of goals scored per match as the Poisson mean (λ) we can see how well our above graph fits a simulated Poisson process.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# generate Poisson distributed vector with mean = real world mean
-simulated_poisson &amp;lt;- real_data_means %&amp;gt;%
-  split(f = .$location) %&amp;gt;%
-  lapply(., function(x) df = data.frame(dist = rpois(100000, x$mean_scored),
-                                        location = x$location)) %&amp;gt;%
-  # map it all together and label
-  map_df(I) %&amp;gt;%
-  mutate(data = &amp;quot;simulated&amp;quot;) 
-
-# add these distributions to the plot
-p2 + geom_density(data = simulated_poisson, aes(x = dist),
-                  fill = NA, adjust = 8, alpha = 0.2) +
-  scale_fill_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;), guide = FALSE) +
-  facet_wrap(~location)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/simulated_poisson-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;It’s not perfect, but it’s not a bad fit either. In actuality, a Chi-squared test will show that goals scored &lt;em&gt;does not&lt;/em&gt; follow a Poisson distribution given the number of matches we have as data. But for the sake of this post, put that out of mind.&lt;/p&gt;
-&lt;p&gt;If we think that goals scored represents some Poisson process, it can be modeled using the equation which underlies the Poisson distribution. For a given interval (one match), the probability of x events (goals scored) in that interval will be:&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}\]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;The simplest model we can produce is to estimate λ as each team’s attack rating (henceforth α&lt;sub&gt;i&lt;/sub&gt;) which is equal to observed mean rate of goals for that team.&lt;/p&gt;
-&lt;p&gt;That is the say the probability of team i scoring x goals against team j is:&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[P(x_{i,j} = x) = \frac{\alpha_{i}^{x}e^{-\alpha_{i}}}{x!}\]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;where α&lt;sub&gt;i&lt;/sub&gt; is the sum of all goals scored divided by the total number of matches:&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\alpha_{i} = \frac{1}{N}\sum_{n=1}^{N} x\]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;grouping by teams makes this easy to calculate:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;basic_model &amp;lt;- results %&amp;gt;%
-  melt_results() %&amp;gt;%
-  group_by(team) %&amp;gt;%
-  # we&amp;#39;ll use the goals scored to model the attack
-  # and goals conceeded to measure defence rating
-  summarise(alpha = mean(g_for),
-            beta = mean(g_ag)) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 3
-##   team             alpha  beta
-##   &amp;lt;chr&amp;gt;            &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;
-## 1 Arsenal           4.88  0.5 
-## 2 Blackburn_Rovers  2.88  0.75
-## 3 Coventry_City     1.75  1   
-## 4 Dover_Athletic    1     1.88
-## 5 Enfield_Town      0.75  2.75
-## 6 Frimley_Green     0.25  4.62&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;(we’ll come on to the beta parameter in a bit- where alpha is the average scoring rate, beta is the average conceding rate).&lt;/p&gt;
-&lt;p&gt;If we take Coventry’s remaining two games as examples we can see that they are yet to play Arsenal and Frimley Green at home&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;coventry_games &amp;lt;- unplayed_games %&amp;gt;%
-  # filter out Coventry City&amp;#39;s remaining fixtures
-  filter(grepl(&amp;quot;Coventry_City&amp;quot;, home)) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##            home          away gameweek
-## 1 Coventry_City       Arsenal        9
-## 2 Coventry_City Frimley_Green       10&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;And we can take the attack rating (α) of each team and use it to estimate the results&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# get the attack ratings of all teams
-team_alphas &amp;lt;- basic_model$alpha %&amp;gt;% `names&amp;lt;-`(basic_model$team)
-
-# assume goals scored for each team will be it&amp;#39;s attack rating
-e_results &amp;lt;- paste(team_alphas[coventry_games$home],
-                   team_alphas[coventry_games$away],
-                   sep = &amp;quot;-&amp;quot;) %&amp;gt;%
-  # name each match with the teams competing
-  `names&amp;lt;-`(c(paste(coventry_games$home, coventry_games$away, sep = &amp;quot;-&amp;quot;))) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##       Coventry_City-Arsenal Coventry_City-Frimley_Green 
-##                &amp;quot;1.75-4.875&amp;quot;                 &amp;quot;1.75-0.25&amp;quot;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;These aren’t ridiculous estimates by any stretch but it’s clear something is up. It’s pretty intuitive that Coventry City would be expected to score more goals at home to Frimley Green than at home to Arsenal.&lt;/p&gt;
-&lt;p&gt;We can account for this by introducing an opposing team defence parameter β&lt;sub&gt;j&lt;/sub&gt;. In our very simple model this will be estimating by taking the average rate a team concedes goals. As with the attack rating, this is the calculated as the sum of all goals conceded divided by number of matches. We’ll then multiply α&lt;sub&gt;i&lt;/sub&gt; and β&lt;sub&gt;j&lt;/sub&gt; together to get the score estimate:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# get and name the defence rating for each team
-team_betas &amp;lt;- basic_model$beta %&amp;gt;% `names&amp;lt;-`(basic_model$team)
-
-# assume the goals scored will be the attack rating of the team times 
-# the defence rating of it&amp;#39;s opponent
-e_results &amp;lt;- paste(round(team_alphas[coventry_games$home]*
-                           team_betas[coventry_games$away], 3),
-                   round(team_alphas[coventry_games$away]*
-                           team_betas[coventry_games$home], 3),
-                   sep = &amp;quot;-&amp;quot;) %&amp;gt;%
-  `names&amp;lt;-`(c(paste(coventry_games$home, coventry_games$away, sep = &amp;quot;-&amp;quot;))) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##       Coventry_City-Arsenal Coventry_City-Frimley_Green 
-##               &amp;quot;0.875-4.875&amp;quot;                &amp;quot;8.094-0.25&amp;quot;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The opposition scores remain the same because Coventry have on average conceded 1 goal per game.&lt;/p&gt;
-&lt;p&gt;Coventry’s predicted goals though has diverged with them now predicted to score less than a goal against Arsenal and to score 8(!) against Frimley Green, both of which sound reasonable (when you consider that Frimley Green are a team of amateurs).&lt;/p&gt;
-&lt;p&gt;However, we’re also missing one final piece of the model we’ll finish with today. Recall modelling the English football data from 1992 onwards, we were left with a difference between the home scoring rate and the away scoring rate.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# reprint what we calculated earlier
-real_data_means&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 2 x 2
-##   location mean_scored
-##   &amp;lt;chr&amp;gt;          &amp;lt;dbl&amp;gt;
-## 1 away            1.12
-## 2 home            1.47&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;It’s pretty common knowledge that football teams do better at home, so we’ll want to factor that in. A simple estimate is to divide the mean home goals/game by the mean away goals/game.&lt;/p&gt;
-&lt;p&gt;We’ll call this parameter γ and can be formalised as the sum of home goals (which we’ll refer to as x from now on) divided by the sum of away goals (y)&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\gamma = \frac{\sum{x}}{\sum{y}}\]&lt;/span&gt;&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# the home advantage is how much easier it is to score at home
-home_advantage_gamma &amp;lt;- sum(results$hgoal) / sum(results$agoal)
-
-e_results &amp;lt;- paste(round(team_alphas[coventry_games$home]*
-                           team_betas[coventry_games$away] * 
-                           # add in home advantage for home team
-                           home_advantage_gamma, 3),
-                   round(team_alphas[coventry_games$away]*
-                           team_betas[coventry_games$home], 3),
-                   sep = &amp;quot;-&amp;quot;) %&amp;gt;%
-  `names&amp;lt;-`(c(paste(coventry_games$home, coventry_games$away, sep = &amp;quot;-&amp;quot;))) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##       Coventry_City-Arsenal Coventry_City-Frimley_Green 
-##               &amp;quot;0.955-4.875&amp;quot;                 &amp;quot;8.83-0.25&amp;quot;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Which tilts the scales a little towards Coventry’s favour but (as we’d expect- home advantage can only go so far) doesn’t affect the results too much.&lt;/p&gt;
-&lt;p&gt;Now we have a method to predict matches, we can use this on the remaining 6 nice and easily:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# simplify to just gamma
-gamma &amp;lt;- home_advantage_gamma
-
-# wrap the above into a function for home and away teams
-predict_results &amp;lt;- function(home, away, parameters) {
-  e_goals_home &amp;lt;- parameters$alpha[home]*parameters$beta[away] * gamma
-  e_goals_away &amp;lt;- parameters$alpha[away]*parameters$beta[home]
-  
-  # output a df of expected goals for home and away teams
-  df &amp;lt;- data.frame(home = home, away = away,
-                   e_hgoal = e_goals_home, e_agoal = e_goals_away)
-  return(df)
-}
-
-# convert the basic_model df into a list with $attack and $defence parameters
-# for each team
-basic_parameters &amp;lt;- basic_model %&amp;gt;%
-  # rename scored/conceeded to attack/defence
-  select(-team) %&amp;gt;%
-  # convert to a list and name each element
-  as.list() %&amp;gt;%
-  lapply(., function(x){names(x) &amp;lt;- teams;return(x)})
-
-# predict results using the function defined above and the list of parameters
-# could use e.g. mapply here but I prefer the map2 grammar
-# run the predict results function over each game consisting of $home and $away
-predicted_fixtures &amp;lt;- map2_df(unplayed_games$home, unplayed_games$away, 
-                    predict_results,
-                    # parameters forms an extra argument that does not vary
-                    basic_parameters) %&amp;gt;%
-  # round the outputs
-  mutate_if(is.numeric, round, digits = 2) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##               home             away e_hgoal e_agoal
-## 1    Coventry_City          Arsenal    0.95    4.88
-## 2 Blackburn_Rovers   Dover_Athletic    5.88    0.75
-## 3    Frimley_Green     Enfield_Town    0.75    3.47
-## 4          Arsenal Blackburn_Rovers    3.99    1.44
-## 5    Coventry_City    Frimley_Green    8.83    0.25
-## 6   Dover_Athletic     Enfield_Town    3.00    1.41&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;All of which look reasonable, if maybe a little bullish on the ‘better’ teams prospects.&lt;/p&gt;
-&lt;p&gt;However, while this is good for back of the envelope predictions, we know that this is a very basic model. If we want to improve it, first we must quantify how good it is.&lt;/p&gt;
-&lt;p&gt;In order to do this we can use the results we have from the first 8 weeks of matches as training data. We know what the ‘correct’ scores are for these matches, so if our model is good, it will predict similar scores to those observed.&lt;/p&gt;
-&lt;p&gt;Remember that for the Poisson distribution, the probability of x goals in one match is&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[P(x) = \frac{\lambda^{x}e^{-\lambda}}{x!}\]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;The expected value of the Poisson distribution is equal to λ, so we can plug λ as our predicted goals, and x as the actual goals, and calculate the probability of that results occurring &lt;em&gt;given&lt;/em&gt; the attack/defence/home advantage parameters that we think are correct.&lt;/p&gt;
-&lt;p&gt;We then do this for all the matches played and get the likelihood for the home and away teams scores given the model:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# &amp;#39;predict&amp;#39; the already played matches using our function
-predicted_results &amp;lt;- map2_df(results$home, results$away, 
-                    predict_results,
-                    basic_parameters) %&amp;gt;%
-  mutate_if(is.numeric, round, digits = 2) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##                home             away e_hgoal e_agoal
-## 1    Dover_Athletic    Coventry_City    1.09    3.28
-## 2      Enfield_Town Blackburn_Rovers    0.61    7.91
-## 3     Frimley_Green          Arsenal    0.14   22.55
-## 4           Arsenal     Enfield_Town   14.62    0.38
-## 5  Blackburn_Rovers    Coventry_City    3.14    1.31
-## 6     Frimley_Green   Dover_Athletic    0.51    4.62
-## 7  Blackburn_Rovers    Frimley_Green   14.51    0.19
-## 8     Coventry_City     Enfield_Town    5.25    0.75
-## 9    Dover_Athletic          Arsenal    0.55    9.14
-## 10          Arsenal    Coventry_City    5.32    0.88
-## 11   Dover_Athletic Blackburn_Rovers    0.82    5.39
-## 12     Enfield_Town    Frimley_Green    3.78    0.69
-## 13 Blackburn_Rovers          Arsenal    1.57    3.66
-## 14     Enfield_Town   Dover_Athletic    1.53    2.75
-## 15    Frimley_Green    Coventry_City    0.27    8.09
-## 16          Arsenal    Frimley_Green   24.60    0.12
-## 17 Blackburn_Rovers     Enfield_Town    8.62    0.56
-## 18    Coventry_City   Dover_Athletic    3.58    1.00
-## 19    Coventry_City Blackburn_Rovers    1.43    2.88
-## 20   Dover_Athletic    Frimley_Green    5.05    0.47
-## 21     Enfield_Town          Arsenal    0.41   13.41
-## 22          Arsenal   Dover_Athletic    9.97    0.50
-## 23     Enfield_Town    Coventry_City    0.82    4.81
-## 24    Frimley_Green Blackburn_Rovers    0.20   13.30&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# calculate the likelihood of each home/away team actually scoring that many goals
-# given the parameters for attack/defence supplied
-likelihoods &amp;lt;- data.frame(lik_hgoal = dpois(results$hgoal,
-                                            predicted_results$e_hgoal),
-                          lik_agoal = dpois(results$agoal,
-                                            predicted_results$e_agoal)) %&amp;gt;%
-  # round the probabilities
-  mutate_all(round, 4) %&amp;gt;%
-  # bind likelihoods to results
-  cbind(results, . ) %&amp;gt;%
-  # bind in predictions
-  left_join(., predicted_results, by = c(&amp;quot;home&amp;quot;, &amp;quot;away&amp;quot;)) %&amp;gt;%
-  # select useful parameters
-  select(home, away, hgoal, e_hgoal, lik_hgoal, agoal, e_agoal, lik_agoal) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##                home             away hgoal e_hgoal lik_hgoal agoal e_agoal
-## 1    Dover_Athletic    Coventry_City     0    1.09    0.3362     3    3.28
-## 2      Enfield_Town Blackburn_Rovers     0    0.61    0.5434     3    7.91
-## 3     Frimley_Green          Arsenal     0    0.14    0.8694     8   22.55
-## 4           Arsenal     Enfield_Town     5   14.62    0.0025     0    0.38
-## 5  Blackburn_Rovers    Coventry_City     1    3.14    0.1359     1    1.31
-## 6     Frimley_Green   Dover_Athletic     1    0.51    0.3063     2    4.62
-## 7  Blackburn_Rovers    Frimley_Green     6   14.51    0.0065     0    0.19
-## 8     Coventry_City     Enfield_Town     2    5.25    0.0723     1    0.75
-## 9    Dover_Athletic          Arsenal     1    0.55    0.3173     3    9.14
-## 10          Arsenal    Coventry_City     3    5.32    0.1228     1    0.88
-## 11   Dover_Athletic Blackburn_Rovers     1    0.82    0.3612     2    5.39
-## 12     Enfield_Town    Frimley_Green     1    3.78    0.0863     0    0.69
-## 13 Blackburn_Rovers          Arsenal     0    1.57    0.2080     2    3.66
-## 14     Enfield_Town   Dover_Athletic     1    1.53    0.3313     2    2.75
-## 15    Frimley_Green    Coventry_City     0    0.27    0.7634     3    8.09
-## 16          Arsenal    Frimley_Green    10   24.60    0.0005     0    0.12
-## 17 Blackburn_Rovers     Enfield_Town     4    8.62    0.0415     0    0.56
-## 18    Coventry_City   Dover_Athletic     1    3.58    0.0998     0    1.00
-## 19    Coventry_City Blackburn_Rovers     1    1.43    0.3422     2    2.88
-## 20   Dover_Athletic    Frimley_Green     2    5.05    0.0817     0    0.47
-## 21     Enfield_Town          Arsenal     2    0.41    0.0558     4   13.41
-## 22          Arsenal   Dover_Athletic     4    9.97    0.0193     0    0.50
-## 23     Enfield_Town    Coventry_City     1    0.82    0.3612     2    4.81
-## 24    Frimley_Green Blackburn_Rovers     1    0.20    0.1637     5   13.30
-##    lik_agoal
-## 1     0.2213
-## 2     0.0303
-## 3     0.0003
-## 4     0.6839
-## 5     0.3535
-## 6     0.1052
-## 7     0.8270
-## 8     0.3543
-## 9     0.0137
-## 10    0.3650
-## 11    0.0663
-## 12    0.5016
-## 13    0.1724
-## 14    0.2417
-## 15    0.0271
-## 16    0.8869
-## 17    0.5712
-## 18    0.3679
-## 19    0.2328
-## 20    0.6250
-## 21    0.0020
-## 22    0.6065
-## 23    0.0943
-## 24    0.0058&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If we sum the log of those likelihood values we get a measure of how wrong overall our predictions are:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;log_likehood &amp;lt;- sum(log(likelihoods$lik_hgoal), log(likelihoods$lik_agoal)) * -1
-
-log_likehood&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## [1] 105.995&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;(n.b. there will be some rounding errors- especially on the pre-log probabilities, but this will suffice for now)&lt;/p&gt;
-&lt;p&gt;To get an idea of whether or not this is good, let’s quickly run the model with all the parameters set to zero. Given that we’re pretty sure that at least Arsenal will be a lot better than Frimley Green, this model should do worse than our basic model above.&lt;/p&gt;
-&lt;p&gt;If it indeed does fit the results worse we will get a greater error term- the log likelihood sum&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# do the same but set each teams attack and defence to 1
-# expect model to be worse as assumes all teams are equal
-equal_parameters &amp;lt;- list(
-  alpha = rep(1, length(teams)) %&amp;gt;% `names&amp;lt;-`(teams),
-  beta = rep(1, length(teams)) %&amp;gt;% `names&amp;lt;-`(teams)
-)
-
-# predict results and munge through to find sum of log likelihoods
-worse_log_likelihood &amp;lt;- map2_df(results$home, results$away, 
-                    predict_results,
-                    equal_parameters) %&amp;gt;%
-  mutate_if(is.numeric, round, digits = 2) %&amp;gt;%
-  # take the log probability straight away this time
-  mutate(lik_hgoal = dpois(results$hgoal, e_hgoal, log = TRUE),
-         lik_agoal = dpois(results$agoal, e_agoal, log = TRUE)) %&amp;gt;%
-  select(lik_hgoal, lik_agoal) %&amp;gt;%
-  map_dbl(sum) %&amp;gt;%
-  sum(.) * -1 
-
-worse_log_likelihood&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## [1] 112.618&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The worse log likelihood (112.6) is worse (only a bit though) than the 106.0 we previously. This suggests that either the teams are actually quite equal, or that our basic model wasn’t all that good.&lt;/p&gt;
-&lt;div id=&#34;parameter-optimisation&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Parameter Optimisation&lt;/h2&gt;
-&lt;p&gt;There will exist some parameters (α and β for each team, and γ for the home field advantage) that will minimise this negative log likelihood. That is to say, they will predict the results of the already played games most accurately.&lt;/p&gt;
-&lt;p&gt;If we want to find those we can use the optim() function in the stats package. This will take a vector of parameters and iterate while slightly changing their values until it gets the lowest value it can find as the output for a supplied function. It also takes a data.frame of results between teams. The results of these games are predicted and then checked against this actually observed data.&lt;/p&gt;
-&lt;p&gt;At the end, I’ve also set the function to pass some information from each iteration into the global environment, namely, the iteration number (i), the parameter values the optim() function has chosen for this iteration, and the negative log likelihood of those parameters- the likelihood of the observed scores if those parameters are correct.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;optimise_params &amp;lt;- function(parameters, results) {
-  # form the parameters back into a list
-  # parameters names alpha (attack), beta (defense), and gamma (hfa)
-  param_list &amp;lt;- relist_params(parameters)
-  
-  # predict the expected results for the games that have been played
-  e_results &amp;lt;- map2_df(results$home, results$away, 
-                      predict_results,
-                      param_list)
-  
-  # calculate the negative log likelihood of those predictions
-  # given the parameters how likely are those scores
-  neg_log_likelihood &amp;lt;- calculate_log_likelihood(results, e_results)
-  
-  # capture the parameters and likelihood at each loop
-  # only do it if i is initialised
-  if(exists(&amp;quot;i&amp;quot;)) {
-    i &amp;lt;&amp;lt;- i + 1
-    current_parameters[[i]] &amp;lt;&amp;lt;- parameters
-    current_nll[[i]] &amp;lt;&amp;lt;- neg_log_likelihood
-  }
-  
-  # return the value to be minimised
-  # in this case the negative log likelihood
-  return(neg_log_likelihood)
-}&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The three separate functions are coded out separately so we can tinker with them shortly:&lt;/p&gt;
-&lt;ol style=&#34;list-style-type: decimal&#34;&gt;
-&lt;li&gt;to predict our results we have been supplying a list of two elements: alpha and beta, each of which are numeric vectors. optim() can only take one vector to optimise over but we can trick it by supplying unlist(&lt;code&gt;list_of_parameters&lt;/code&gt;). If we do this we then first want to convert this unlisted numeric vector back into our two element list*&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;*it isn’t vital to have the parameters arranged like this, but I think it leads to neater indexing when predicting the results&lt;/p&gt;
-&lt;ol start=&#34;2&#34; style=&#34;list-style-type: decimal&#34;&gt;
-&lt;li&gt;&lt;p&gt;we then need to use these parameters to predict the results of past games. For each home and away team in a data.frame of results we can predict the expected home and expected away goals. These are then bound into a data.frame of home and away teams and these predicted goals for each&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;finally, we need to calculate the negative log likelihood by calculating the log probability of the observed goals given the predicted goals and summing these. We then multiply this by -1 as the sum of the log probabilities will be negative and we want to minimise this number as close to zero as possible. The transformation of prod(neg_log_likelihood, -1) is a quick hack for this&lt;sup&gt;4&lt;/sup&gt;&lt;/p&gt;&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Hopefully this is at least bearable to follow. Formalised, this can be written for teams i and matches k as:&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\mathcal L(\alpha_{i},\beta_{i},\gamma;i = 1 ... n) = \prod_{k = 1}^{K}{\frac{\lambda_{k}^{x_{k}}e^{-\lambda_{k}}}{x_{k}!}\frac{\mu_{k}^{y_{k}}e^{-\mu_{k}}}{y_{k}!}}\]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;where for match k and teams i and j, home goals, x is defined by&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{k} \sim Poisson(\lambda_{k} = \alpha_{i(k)}\beta_{j(k)}\gamma)\]&lt;/span&gt;
-and away goals, y&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[y_{k} \sim Poisson(\mu_{k} = \alpha_{j(k)}\beta_{i(k)})\]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;which seems daunting when you write it down, but we’ve already covered everything we need to do solve it. It’s just saying we want to minimise the result of the multiplication (the sum of logs in our case above) of the probability of scoring x and y goals in a game. The probability of goals scored assumed to be Poisson distributed, controlled by parameters α, β, and γ for home and away teams.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# optim requires parameters to be supplied as a vector
-# we&amp;#39;ll unlist the parameters then relist in the function
-relist_params &amp;lt;- function(parameters) {
-  parameter_list &amp;lt;- list(
-    # alpha = attack rating
-    alpha = parameters %&amp;gt;%
-      .[grepl(&amp;quot;alpha&amp;quot;, names(.))] %&amp;gt;%
-      `names&amp;lt;-`(teams),
-    # beta = defence rating
-    beta = parameters %&amp;gt;%
-      .[grepl(&amp;quot;beta&amp;quot;, names(.))] %&amp;gt;%
-      `names&amp;lt;-`(teams),
-    # gamma = home field advantage
-    gamma = parameters[&amp;quot;gamma&amp;quot;]
-  )
-  
-  return(parameter_list)
-}
-
-# use these parameters to predict results for supplied matches
-predict_results &amp;lt;- function(home, away, param_list) {
-  # expected home goals
-  e_goals_home &amp;lt;- param_list$alpha[home] * param_list$beta[away] * param_list$gamma
-  # expected away goals
-  e_goals_away &amp;lt;- (param_list$alpha[away] * param_list$beta[home])
-  
-  # bind to df
-  df &amp;lt;- data.frame(home = home, away = away,
-                   e_hgoal = e_goals_home, e_agoal = e_goals_away)
-  
-  return(df)
-}
-
-# calculate the log likelihood of predict results vs supplied results
-calculate_log_likelihood &amp;lt;- function(results, e_results) {
-  home_likelihoods = dpois(results$hgoal, lambda = e_results$e_hgoal, log = TRUE)
-  away_likelihoods = dpois(results$agoal, lambda = e_results$e_agoal, log = TRUE)
-  
-  # sum log likelihood and multiply by -1 so we&amp;#39;re minimising neg log likelihood
-  likelihood_sum &amp;lt;- sum(home_likelihoods, away_likelihoods)
-  neg_log_likelihood &amp;lt;- prod(likelihood_sum, -1)
-  
-  return(neg_log_likelihood)
-}&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We’ll supply parameters that are all equal to 1 to optim to stop it falling into local minima that might affect the ‘optimal’ parameters it finds. The unlisted parameters are then supplied to optim along with the optimise_parameters() function.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# start with all parameters equal
-equal_parameters &amp;lt;- list(
-  alpha = rep(1, length(teams)) %&amp;gt;% `names&amp;lt;-`(teams),
-  beta = rep(1, length(teams)) %&amp;gt;% `names&amp;lt;-`(teams),
-  gamma = 1
-)
-
-# run optim over the functions with these initial parameters
-optimised_parameters &amp;lt;- optim(
-  # the equal initial parameters
-  par = unlist(equal_parameters),
-  # run over the function to optimise parameters
-  fn = optimise_params,
-  # extra arguments to function
-  results = results,
-  # Nelder-Mead equation with 10k iterations max
-  method = &amp;quot;Nelder-Mead&amp;quot;,
-  control = list(maxit = 10000)
-  )&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We can take the $par element of the output of this to find the parameters for which the negative log likelihood is minimised&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# display the parameters found to minimise
-# the negative log likelihood
-optimised_parameters$par&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##          alpha.Arsenal alpha.Blackburn_Rovers    alpha.Coventry_City 
-##              2.9858302              1.8014838              1.2995271 
-##   alpha.Dover_Athletic     alpha.Enfield_Town    alpha.Frimley_Green 
-##              0.8192267              0.7762002              0.2748448 
-##           beta.Arsenal  beta.Blackburn_Rovers     beta.Coventry_City 
-##              0.4738011              0.6346112              0.7503864 
-##    beta.Dover_Athletic      beta.Enfield_Town     beta.Frimley_Green 
-##              1.2208768              1.5180931              2.5535961 
-##                  gamma 
-##              1.1663125&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;As expected, alpha decreases as teams get worse, and beta increases. The found gamma (1.166) is only marginally higher than the 1.091 for our simple model.&lt;/p&gt;
-&lt;p&gt;The $value element gives the negative log likelihood calculated for these parameters&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;optimised_parameters$value&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## [1] 57.5175&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Which is much smaller than the ~100 we got from our very basic model.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;tinkering&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Tinkering&lt;/h2&gt;
-&lt;p&gt;This is all very well but there’s still some small improvements we can make.&lt;/p&gt;
-&lt;p&gt;For starters, I always think it’s simpler to have both scales of α and β to increase as a teams becomes more skillful in attack or defence. In our original equation the expected home and away goals follow the formula&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(α_{i}β_{j}γ)\]&lt;/span&gt;
-&lt;span class=&#34;math display&#34;&gt;\[y_{ij} \sim Poisson(α_{j}β_{i})\]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;if instead of multiplying by β, we divide instead, a stronger defence will reduce the value of x&lt;sub&gt;ij&lt;/sub&gt;/y&lt;sub&gt;ij&lt;/sub&gt; (reducing the number of expected goals for the opposing team).&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]&lt;/span&gt;
-&lt;span class=&#34;math display&#34;&gt;\[y_{ij} \sim Poisson(\frac{α_{j}}{β_{i}})\]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;To achieve this we just have to flip two lines of the predict_results function. Instead of multiplying α and β, we divide them instead.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# change prediction to inverse defence parameters
-predict_results &amp;lt;- function(home, away, param_list) {
-  e_goals_home &amp;lt;- (param_list$alpha[home] / param_list$beta[away]) * param_list$gamma
-  e_goals_away &amp;lt;- (param_list$alpha[away] / param_list$beta[home])
-  
-  df &amp;lt;- data.frame(home = home, away = away,
-                   e_hgoal = e_goals_home, e_agoal = e_goals_away)
-  
-  return(df)
-}
-
-# re run using new subfunction
-optimised_parameters2 &amp;lt;- optim(
-  par = unlist(equal_parameters),
-  fn = optimise_params,
-  results = results,
-  method = &amp;quot;Nelder-Mead&amp;quot;,
-  control = list(maxit = 10000))
-
-# check this does what we want
-optimised_parameters2$par&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;(n.b. I won’t print out the results of all these steps as this post is long enough, but you can run and see the gradual improvements for yourself)&lt;/p&gt;
-&lt;p&gt;Next we want to subtly change how the expected goals are calculated.&lt;/p&gt;
-&lt;p&gt;Given that&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ A = \frac{B \cdot C}{D}\]&lt;/span&gt;
-is exactly the same as&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[ A = e ^{log(B) + log(C) - log(D)}\]&lt;/span&gt;
-we can convert the parameters we are looking for into log(parameters) and take the exponent of their sum as the predicted goals. This might seem like a minor change, but prevents an important exception. Using home goals as an example, remember that&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(\frac{α_{i}γ}{β_{j}})\]&lt;/span&gt;
-if any of the three parameters become negative then we’re left with a Poisson distribution with a negative mean, which is is absurd: events cannot unhappen. For instance, imagine a football game where one team scores negative goals.&lt;/p&gt;
-&lt;p&gt;If we take the log parameters instead we have&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[x_{ij} \sim Poisson(e ^ {α_{i} - β_{j} + γ})\]&lt;/span&gt;
-where no matter what values α, β, or γ take, the exponent of their sum will never be negative. When playing a very strong away teams, the mean goals will tend towards 0 (though will never actually reach it).&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# change prediction to use log parameters
-# exp(log(x) + log(y)) = x * y
-predict_results &amp;lt;- function(home, away, param_list) {
-  e_goals_home &amp;lt;- exp(param_list$alpha[home] - param_list$beta[away] + param_list$gamma)
-  e_goals_away &amp;lt;- exp(param_list$alpha[away] - param_list$beta[home])
-  
-  df &amp;lt;- data.frame(home = home, away = away,
-                   e_hgoal = e_goals_home, e_agoal = e_goals_away)
-  
-  return(df)
-}
-
-# initialise parameters as all 0
-# log(1) = 0
-equal_parameters &amp;lt;- list(
-  alpha = rep(0, length(teams)) %&amp;gt;% `names&amp;lt;-`(teams),
-  beta = rep(0, length(teams)) %&amp;gt;% `names&amp;lt;-`(teams),
-  gamma = 0
-)
-
-# re run using new subfunction
-optimised_parameters3 &amp;lt;- optim(
-  par = unlist(equal_parameters), 
-  fn = optimise_params,
-  results = results,
-  # using log will avoid non-finite differences 
-  # so can use BFGS model
-  method = &amp;quot;BFGS&amp;quot;,
-  control = list(maxit = 10000))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We’ve also switched optimisation algorithm from Nelder-Mead to BFGS. BFGS is &lt;a href=&#34;https://docs.mantidproject.org/v3.7.1/concepts/FittingMinimizersComparisonDetailed.html#minimizers-unweighted-comparison-in-terms-of-accuracy&#34;&gt;quicker&lt;/a&gt; than Nelder-Mead but requires the minimisation function (i.e. the negative log likelihood we calculate) to be finite. Before, we could get infinite negative log likelihoods, as it was possible to calculate a negative mean (expected goals for a team). Running dpois() for a negative lambda will return NaN so it becomes impossible to calculate the final negative log likelihood.&lt;/p&gt;
-&lt;p&gt;Finally, we want to constrain the final optimised parameters by fixing the sum of all attack parameters, and the sum of all defence parameters, to equal 0. In practice, this basically means that above average attacking/defending teams will have parameters above 0, and below average teams will have parameters below 0. This is handy, but also the main advantage is this prevents &lt;a href=&#34;https://en.wikipedia.org/wiki/Overfitting&#34;&gt;overfitting&lt;/a&gt; of the parameters by the optimisation algorithm.&lt;/p&gt;
-&lt;p&gt;To do this, we can simply drop the first (or last, or any, it doesn’t matter) parameter from attack or defence (the parameters for Arsenal) and then calculate Arsenal’s parameters as the sum of the remaining parameters multiplied by minus 1.&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\alpha_{n} = -\sum_{i = 1}^{n-1} \alpha_{i} \]&lt;/span&gt;
-and also&lt;/p&gt;
-&lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\beta_{n} = -\sum_{i = 1}^{n-1} \beta_{i} \]&lt;/span&gt;
-In terms of code this just requires adding one line to the relist_params() function to append the value back. We also then need to remove this parameter that we will add back in from the initial parameters which is done below.&lt;/p&gt;
-&lt;p&gt;Our output will now be missing the parameters for Arsenal (as they will only exist within the function), but we can easily calculate it from the parameters we do get out.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# introduce sum to zero constraint by calculating
-# first teams parameters as minus sum of the rest
-relist_params &amp;lt;- function(parameters) {
-  parameter_list &amp;lt;- list(
-    alpha = parameters %&amp;gt;%
-      .[grepl(&amp;quot;alpha&amp;quot;, names(.))] %&amp;gt;%
-      append(prod(sum(.), -1), .) %&amp;gt;%
-      `names&amp;lt;-`(teams),
-    beta = parameters %&amp;gt;%
-      .[grepl(&amp;quot;beta&amp;quot;, names(.))] %&amp;gt;%
-      append(prod(sum(.), -1), .) %&amp;gt;%
-      `names&amp;lt;-`(teams),
-    gamma = parameters[&amp;quot;gamma&amp;quot;]
-  )
-  
-  return(parameter_list)
-}
-
-# remove the first team from the attack and defence ratings
-equal_parameters &amp;lt;- list(
-  alpha = rep(0, length(teams)-1) %&amp;gt;% `names&amp;lt;-`(teams[2:length(teams)]),
-  beta = rep(0, length(teams)-1) %&amp;gt;% `names&amp;lt;-`(teams[2:length(teams)]),
-  gamma = 0
-)
-
-# initialise i to collect data about the optimisation process at each iteration
-i &amp;lt;- 0
-# collect current parameter values and neg log likelihood at each iteration
-current_parameters &amp;lt;- list()
-current_nll &amp;lt;- list()&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We can then final the optim() function one final time to get our final optimised parameters&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# run our final calculation
-optimised_parameters4 &amp;lt;- optim(
-  par = unlist(equal_parameters), 
-  fn = optimise_params,
-  results = results,
-  method = &amp;quot;BFGS&amp;quot;,
-  control = list(maxit = 10000))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We can plot the log likelihood at each iteration. Notice how it starts around &amp;lt;120, which is pretty close what our worse_log_likelihood returned. For these optimisations, the original parameters we are supplying are similar to the zeroed parameters for that example.&lt;/p&gt;
-&lt;p&gt;As the optim() function plays with the parameters you can see the log likelihood jumps around quite violently, but over time tend towards zero.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p3 &amp;lt;- data.frame(likelihood = unlist(current_nll),
-                iteration = seq(length(current_nll))) %&amp;gt;%
-  ggplot(aes(x = iteration, y = likelihood)) +
-  geom_line(colour = &amp;quot;red&amp;quot;) +
-  # cut out some cases where optim() has been a bit ambitious
-  coord_cartesian(ylim = c(0, 250)) +
-  labs(title = &amp;quot;Negative log likelihood of parameters over iterations&amp;quot;,
-       y = &amp;quot;negative log likelihood&amp;quot;,
-       x = &amp;quot;iteration&amp;quot;) +
-  theme_minimal()
-
-p3&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_log_liks-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;The final parameters can also be extracted from the output from optim() and plotted:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p4 &amp;lt;- optimised_parameters4$par %&amp;gt;%
-  # relist to add in first team
-  relist_params() %&amp;gt;%
-  unlist() %&amp;gt;%
-  # select team parameters
-  .[grepl(&amp;quot;beta|alpha&amp;quot;, names(.))] %&amp;gt;%
-  data.frame(value = .,
-             parameter = names(.)) %&amp;gt;%
-  separate(parameter, into = c(&amp;quot;parameter&amp;quot;, &amp;quot;team&amp;quot;), &amp;quot;\\.&amp;quot;) %&amp;gt;%
-  # spread into wide format
-  spread(parameter, value) %&amp;gt;%
-  # pipe into a plot
-  ggplot(aes(x = alpha, y = beta)) +
-  geom_point() +
-  ggrepel::geom_text_repel(aes(label = team)) +
-  stat_smooth(method = &amp;quot;lm&amp;quot;, se = FALSE) +
-  labs(title = &amp;quot;Optimal parameters for teams&amp;quot;,
-       subtitle = &amp;quot;given first 8 weeks of results&amp;quot;,
-       x = &amp;quot;alpha (more likely to score -&amp;gt;)&amp;quot;,
-       y = &amp;quot;beta (less likely to concede -&amp;gt;)&amp;quot;) +
-  theme_minimal()
-
-p4&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_parameters-1.png&#34; width=&#34;672&#34; /&gt;
-Notice how the teams monotonically increase in both attack and defensive ability. This is by design on how the results were created (see the bottom of this post). With only 8 games per team however, there is quite a lot of noise in the signal. Hitting the crossbar instead of scoring in one game could make a fairly large difference in how the function rates a team.&lt;/p&gt;
-&lt;p&gt;Also note how the regression line passes through the origin- this is a result of us constraining the parameters to sum to zero.&lt;/p&gt;
-&lt;p&gt;If we want to see how optim() selects these, we can plot how they change over iterations. You can see how it jumps around then settles on incremental improvements to the model.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p5 &amp;lt;- current_parameters %&amp;gt;%
-  # get the parameters for arsenal for each iteration
-  lapply(., function(x){ unlist(relist_params(x))}) %&amp;gt;%
-  map_df(bind_rows, .id = &amp;quot;iteration&amp;quot;) %&amp;gt;%
-  # melt data and split parameters into team and parameter
-  gather(&amp;quot;parameter&amp;quot;, &amp;quot;value&amp;quot;, -iteration) %&amp;gt;%
-  # get rid of the gamma parameter
-  filter(parameter != &amp;quot;gamma.gamma&amp;quot;) %&amp;gt;%
-  separate(parameter, into = c(&amp;quot;parameter&amp;quot;, &amp;quot;team&amp;quot;), sep = &amp;quot;\\.&amp;quot;) %&amp;gt;%
-  # spread data back by parameter
-  spread(parameter, value) %&amp;gt;%
-  mutate(iteration = as.numeric(iteration)) %&amp;gt;%
-  # plot alpha against beta for each iteration
-  ggplot(aes(x = alpha, y = beta)) +
-  geom_text(aes(label = team)) +
-  labs(title = &amp;#39;Parameters for Iteration {floor(frame_time)}&amp;#39;,
-       subtitle = &amp;quot;given first 8 weeks of results&amp;quot;,
-       x = &amp;quot;alpha (more likely to score -&amp;gt;)&amp;quot;,
-       y = &amp;quot;beta (less likely to concede -&amp;gt;)&amp;quot;) +
-  # using gganimate package
-  gganimate::transition_time(iteration) +
-  gganimate::ease_aes(&amp;#39;linear&amp;#39;) +
-  gganimate::view_follow()
-
-# animate the plot
-gganimate::animate(p5, nframes = i)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_optimisation_animation-1.gif&#34; /&gt;&lt;!-- --&gt;&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;predict-remaining-matches&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Predict Remaining Matches&lt;/h2&gt;
-&lt;p&gt;Now we have rated each teams attack/defense, and the advantage to a team to play at home, we can predict the remaining matches between the teams.&lt;/p&gt;
-&lt;p&gt;For this, we just have to use the predict_results() function we defined earlier, except this time the output will be the expected goals per team. Earlier we were measuring the deviance from expectation, but not we assume the most likely result is exactly equal to the expected results. If we wanted to we could work out how likely this result is, and what the most likely results are.&lt;/p&gt;
-&lt;p&gt;This post is long enough however, so for now, we’ll just detail the most likely results.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;predicted_results &amp;lt;- predict_results(unplayed_games$home,
-                      unplayed_games$away, 
-                      relist_params(optimised_parameters4$par)) %&amp;gt;%
-  mutate_if(is.numeric, round, 2) %&amp;gt;%
-  print()&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##               home             away e_hgoal e_agoal
-## 1    Coventry_City          Arsenal    0.86    2.11
-## 2 Blackburn_Rovers   Dover_Athletic    2.62    0.49
-## 3    Frimley_Green     Enfield_Town    0.44    1.72
-## 4          Arsenal Blackburn_Rovers    2.39    0.99
-## 5    Coventry_City    Frimley_Green    4.09    0.17
-## 6   Dover_Athletic     Enfield_Town    1.33    0.79&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;All of these look reasonable, with better teams beating worse ones. The only match that the model thinks might well end in a draw is Dover at home to Enfield, which is not entirely unreasonable.&lt;/p&gt;
-&lt;p&gt;We can add these predictions to our earlier matrix of results to get a sense if these fit in with the trend from the observed matches:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p6 &amp;lt;- rbind(
-  predicted_results %&amp;gt;%
-    rename_if(is.numeric, gsub, pattern = &amp;quot;e_&amp;quot;, replacement = &amp;quot;&amp;quot;) %&amp;gt;%
-    mutate(type = &amp;quot;predicted&amp;quot;),
-  results %&amp;gt;%
-    select(-gameweek) %&amp;gt;%
-    mutate(type = &amp;quot;result&amp;quot;)
-) %&amp;gt;%
-  ggplot(., aes(x = away, y = home, fill = hgoal-agoal)) +
-  geom_tile() +
-  # add the scorelines
-  geom_label(aes(label = paste(hgoal, agoal, sep = &amp;quot;-&amp;quot;), colour = type), fill = &amp;quot;white&amp;quot;) +
-  # colour where black for actual results and red for predictions
-  scale_colour_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;black&amp;quot;)) +
-  # colour where green shows home win and red an away win
-  scale_fill_gradient2(low = &amp;quot;darkred&amp;quot;, high = &amp;quot;green&amp;quot;, midpoint = 0, guide = FALSE) +
-  scale_x_discrete(limits = levels(results$home), position = &amp;quot;top&amp;quot;) +
-  scale_y_discrete(limits = rev(levels(results$away))) +
-  theme_minimal()
-
-p6&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-1_files/figure-html/plot_all_games-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;Which they do! The predicted results fit in with the gradient of heavier defeats for home teams towards the bottom left, progressing to easy home victories in the top right.&lt;/p&gt;
-&lt;p&gt;That’s all for this post. Hopefully using the Poisson distribution to model football matches is a little clearer now. Feel free to email me any questions and check out the packages I stole all the codes/idea from.&lt;/p&gt;
-&lt;p&gt;Next time, I’ll go over how to quantify the probability of a range of results for any single match in (hopefully) a shorter post; until then!&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;notes&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Notes&lt;/h2&gt;
-&lt;p&gt;&lt;sup&gt;1&lt;/sup&gt; much of the code I use here is stolen/reworked from the code shared on this repo&lt;/p&gt;
-&lt;p&gt;&lt;sup&gt;2&lt;/sup&gt; towards the end of writing this post I came across &lt;a href=&#34;https://dashee87.github.io/football/python/predicting-football-results-with-statistical-modelling-dixon-coles-and-time-weighting/&#34;&gt;David Sheehan’s blog&lt;/a&gt; which actually does a pretty good job, but I felt still didn’t quite go through how/why the model uses the maths it does&lt;/p&gt;
-&lt;p&gt;&lt;sup&gt;3&lt;/sup&gt; see &lt;a href=&#34;https://arxiv.org/pdf/cond-mat/0110605.pdf&#34; class=&#34;uri&#34;&gt;https://arxiv.org/pdf/cond-mat/0110605.pdf&lt;/a&gt; and also the conclusion of &lt;a href=&#34;https://dashee87.github.io/football/python/predicting-football-results-with-statistical-modelling/&#34;&gt;David Sheehan’s blog on Dixon-Coles processes&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;sup&gt;4&lt;/sup&gt; *we could instead &lt;em&gt;maximise&lt;/em&gt; the sum of the log likelihoods and then the error will converge towards 0 from a negative number. Either is fine.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;results-generation&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Results Generation&lt;/h2&gt;
-&lt;p&gt;First we need to create a data.frame of fixtures for each team&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# https://stackoverflow.com/questions/54099990/is-there-an-efficient-algorithm-to-create-this-type-of-schedule
-create_fixtures &amp;lt;- function(teams) {
-  # keep team 1 in place
-  team1 &amp;lt;- as.character(teams[1])
-  #rotate other teams around team 1
-  other_teams &amp;lt;- as.character(teams[!teams %in% team1])
-  length &amp;lt;- length(other_teams)
-  
-  # generate fixtures each week
-  for(week in seq((length(teams)-1)*2)) {
-    
-    if(week %% 2 == 0) {
-      fixtures &amp;lt;- data.frame(home = c(team1, other_teams[1:2]),
-                             away = other_teams[length:3],
-                             gameweek = week)
-    } else {
-      fixtures &amp;lt;- data.frame(home = other_teams[length:3],
-                             away = c(team1, other_teams[1:2]),
-                             gameweek = week)
-      
-    }
-    
-    if(week == 1) {
-      fixtures_df &amp;lt;- fixtures 
-    } else {
-      fixtures_df &amp;lt;- rbind(fixtures_df, fixtures)
-    }
-    
-    # rotate other teams around
-    other_teams &amp;lt;- c(other_teams[length], other_teams[1:length-1])
-  }
-  
-  return(fixtures_df)
-}
-
-# create the fixtures
-fixtures &amp;lt;- create_fixtures(teams) %&amp;gt;%
-  mutate_if(is.factor, as.character)
-
-# print the fixture list
-fixtures&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##                home             away gameweek
-## 1     Frimley_Green          Arsenal        1
-## 2      Enfield_Town Blackburn_Rovers        1
-## 3    Dover_Athletic    Coventry_City        1
-## 4           Arsenal     Enfield_Town        2
-## 5     Frimley_Green   Dover_Athletic        2
-## 6  Blackburn_Rovers    Coventry_City        2
-## 7    Dover_Athletic          Arsenal        3
-## 8     Coventry_City     Enfield_Town        3
-## 9  Blackburn_Rovers    Frimley_Green        3
-## 10          Arsenal    Coventry_City        4
-## 11   Dover_Athletic Blackburn_Rovers        4
-## 12     Enfield_Town    Frimley_Green        4
-## 13 Blackburn_Rovers          Arsenal        5
-## 14    Frimley_Green    Coventry_City        5
-## 15     Enfield_Town   Dover_Athletic        5
-## 16          Arsenal    Frimley_Green        6
-## 17 Blackburn_Rovers     Enfield_Town        6
-## 18    Coventry_City   Dover_Athletic        6
-## 19     Enfield_Town          Arsenal        7
-## 20   Dover_Athletic    Frimley_Green        7
-## 21    Coventry_City Blackburn_Rovers        7
-## 22          Arsenal   Dover_Athletic        8
-## 23     Enfield_Town    Coventry_City        8
-## 24    Frimley_Green Blackburn_Rovers        8
-## 25    Coventry_City          Arsenal        9
-## 26 Blackburn_Rovers   Dover_Athletic        9
-## 27    Frimley_Green     Enfield_Town        9
-## 28          Arsenal Blackburn_Rovers       10
-## 29    Coventry_City    Frimley_Green       10
-## 30   Dover_Athletic     Enfield_Town       10&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;and then create the results&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# using goalmodel package 
-# https://github.com/opisthokonta/goalmodel
-library(goalmodel)
-
-# have to manually create a list of parameters
-model &amp;lt;- list()
-# stratify teams abilities in attack and defense
-model$parameters &amp;lt;- list(attack = seq(1, -1 + 2/length(teams), by = -2/(length(teams)-1)) %&amp;gt;%
-                           append(-sum(.)) %&amp;gt;%
-                           `names&amp;lt;-`(teams), 
-                         defense = seq(1, -1 + 2/length(teams), by = -2/(length(teams)-1)) %&amp;gt;%
-                           append(-sum(.)) %&amp;gt;%
-                           `names&amp;lt;-`(teams), 
-                         # no base rate of goals
-                         intercept = 0, 
-                         # roughly accurate hfa for English professional football
-                         hfa = 0.3)
-
-# add in teams
-model$all_teams &amp;lt;- teams
-# use a simple Poisson model with 8 goals max
-model$model &amp;lt;- &amp;quot;poisson&amp;quot;
-model$maxgoal &amp;lt;- 8
-
-# use the model to predict results using regista package
-results &amp;lt;- predict_expg(model, fixtures$home, fixtures$away, return_df = TRUE) %&amp;gt;%
-  # add some noise
-  mutate(noise1 = rnorm(nrow(.), 0, 0.5),
-         noise2 = rnorm(nrow(.), 0, 0.5)) %&amp;gt;%
-  mutate(hgoal = round(expg1 + noise1,0 ),
-         agoal = round(expg2 + noise2,0),
-         home = as.factor(team1),
-         away = as.factor(team2)) %&amp;gt;%
-  # merge to fixtures
-  merge(., fixtures, by = c(&amp;quot;home&amp;quot;, &amp;quot;away&amp;quot;)) %&amp;gt;%
-  # cant score less than zero goals
-  mutate_at(vars(hgoal:agoal), funs(replace(., .&amp;lt;0, 0))) %&amp;gt;%
-  select(home, away, hgoal, agoal, gameweek) %&amp;gt;%
-  arrange(gameweek, home) %&amp;gt;%
-  # treat only first 8 weeks as played
-  filter(gameweek &amp;lt;= 8)
-
-# print results
-results&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##                home             away hgoal agoal gameweek
-## 1    Dover_Athletic    Coventry_City     0     2        1
-## 2      Enfield_Town Blackburn_Rovers     1     3        1
-## 3     Frimley_Green          Arsenal     0     6        1
-## 4           Arsenal     Enfield_Town     6     0        2
-## 5  Blackburn_Rovers    Coventry_City     2     0        2
-## 6     Frimley_Green   Dover_Athletic     0     3        2
-## 7  Blackburn_Rovers    Frimley_Green     8     0        3
-## 8     Coventry_City     Enfield_Town     3     1        3
-## 9    Dover_Athletic          Arsenal     1     3        3
-## 10          Arsenal    Coventry_City     3     0        4
-## 11   Dover_Athletic Blackburn_Rovers     1     2        4
-## 12     Enfield_Town    Frimley_Green     2     1        4
-## 13 Blackburn_Rovers          Arsenal     2     2        5
-## 14     Enfield_Town   Dover_Athletic     0     2        5
-## 15    Frimley_Green    Coventry_City     1     3        5
-## 16          Arsenal    Frimley_Green     9     0        6
-## 17 Blackburn_Rovers     Enfield_Town     5     0        6
-## 18    Coventry_City   Dover_Athletic     1     2        6
-## 19    Coventry_City Blackburn_Rovers     0     2        7
-## 20   Dover_Athletic    Frimley_Green     3     1        7
-## 21     Enfield_Town          Arsenal     0     5        7
-## 22          Arsenal   Dover_Athletic     4     1        8
-## 23     Enfield_Town    Coventry_City     1     2        8
-## 24    Frimley_Green Blackburn_Rovers     1     4        8&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 </description>
     </item>
