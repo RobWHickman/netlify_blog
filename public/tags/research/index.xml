@@ -39,8 +39,8 @@ library(zoo)&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;div id=&#34;the-theory&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;The Theory&lt;/h1&gt;
-&lt;p&gt;Imagine two teams, I and J. Each of these has 11 players (hopefully) on the pitch at any time chasing after one ball. We want to know which team controls which parts of the pitch for each point in the match. As ‘control’ really only refers to “will player on my team get to a potential pass there first”, pitch control is just looking at where players i,j,k… are going to be at time t -&amp;gt; time t + n.&lt;/p&gt;
-&lt;p&gt;The easiest way to start to approximate this is to imagine a set of players who never change direction, they only speed up or slow down (and possible reverse). E.g. a full back running up and down the wings like a rook in a chess game. Their location at t + 1 will be their current location plus the expected value of their velocity.&lt;/p&gt;
+&lt;p&gt;Imagine two teams, I and J. Each of these has 11 players (hopefully) on the pitch at any time chasing after one ball. We want to know which team controls which parts of the pitch for each point in the match. As ‘control’ in a football match really only refers to “will player on my team get to a potential pass there first”, we are just looking at where players i,j,k… are going to be at time t + n seconds.&lt;/p&gt;
+&lt;p&gt;The easiest way to start to approximate this is to imagine a set of players who never change direction, they only speed up or slow down (and possibly reverse). E.g. a full back running up and down the wings like a rook in a chess game. Their location at t + 1 will be their current location plus the expected value of their velocity.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#make up some movement data
 full_back_pos &amp;lt;- data.frame(x = 40, y = 70)
 full_back_movement &amp;lt;- data.frame(
@@ -59,15 +59,20 @@ full_back_next_pos &amp;lt;- data.frame(table(next_x)) %&amp;gt;%
 #plot fake movement data
 p &amp;lt;- ggplot() +
   annotate_pitch(dimensions = pitch_statsbomb) +
-  geom_tile(data = full_back_next_pos, aes(x = next_x, y = y, fill = Freq), alpha = 0.7, height = 10) +
+  geom_tile(data = full_back_next_pos, 
+            aes(x = next_x, y = y, fill = Freq),
+            alpha = 0.7, height = 10) +
   scale_fill_viridis_c(name = &amp;quot;confidence&amp;quot;) +
-  geom_segment(data = full_back_movement, aes(x = pos, xend = x, y = y_pos, yend = y_pos), size = 2) +
-  geom_point(data = full_back_pos, aes(x = x , y = y), shape = 21, colour = &amp;quot;black&amp;quot;, fill = &amp;quot;red&amp;quot;, size = 5) +
+  geom_segment(data = full_back_movement,
+               aes(x = pos, xend = x, y = y_pos, yend = y_pos), size = 2) +
+  geom_point(data = full_back_pos, 
+             aes(x = x , y = y), 
+             shape = 21, colour = &amp;quot;black&amp;quot;, fill = &amp;quot;red&amp;quot;, size = 5) +
   theme_pitch()
 
 p&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;/post/2020-04-20-wide_open_spaces_1_files/figure-html/player_example-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;We’re not fully confident in our assessment of how fast this full back is so aren’t 100% sure where his next position will be (at time t + n seconds), but given how quick we &lt;em&gt;expect&lt;/em&gt; him to be, we can produce produce an expected distribution of his next x coordinate (here binned into boxes of 5m worth). This estimate will vary according to two parameters, the mean speed (μ) and the standard deviation of that speed (σ). If we make 10000 such estimates (assuming no bias and forgetting our previous estimate etc.) these will form the normal distribution probability density function&lt;/p&gt;
+&lt;p&gt;As we’re not fully confident in our assessment of how fast this full back is, we aren’t 100% sure where his next position will be (at time t + n seconds), but given how quick we &lt;em&gt;expect&lt;/em&gt; him to be, we can produce produce an expected distribution of his next x coordinate (here binned into boxes of 5m worth). This estimate will vary according to two parameters, the mean speed (μ) and the standard deviation of that speed (σ). If we make 10000 such estimates (assuming no bias and forgetting our previous estimate etc.) these will form the normal distribution probability density function&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot histogram of fake movement data
 p2 &amp;lt;- ggplot(full_back_next_pos, aes(x = next_x, y = Freq)) +
   geom_bar(stat = &amp;quot;identity&amp;quot;) +
@@ -94,10 +99,16 @@ full_back_movement &amp;lt;- data.frame(x = 40, y = 70, next_x = 60, next_y = 60
 #plot
 p3 &amp;lt;- ggplot() +
   annotate_pitch(dimensions = pitch_statsbomb) +
-  geom_tile(data = full_back_next_pos, aes(x = next_x, y = next_y, fill = Freq), alpha = 0.7, height = 10) +
+  geom_tile(data = full_back_next_pos, 
+            aes(x = next_x, y = next_y, fill = Freq), 
+            alpha = 0.7, height = 10) +
   scale_fill_viridis_c(name = &amp;quot;confidence&amp;quot;) +
-  geom_segment(data = full_back_movement, aes(x = x, xend = next_x, y = y, yend = next_y), size = 2, arrow = arrow(length = unit(0.03, &amp;quot;npc&amp;quot;))) +
-  geom_point(data = full_back_pos, aes(x = x , y = y), shape = 21, colour = &amp;quot;black&amp;quot;, fill = &amp;quot;red&amp;quot;, size = 5) +
+  geom_segment(data = full_back_movement, 
+               aes(x = x, xend = next_x, y = y, yend = next_y),
+               size = 2, arrow = arrow(length = unit(0.03, &amp;quot;npc&amp;quot;))) +
+  geom_point(data = full_back_pos,
+             aes(x = x , y = y),
+             shape = 21, colour = &amp;quot;black&amp;quot;, fill = &amp;quot;red&amp;quot;, size = 5) +
   theme_pitch()
 
 p3&lt;/code&gt;&lt;/pre&gt;
@@ -108,10 +119,9 @@ So now we have a realistic of guess, based upon the players velocity vector, of 
 &lt;div id=&#34;the-math&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;The Math&lt;/h1&gt;
 &lt;p&gt;Now we have an idea of what we want to do, ‘we’ need to formalise it. Luckily the paper already does it for us and all we need to do is follow the derivation. First, need to define two terms. We’ll call the space of possible locations (120 x 80m for me) P(itch) and the range of times T(ime)&lt;/p&gt;
-&lt;p&gt;For every single p at time t pitch control (PC) is defined by equation 2&lt;/p&gt;
+&lt;p&gt;For every single point p at time t pitch control (PC) is defined by equation 2&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[PC_{(p,t)} = \sigma \sum_{i} I_{(p,t)} - \sum_{j} I_{(p,t)}\]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;where you sum across i (all the players on team I) and j (all the players on team J).&lt;/p&gt;
-&lt;p&gt;because this is a logistic function will be from 0 to 1 where &amp;lt;0.5 is control by team J and &amp;gt;0.5 is control by team I. E.g. if you drop a ball at place p at time t, if PC(p,t) is greater than 0.5, team I is likelier to get the ball, and viceversa for &amp;lt;0.5 (PC(p,t) is in the range 0-&amp;gt;1).&lt;/p&gt;
+&lt;p&gt;where you sum across i (all the players on team I) and j (all the players on team J). This is then multiplied by a logistic function (σ). Due to the logistic function, the output of this (PC) will have a value from 0 to 1 where &amp;lt;0.5 is control by team J and &amp;gt;0.5 is control by team I. E.g. if you drop a ball at place p at time t, if PC(p,t) is greater than 0.5, team I is likelier to get the ball, and viceversa for &amp;lt;0.5 (PC(p,t) is in the range 0-&amp;gt;1).&lt;/p&gt;
 &lt;p&gt;We’ll rewrite this with sigma replace with numbers as:&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[PC(p,t) = \frac{1}{1 + (\sum_{i} I(p,t) - \sum_{j} I(p,t))}\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;From here it should be obvious we need to calculate I(p,t) for each player. We do this in equation 1&lt;/p&gt;
@@ -121,7 +131,7 @@ So now we have a realistic of guess, based upon the players velocity vector, of 
 &lt;p&gt;If we then skip to the supplemental figures we hit the pretty rough equation 12 which tells us how to solve for f_i(p,t)&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[f_{i}(p,t) = \frac{1}{\sqrt{(2\pi)^2detCOV_{i}(t)}}exp(-\frac{1}{2}(p-\mu_{i}(\overrightarrow{s}_{i}(t)))^tCOV_{i}(t)^{-1}(p-\mu_{i}(t)))  \]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;It looks horrendous but it’s just the equation for the multivariate normal distribution. See for example &lt;a href=&#34;https://wikimedia.org/api/rest_v1/media/math/render/svg/c66e6f6abd66698181e114a4b00da97446efd3c4&#34;&gt;here&lt;/a&gt;. We know we need this from the example using our full back above!&lt;/p&gt;
-&lt;p&gt;All we need to do is find x, μ, and Σ, in that picture. Then we’re going to use mvtnorm::dmvnorm to sample from it. If you run&lt;/p&gt;
+&lt;p&gt;All we need to do is find x, μ, and Σ, in that picture. Then we’re going to use mvtnorm::dmvnorm to calculate the denisty function. If you run&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;?mvtnorm::dmvnorm&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;you can see that ‘coincidentally’ this also requires 3 arguments (ignore the 4th log = FALSE), x, μ (mean), and sigma. All we have to do is find out what each of these arguments are equal to.&lt;/p&gt;
 &lt;p&gt;Firstly we want to find the covariance matrix (COV_i(t)). To calculate this, we can rewrite it as Sigma- the product of two matrices R and S such that:&lt;/p&gt;
@@ -144,7 +154,7 @@ s_{x} &amp;amp; 0 \\
 &lt;p&gt;After resolving these matrices, we then only need to find the mean value of the distribution (μ_i(t)) which is defined in equation 21 of the paper&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\mu_{i}(t) = p_{i}(t) + \overrightarrow{\widehat{s}}_{i}(t) \cdot 0.5 \]&lt;/span&gt;
 (we’ll go over the details of this equation later)&lt;/p&gt;
-&lt;p&gt;and also the pitch area, p, which is just an area of the pitch we want to find the control a player exerts over. We define this by dividing the total pitch area into many ‘pixels’ sampling each in our multivariate normal function. For example, in you split a 120m x 80m pitch into 1m^2 boxes, there are 120 * 80 = 9600 ‘pixels’ to sample.&lt;/p&gt;
+&lt;p&gt;and also the pitch area, p, which is just an area of the pitch we want to find the control a player exerts over. We define this by dividing the total pitch area into many ‘pixels’ sampling each in our multivariate normal function. For example, in you split a 120m x 80m pitch into 1m^2 boxes, there are 120 * 80 = 9600 ‘pixels’ to run across.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div id=&#34;the-data&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;The Data&lt;/h1&gt;
@@ -152,7 +162,7 @@ s_{x} &amp;amp; 0 \\
 &lt;p&gt;The function below downloads, melts and organises the data.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#func to download and melt tracking data
 #will use game 1
-get_tracking_data &amp;lt;- function(file, directory = &amp;quot;metrica-sports/sample-data&amp;quot;, x_adj = 105, y_adj = 68) {
+get_tracking_data &amp;lt;- function(file, directory = &amp;quot;metrica-sports/sample-data&amp;quot;, x_adj = 120, y_adj = 80) {
   #build url
   url &amp;lt;- paste0(&amp;quot;https://raw.githubusercontent.com/&amp;quot;, directory, &amp;quot;/master/data/&amp;quot;, file)
   #read data
@@ -185,7 +195,8 @@ get_tracking_data &amp;lt;- function(file, directory = &amp;quot;metrica-sports/
 
 #run
 tracking_data &amp;lt;- map_df(
-  c(&amp;quot;Sample_Game_1/Sample_Game_1_RawTrackingData_Away_Team.csv&amp;quot;, &amp;quot;Sample_Game_1/Sample_Game_1_RawTrackingData_Home_Team.csv&amp;quot;),
+  c(&amp;quot;Sample_Game_1/Sample_Game_1_RawTrackingData_Away_Team.csv&amp;quot;, 
+    &amp;quot;Sample_Game_1/Sample_Game_1_RawTrackingData_Home_Team.csv&amp;quot;),
   get_tracking_data) %&amp;gt;%
   filter(!is.na(x) &amp;amp; !is.na(y))&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;To calculate pitch control, we only need 4 pieces on information on each player to calculate their relative pitch control:&lt;/p&gt;
@@ -199,18 +210,16 @@ tracking_data &amp;lt;- map_df(
 &lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 9
 ##   period frame  time ball_x ball_y player       x     y team     
 ##    &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;    &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;    
-## 1      1     1  0.04   47.7   26.3 Player15  61.3  14.1 Away_Team
-## 2      1     2  0.08   52.1   27.6 Player15  61.3  14.1 Away_Team
-## 3      1     3  0.12   56.4   28.9 Player15  61.3  14.1 Away_Team
-## 4      1     4  0.16   58.1   28.7 Player15  61.3  14.2 Away_Team
-## 5      1     5  0.2    58.3   27.6 Player15  61.2  14.3 Away_Team
-## 6      1     6  0.24   58.5   26.5 Player15  61.1  14.4 Away_Team&lt;/code&gt;&lt;/pre&gt;
+## 1      1     1  0.04   54.6   31.0 Player15  70.1  16.6 Away_Team
+## 2      1     2  0.08   59.6   32.5 Player15  70.1  16.6 Away_Team
+## 3      1     3  0.12   64.5   34.0 Player15  70.1  16.6 Away_Team
+## 4      1     4  0.16   66.4   33.8 Player15  70.0  16.7 Away_Team
+## 5      1     5  0.2    66.6   32.5 Player15  69.9  16.8 Away_Team
+## 6      1     6  0.24   66.8   31.1 Player15  69.9  16.9 Away_Team&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;and from this we can build up everything we need. We’ll also want the team data at the end to sum across all players but for now that isn’t important.&lt;/p&gt;
 &lt;p&gt;First lets do the two simplest: the speed and trajectory of a player’s movement. To ease processing, first we’ll put all the information needed per frame on one line. Not strictly necessary, but allows for neater functions when we really get processing&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#first add in the lead x/y to ease processing 
 tracking_data &amp;lt;- tracking_data %&amp;gt;%
-  #hacky fix for speeds?
-  #dplyr::filter(time %in% seq(0, max(.$time), by = 0.2p)) %&amp;gt;%
   group_by(player, team, period) %&amp;gt;%
   #player x,y and time at t + n
   mutate(next_x = lead(x), next_y = lead(y), next_time = lead(time)) %&amp;gt;%
@@ -294,7 +303,7 @@ results &amp;lt;- c(speed_x, speed_y, theta_deg)
 names(results) &amp;lt;- c(&amp;quot;speed_x&amp;quot;, &amp;quot;speed_y&amp;quot;, &amp;quot;theta&amp;quot;)
 print(results)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;##    speed_x    speed_y      theta 
-##  0.8309848 -0.4739394 29.6976071&lt;/code&gt;&lt;/pre&gt;
+##  0.9496970 -0.5575758 30.4175840&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;(the calculations will use theta in radians, but I think it makes more sense to show it here in degrees).&lt;/p&gt;
 &lt;p&gt;We can now very trivially solve equation 21 right off the bat&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[\mu_{i}(t) = p_{i}(t) + \overrightarrow{\widehat{s}}_{i}(t) \cdot 0.5 \]&lt;/span&gt;&lt;/p&gt;
@@ -431,12 +440,12 @@ calc_I &amp;lt;- function(pitch_area, x, y, mu_x, mu_y, Sigma) {
 I &amp;lt;- calc_I(pitch, x_start, y_start, mu_x, mu_y, Sigma)
 head(mutate(pitch, I))&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;##           x y            I
-## 1 0.0000000 0 8.097891e-74
-## 2 0.6030151 0 7.108987e-73
-## 3 1.2060302 0 6.151215e-72
-## 4 1.8090452 0 5.246040e-71
-## 5 2.4120603 0 4.409808e-70
-## 6 3.0150754 0 3.653635e-69&lt;/code&gt;&lt;/pre&gt;
+## 1 0.0000000 0 4.256184e-96
+## 2 0.6030151 0 5.076124e-95
+## 3 1.2060302 0 5.967198e-94
+## 4 1.8090452 0 6.914091e-93
+## 5 2.4120603 0 7.896343e-92
+## 6 3.0150754 0 8.888804e-91&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;We of course need to do this across the whole team, summing the pitch influence per team then finding the difference between them as per equation 2 in the paper&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[PC_{(p,t)} = \sigma \sum_{i} I_{(p,t)} - \sum_{j} I_{(p,t)}\]&lt;/span&gt;&lt;/p&gt;
 &lt;p&gt;I’ve neatly nested all the functions we’ve written into one larger function which every row of a team is then applied to using pmap from the purrr package.&lt;/p&gt;
@@ -654,11 +663,11 @@ microbenchmark(
   times = 100
 )&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## Unit: milliseconds
-##              expr      min       lq     mean   median       uq        max neval
-##      pmap_calc_pc 4.582201 6.261201 6.983336 6.610352 7.380701  14.518001   100
-##  pmap_calc_pc_cpp 4.476900 5.343902 7.118778 5.506201 6.081450 129.428202   100
-##           calc_pc 3.268501 4.397600 4.778143 4.621302 5.032951   9.921601   100
-##       calc_pc_cpp 3.083600 3.437851 3.904248 3.660301 4.164252   5.948601   100&lt;/code&gt;&lt;/pre&gt;
+##              expr    min      lq     mean  median      uq      max neval
+##      pmap_calc_pc 4.3516 5.48390 5.627819 5.66785 5.85755   7.9524   100
+##  pmap_calc_pc_cpp 4.1379 4.88820 6.289097 5.12535 5.32970 120.6178   100
+##           calc_pc 3.1375 3.85350 3.978798 3.98955 4.16720   5.1313   100
+##       calc_pc_cpp 2.6562 3.15685 3.399587 3.35045 3.49230   7.8303   100&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;That’s all for this post! As I said at some point (soon? later? who knows) I’d like to include the value term because conceptually it’s not hard to get a stupid version of it going. Hopefully this is of use to some people. As I said up top, written in evenings locked inside during quarantine so probably maths mistakes/ huge coding errors etc. If people point them out and get in touch I’ll fix them.&lt;/p&gt;
 &lt;p&gt;Best!&lt;/p&gt;
 &lt;/div&gt;
