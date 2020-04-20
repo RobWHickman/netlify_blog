@@ -655,10 +655,10 @@ microbenchmark(
 )&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## Unit: milliseconds
 ##              expr      min       lq     mean   median       uq        max neval
-##      pmap_calc_pc 4.678101 6.016201 6.348389 6.450652 6.786201   8.110101   100
-##  pmap_calc_pc_cpp 4.193102 5.138201 6.532153 5.414801 5.683001 121.216300   100
-##           calc_pc 3.320500 4.267101 4.512472 4.559201 4.814401   5.803501   100
-##       calc_pc_cpp 2.743001 3.231902 3.498605 3.513801 3.704501   5.351702   100&lt;/code&gt;&lt;/pre&gt;
+##      pmap_calc_pc 4.582201 6.261201 6.983336 6.610352 7.380701  14.518001   100
+##  pmap_calc_pc_cpp 4.476900 5.343902 7.118778 5.506201 6.081450 129.428202   100
+##           calc_pc 3.268501 4.397600 4.778143 4.621302 5.032951   9.921601   100
+##       calc_pc_cpp 3.083600 3.437851 3.904248 3.660301 4.164252   5.948601   100&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;That’s all for this post! As I said at some point (soon? later? who knows) I’d like to include the value term because conceptually it’s not hard to get a stupid version of it going. Hopefully this is of use to some people. As I said up top, written in evenings locked inside during quarantine so probably maths mistakes/ huge coding errors etc. If people point them out and get in touch I’ll fix them.&lt;/p&gt;
 &lt;p&gt;Best!&lt;/p&gt;
 &lt;/div&gt;
