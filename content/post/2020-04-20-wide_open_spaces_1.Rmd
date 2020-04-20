@@ -1,0 +1,810 @@
+---
+title: Papers Please! 'Wide Open Spaces A statistical technique for measuring space creation in professional soccer' pt 1
+author: Robert Hickman
+date: '2020-04-20'
+slug: fall_back_in_to_space
+output: pdf_document
+categories: []
+tags:
+  - research
+  - football
+  - modelling
+header:
+  caption: ''
+  image: ''
+---
+
+
+_written during lockdown so while I think it adds some value (and is useful to organise my thoughts on the paper for my own work on football) there are probably mistakes. E.g. the C++ code is still pretty inefficient and could well be improved and I've surely confused some maths concepts. To be honest, the post is just an excuse to practice writing LaTeX maths and some C++. Let me know my errors and I'll correct_
+
+[Beach House - Space Song](https://www.youtube.com/watch?v=f9X1C7pTu-M)
+
+# Intro/Pre-amble
+
+When analysing football (whether as a scout watching games, or an analyst using data), we want the greatest sample size possible. During a single match a player might well make fewer than 100 'events' (passes, tackles, interceptions, shots, ...) and still play well enough that he might be a worthwhile purchase. As we increase the number of matches we watch that player play, a more accurate 'smoothed' representation of their game should emerge. However, time is very obviously a limited resource. If we assume a very hardworking scout can watch 6 football matches a day, it will probably take them a week to cover all of the games of one team in a season, and over 3 months to cover an entire season of a league. 
+
+An obvious way to get around some of these limitations is augment scouting using data. If a player is obviously an [Filipo Inzaghi](https://en.wikipedia.org/wiki/Filippo_Inzaghi) style poacher, its feasible we might watch 5-6 games of his to get a feel of his ability, then check some basic stats such a shots, xG, ... etc. per game over his last few seasons to see how representative our sample was and flesh out our scouting.
+
+When we build these models (even just counting shot numbers) we are in essence 'teaching' machines to do the scouting for us. We provide them with a model of how the game works and ask them to 'watch' a huge number of matches very quickly. The obvious pitfall of this is that 'computers don't play football', and they don't, so the output of our model is going to be proportional to the understanding of the game the computer has. For example, a computer who only counts shot numbers has a poorer understanding of football than a machine who weights these by xG per shot. Just as humans understand creating better shooting chances is important, the second computer has come to grasp that.
+
+Some of these computational models seem to work, even with simple inputs. The xG a striker produces per season does for instance align quite well with how good the human eye test thinks a striker is. However, many are _quite bad_, especially as you move back through play away from shots on goal. To fix this, we need machines who understand the game better, and in the same ways humans do.
+
+This is really the idea behind a lot of modern football analytics research, but I think especially behind [Wide Open Spaces](http://www.sloansportsconference.com/wp-content/uploads/2018/03/1003.pdf), a 2019 Sloan conference paper by Javier Fernandez and Luke Bornn. I'm not going to review the whole paper, but the key takeaway is that for every 'event' that a player takes, there are actually many more uncaptured events where players are continually creating and destroying space. Combining these gives us a better approximation of what the human brain does when evaluating players. If this seems confusing, a simpler way to think about this is consider [this Tifo football video on Thomas Mueller](https://www.youtube.com/watch?v=sZsJo7ZKdjQ). It is probably more valuable to be able to create and exploit space, than it is to be able to technically execute a pass. The reverse is also clearly true for defenders; consider Maldini's famous quote: "If I have to make a tackle then I have already made a mistake.".
+
+The paper, while very clearly written, does not explain it's maths as clearly as I might like, so I thought a post going through exactly what the paper is doing might be of value. All the hard work for this post is reall done by [Will Thompson's](https://twitter.com/AnEnglishGoat) whose implementation of the algorithm in python [here](https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU) forms the basis (and only has minor tweaks in my final code).
+
+As always, let's first load some libraries we'll need:
+
+```{r libraries, warning=FALSE,message=FALSE}
+set.seed(3459)
+#libraries
+library(tidyverse)
+library(ggsoccer)
+library(mvtnorm) #might be possible with MASS
+library(zoo)
+
+```
+
+# The Theory
+
+Imagine two teams, I and J. Each of these has 11 players (hopefully) on the pitch at any time chasing after one ball. We want to know which team controls which parts of the pitch for each point in the match. As 'control' really only refers to "will player on my team get to a potential pass there first", pitch control is just looking at where players i,j,k... are going to be at time t -> time t + n.
+
+The easiest way to start to approximate this is to imagine a set of players who never change direction, they only speed up or slow down (and possible reverse). E.g. a full back running up and down the wings like a rook in a chess game. Their location at t + 1 will be their current location plus the expected value of their velocity. 
+
+```{r player_example, warning=FALSE,message=FALSE}
+#make up some movement data
+full_back_pos <- data.frame(x = 40, y = 70)
+full_back_movement <- data.frame(
+  pos = 40,
+  x = c(10, 100),
+  y_pos = 70)
+
+next_x <- rnorm(10000, 60, 5)
+next_x <- next_x - (next_x %% 5)
+full_back_next_pos <- data.frame(table(next_x)) %>%
+  mutate(y = 70, 
+         next_x = as.numeric(as.character(next_x)),
+         Freq = Freq / sum(Freq))
+  
+
+#plot fake movement data
+p <- ggplot() +
+  annotate_pitch(dimensions = pitch_statsbomb) +
+  geom_tile(data = full_back_next_pos, aes(x = next_x, y = y, fill = Freq), alpha = 0.7, height = 10) +
+  scale_fill_viridis_c(name = "confidence") +
+  geom_segment(data = full_back_movement, aes(x = pos, xend = x, y = y_pos, yend = y_pos), size = 2) +
+  geom_point(data = full_back_pos, aes(x = x , y = y), shape = 21, colour = "black", fill = "red", size = 5) +
+  theme_pitch()
+
+p
+```
+
+We're not fully confident in our assessment of how fast this full back is so aren't 100% sure where his next position will be (at time t + n seconds), but given how quick we _expect_ him to be, we can produce produce an expected distribution of his next x coordinate (here binned into boxes of 5m worth). This estimate will vary according to two parameters, the mean speed (μ) and the standard deviation of that speed (σ). If we make 10000 such estimates (assuming no bias and forgetting our previous estimate etc.) these will form the normal distribution probability density function
+
+```{r player_example_hist, warning=FALSE,message=FALSE}
+#plot histogram of fake movement data
+p2 <- ggplot(full_back_next_pos, aes(x = next_x, y = Freq)) +
+  geom_bar(stat = "identity") +
+  ylab("confidence") +
+  xlab("next x coordinate") +
+  theme_minimal()
+
+p2
+```
+
+(here I've plotted the x axis as the next x coordinate which is just our estimate of the x speed + the original x coordinate [40]).
+
+But this is obviously an oversimplification because players can travel in a myriad different directions across the pitch- we need our normal distribution confidence interval to generalise across more than 1 dimension. 
+
+```{r player_example_2d, warning=FALSE,message=FALSE}
+#fake data in 2 dimensions now
+next_x <- rnorm(10000, 60, 5)
+next_x <- next_x - (next_x %% 5)
+next_y <- rnorm(10000, 65, 3)
+next_y <- next_y - (next_y %% 5)
+
+full_back_next_pos <- data.frame(next_x, next_y) %>%
+  group_by(next_x, next_y) %>%
+  summarise(Freq = n())
+
+full_back_movement <- data.frame(x = 40, y = 70, next_x = 60, next_y = 60)
+
+#plot
+p3 <- ggplot() +
+  annotate_pitch(dimensions = pitch_statsbomb) +
+  geom_tile(data = full_back_next_pos, aes(x = next_x, y = next_y, fill = Freq), alpha = 0.7, height = 10) +
+  scale_fill_viridis_c(name = "confidence") +
+  geom_segment(data = full_back_movement, aes(x = x, xend = next_x, y = y, yend = next_y), size = 2, arrow = arrow(length = unit(0.03, "npc"))) +
+  geom_point(data = full_back_pos, aes(x = x , y = y), shape = 21, colour = "black", fill = "red", size = 5) +
+  theme_pitch()
+
+p3
+
+```
+So now we have a realistic of guess, based upon the players velocity vector, of where they will be in n seconds time. If we do the same for every player of the pitch, we get a (roughly) 22 layer raster detailing how likely any single player is to be able to be in location x, y at time t + n. If a football magically appeared at point x,y, we now know which player(s) are likely to be able to reach it. Therefore, we know we parts of the pitch team I or J 'controls'- where their teammates can pass to and expect them to receive the ball.
+
+This really is the fundamental idea of the pitch control metric presented in [Wide Open Spaces](http://www.sloansportsconference.com/wp-content/uploads/2018/03/1003.pdf)- we can use the expected 2d position of each player in the next n seconds, to work out which team would win the ball if it were dropped on a specific coordinate. This is what we mean by 'pitch control'.
+
+# The Math
+
+Now we have an idea of what we want to do, 'we' need to formalise it. Luckily the paper already does it for us and all we need to do is follow the derivation. First, need to define two terms. We'll call the space of possible locations (120 x 80m for me) P(itch) and the range of times T(ime)
+
+For every single p at time t pitch control (PC) is defined by equation 2
+
+$$PC_{(p,t)} = \sigma \sum_{i} I_{(p,t)} - \sum_{j} I_{(p,t)}$$
+
+where you sum across i (all the players on team I) and j (all the players on team J).
+
+because this is a logistic function will be from 0 to 1 where <0.5 is control by team J and >0.5 is control by team I. E.g. if you drop a ball at place p at time t, if PC(p,t) is greater than 0.5, team I is likelier to get the ball, and viceversa for <0.5 (PC(p,t) is in the range 0->1).
+
+We'll rewrite this with sigma replace with numbers as:
+
+$$PC(p,t) = \frac{1}{1 + (\sum_{i} I(p,t) - \sum_{j} I(p,t))}$$
+
+
+From here it should be obvious we need to calculate I(p,t) for each player. We do this in equation 1
+
+$$I_{i}(p,t) = \frac{f_{i}(p,t)}{f_{i}(p_{i}(t), t)} $$
+
+The numerator here is the probability density function of the player influence. How much influence does a single player have over any single part of the pitch surface (p) at a time (t). This is normalised by the denominator which does the same thing only for the players current location at time t (p_i(t)).
+
+Ok so so far so good. Equations 4 and 5 in the paper we'll come back to later but they define the value of having the ball at these locations. Don't worry about that for now. We won't really go into that in this post.
+
+If we then skip to the supplemental figures we hit the pretty rough equation 12 which tells us how to solve for f_i(p,t)
+
+$$f_{i}(p,t) = \frac{1}{\sqrt{(2\pi)^2detCOV_{i}(t)}}exp(-\frac{1}{2}(p-\mu_{i}(\overrightarrow{s}_{i}(t)))^tCOV_{i}(t)^{-1}(p-\mu_{i}(t)))  $$
+
+It looks horrendous but it's just the equation for the multivariate normal distribution. See for example [here](https://wikimedia.org/api/rest_v1/media/math/render/svg/c66e6f6abd66698181e114a4b00da97446efd3c4). We know we need this from the example using our full back above!
+
+All we need to do is find x, μ, and Σ, in that picture. Then we're going to use mvtnorm::dmvnorm to sample from it. If you run 
+```{r show_help, warning=FALSE,message=FALSE,eval=FALSE}
+?mvtnorm::dmvnorm
+```
+
+you can see that 'coincidentally' this also requires 3 arguments (ignore the 4th log = FALSE), x, μ (mean), and sigma. All we have to do is find out what each of these arguments are equal to.
+
+Firstly we want to find the covariance matrix (COV_i(t)). To calculate this, we can rewrite it as Sigma- the product of two matrices R and S such that:
+
+$$ \Sigma = R\cdot S \cdot S \cdot R^{-1}$$
+where R is the rotation matrix around the euclidean plane:
+
+$$R = 
+\begin{bmatrix}
+cos(\theta) & -sin(\theta) \\
+sin(\theta) & cos(\theta) \\
+\end{bmatrix}
+$$
+
+and S is a scaling matrix
+
+$$S = 
+\begin{bmatrix}
+s_{x} & 0 \\
+0 & s_{y} \\
+\end{bmatrix}
+$$
+
+The details of this transformation aren't really important, but a good explanation can be found [here](https://www.visiondummy.com/2014/04/geometric-interpretation-covariance-matrix/).
+
+After resolving these matrices, we then only need to find the mean value of the distribution (μ_i(t)) which is defined in equation 21 of the paper
+
+$$\mu_{i}(t) = p_{i}(t) + \overrightarrow{\widehat{s}}_{i}(t) \cdot 0.5 $$
+(we'll go over the details of this equation later)
+
+and also the pitch area, p, which is just an area of the pitch we want to find the control a player exerts over. We define this by dividing the total pitch area into many 'pixels' sampling each in our multivariate normal function. For example, in you split a 120m x 80m pitch into 1m^2 boxes, there are 120 * 80 = 9600 'pixels' to sample.
+
+# The Data
+
+Now we've (briefly) gone through the theory, we can start working with the data and build our way back up. First we need to get our hands on the data itself. As part of the Friends of Tracking project during lockdown, Metrica Sports have kindly provided 2 sample matches (I'm using match 1 here) of tracking and event data which can be found [here](https://github.com/metrica-sports/sample-data).
+
+The function below downloads, melts and organises the data.
+
+```{r get_and_melt_tracking_data, warning=FALSE,message=FALSE}
+#func to download and melt tracking data
+#will use game 1
+get_tracking_data <- function(file, directory = "metrica-sports/sample-data", x_adj = 105, y_adj = 68) {
+  #build url
+  url <- paste0("https://raw.githubusercontent.com/", directory, "/master/data/", file)
+  #read data
+  data <- read_csv(url, skip = 2)
+  
+  #fix names
+  names(data)[grep("^X[0-9]*$", names(data))-1] <- paste0(names(data)[grep("^X[0-9]*$", names(data))-1], "_x")
+  names(data)[grep("^X[0-9]*$", names(data))] <- gsub("_x$", "_y", names(data)[grep("^X[0-9]*$", names(data))-1])
+  
+  #melt it from long to wide
+  melted_data <- data %>%
+    pivot_longer(cols = starts_with("Player")) %>%
+    separate(name, into = c("player", "coord"), sep = "_") %>%
+    pivot_wider(names_from = "coord", values_from = "value") %>%
+    rename(time = `Time [s]`) %>%
+    rename_all(tolower) %>%
+    #add the team info
+    #scale coords to statsbomb spec
+    mutate(team = gsub("(.*)(Home_Team|Away_Team)(\\..*)", "\\2", file)) %>%
+    mutate_at(vars(ends_with("x")), ~.x * x_adj) %>%
+    mutate_at(vars(ends_with("y")), ~.x * y_adj) %>%
+    arrange(player, frame) %>%
+    #some missing values on the ball location
+    #will just say ball stays where it is when no location data
+    #could interpolate but w/e
+    mutate(ball_x = na.locf(ball_x),
+           ball_y = na.locf(ball_y))
+  return(melted_data)
+}
+
+#run
+tracking_data <- map_df(
+  c("Sample_Game_1/Sample_Game_1_RawTrackingData_Away_Team.csv", "Sample_Game_1/Sample_Game_1_RawTrackingData_Home_Team.csv"),
+  get_tracking_data) %>%
+  filter(!is.na(x) & !is.na(y))
+
+```
+
+To calculate pitch control, we only need 4 pieces on information on each player to calculate their relative pitch control:
+
+- their x,y location on the pitch
+- the x,y location of the ball
+- the time at which they were at that location
+- and also, their location x,y at time t + n
+
+```{r show_player_data}
+head(tracking_data)
+
+```
+
+and from this we can build up everything we need. We'll also want the team data at the end to sum across all players but for now that isn't important.
+
+First lets do the two simplest: the speed and trajectory of a player's movement. To ease processing, first we'll put all the information needed per frame on one line. Not strictly necessary, but allows for neater functions when we really get processing
+
+```{r prep_data, warning=FALSE,message=FALSE}
+#first add in the lead x/y to ease processing 
+tracking_data <- tracking_data %>%
+  #hacky fix for speeds?
+  #dplyr::filter(time %in% seq(0, max(.$time), by = 0.2p)) %>%
+  group_by(player, team, period) %>%
+  #player x,y and time at t + n
+  mutate(next_x = lead(x), next_y = lead(y), next_time = lead(time)) %>%
+  #to develop velocity arrows per player
+  mutate(forward_x = lead(x, 10), forward_y = lead(y, 10)) %>%
+  ungroup() 
+
+
+```
+
+We calculate the speed in the x and y dimensions simply as the change in position divided by the time taken, and can calculate theta using either this speed vector, or the change in position (defined as the angle from the x axis the vector takes).
+
+For an example, here is the data for 4 seconds on Player15 in the sample dataset. It's taken from about 4 minutes into the match.
+
+```{r example_data, warning=FALSE,message=FALSE}
+#filters for some data to plot
+player_spec <- "Player15"
+#each frame is 0.04s apart, take 100 frames worth from t = 250
+times_spec <- seq(250, by = 0.04, length.out = 100)
+
+#filter
+example_data <- tracking_data %>%
+  filter(player == player_spec & time %in% times_spec)
+
+#plot the players trajectory over this time
+#and the velocity and theta derived from it
+p4 <- ggplot(example_data) +
+  geom_point(aes(x = x, y = y, colour = time), alpha = 0.6, size = 3) +
+  #plot the x-axis as a green line
+  geom_hline(yintercept = first(example_data$y), colour = "green", alpha = 0.5, size = 3) +
+  #plot the x-axis movement
+  geom_segment(aes(x = first(x), xend = last(x), y = first(y), yend = first(y)), 
+               arrow = arrow(length = unit(0.03, "npc"))) +
+  #plot the y axis movement
+  geom_segment(aes(x = last(x), xend = last(x), y = first(y), yend = last(y)), 
+               arrow = arrow(length = unit(0.03, "npc"))) +
+  #plot the hypotenuse
+  geom_segment(aes(x = first(x), xend = last(x), y = first(y), yend = last(y)),
+               size = 2, colour = "red", arrow = arrow(length = unit(0.03, "npc"))) +
+  #anotate speeds and theta
+  annotate("text", x = 105.5, y = 17.3, label = "x speed = 0.95 m/s") +
+  annotate("text", x = 106.75, y = 16.25, label = "y speed =\n0.56m/s") +
+  annotate("text", x = 104.25, y = 16.9, label = "theta = -30.4°") +
+  labs(x = "pitch x coord (/m)",
+       y = "pitch y coord (/m)",
+       title = "example player movement over 4 seconds") +
+  #scale manually so it isn't distorted
+  scale_x_continuous(limits = c(103.5, 107.5)) +
+  scale_y_continuous(limits = c(14, 18)) +
+  theme_minimal()
+
+p4
+```
+
+So we get a good idea of the players trajectory over those 4 seconds and the average velocity and angle he is travelling at.
+
+We can now start building up all the calculations we need to do to work out the pitch control any one player (and then whole teams) exert from basics. Through this I'm going to define each sum as a function to make it _extremely_ clear what's going on. Some of those functions will be ridiculously simple, but I don't want to skip over anything.
+
+Starting with the speed in any dimension and the angle from the x axis (theta) the player is travelling at:
+
+```{r speed_theta_funcs, warning=FALSE,message=FALSE}
+#no real reason for these to be functions, but just to
+#make it more obvious what we're doing
+get_speed <- function(coord, next_coord, time, next_time) {
+  #speed in meters per second
+  speed = (next_coord - coord) / (next_time - time)
+  return(speed)
+}
+
+#again very simple for illustrative purposes
+get_theta <- function(x_speed, y_speed) {
+  hypotenuse_speed = sqrt(x_speed^2 + y_speed^2)
+  theta = acos(x_speed / hypotenuse_speed)
+  return(theta)
+}
+```
+
+if we plug our data from graph p4 into these very verbose-ly we get
+
+```{r verbose_basic_results, warning=FALSE,message=FALSE}
+x_start <- first(example_data$x)
+x_end <- last(example_data$x)
+y_start <- first(example_data$y)
+y_end <- last(example_data$y)
+t_start <- first(example_data$time)
+t_end <- last(example_data$time)
+
+#in m/s
+speed_x <- get_speed(x_start, x_end, t_start, t_end)
+speed_y <- get_speed(y_start, y_end, t_start, t_end)
+
+#convert to degrees
+theta <- get_theta(speed_x, speed_y)
+theta_deg <- theta * (180/pi)
+
+results <- c(speed_x, speed_y, theta_deg)
+names(results) <- c("speed_x", "speed_y", "theta")
+print(results)
+```
+
+(the calculations will use theta in radians, but I think it makes more sense to show it here in degrees).
+
+We can now very trivially solve equation 21 right off the bat
+
+$$\mu_{i}(t) = p_{i}(t) + \overrightarrow{\widehat{s}}_{i}(t) \cdot 0.5 $$
+
+Where p is the location of player i at time t, and s_hat is the speed of the player in either dimension. The mean of the distribution (where we expect the player to have the most pitch control) is his current position + (where he will be / 2)
+
+```{r get_mu, warning=FALSE,message=FALSE}
+#another simple function to find mu
+get_mu <- function(location, speed) {
+  mu = location + speed / 2
+  return(mu)
+}
+
+mu_x <- get_mu(x_start, speed_x)
+mu_y <- get_mu(y_start, speed_y)
+```
+
+Which means we now have the first of our variables for our big multivariate normal distribution equation (paper equation 12) 
+
+$$f_{i}(p,t) = \frac{1}{\sqrt{(2\pi)^2detCOV_{i}(t)}}exp(-\frac{1}{2}(p-\mu_{i}(\overrightarrow{s}_{i}(t)))^tCOV_{i}(t)^{-1}(p-\mu_{i}(t)))  $$
+
+and just need to define p, and calculate the covariance matrix COV.
+
+We can start calculating the components of the covariance matrix with equation 18 (calculating the speed as a ratio of max speed) which is also trivial to solve now. Instead of using the speed in either direction, this relies on the total velocity , which we can find using school trigonometry
+
+$$ Srat_{i}(t) = \frac{s^2}{ 13^2 } $$
+The 13m/s constant is the assumed maximum possible speed of a player (averaging this over 100m would break the world record by ~2 seconds)
+
+```{r, get_srat, warning=FALSE,message=FALSE}
+get_srat <- function(speed_x, speed_y) {
+  #find total velocity
+  speed <- sqrt(speed_x^2 + abs(speed_y)^2)
+  srat = (speed / 13)^2
+  return(srat)
+}
+
+srat <- get_srat(speed_x, speed_y)
+```
+
+And we can also find the constant Ri- the radius of a players influence- which isn't listed in the paper but gives rise to figure 9. Given the formula isn't listed, the numeric constants in the equation might be slightly off. They're all taken from Will Thompson's work [here](https://colab.research.google.com/drive/1V75UgfJEfCWgbfxnG4OuB1WpvqahUJPU?pli=1).
+
+$$R_{i}(t) = 
+\begin{cases} 
+4 + \frac{(p_{i}(t) - p_{b}(t))^3}{18^3 / 6} & \text{if < 10} \\
+10 & \text{else}
+\end{cases}$$
+
+It specifies that a player has an influence radius of 10 metres, unless they are within ~15metres of the ball, in which case their influence radius decreases with ball_distance to a minimum of 4 metres. The idea behind this is that a player nearer the ball is much more geographically focused in their movement- as they either posses the ball or are trying to win it back.
+
+```{r get_ri, warning=FALSE,message=FALSE}
+#allocate a few more variables from our example data
+ball_x <- first(example_data$ball_x)
+ball_y <- first(example_data$ball_y)
+
+#little bit more complicated but still easy
+get_ri <- function(x, y, ball_x, ball_y) {
+  ball_diff <- sqrt((x - ball_x) ^ 2 + (y - ball_y)^2)
+  ri = 4 + ((ball_diff^3) / ((18^3) / 6))
+  return(min(ri, 10))  
+}
+
+ri <- get_ri(x_start, y_start, ball_x, ball_y)
+```
+
+We can test this function in the range of distance to the ball 0-30m and compare it to figure 9 in the paper
+
+```{r test_function, warning=FALSE,message=FALSE}
+p5 <- data.frame(
+  x = 0:30,
+  y = map_dbl(0:30, get_ri,
+    #set all other args to 0
+    y = 0, ball_x = 0, ball_y = 0)) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_line(colour = "maroon", size = 2) +
+  geom_point(size = 3, alpha = 0.5) +
+  scale_y_continuous(limits = c(0, 12)) +
+  labs(title = "paper figure 9 (approx)",
+       x = "distance to the ball (/m)",
+       y = "influence radius (/m)") +
+  theme_minimal() 
+
+p5
+```
+
+We're really getting there now. We just need to define our covariance matrix and we're done with equations. Remember earlier with redefined
+
+$$ \Sigma = R\cdot S \cdot S \cdot R^{-1}$$
+in paper equation 14, where R is the rotation matrix, and S is the scaling matrix. 
+
+To rotate in Euclidean space clockwise from the x-axis, the rotation matrix [is just](https://en.wikipedia.org/wiki/Rotation_matrix)
+
+$$R = 
+\begin{bmatrix}
+cos(\theta) & -sin(\theta) \\
+sin(\theta) & cos(\theta) \\
+\end{bmatrix}
+$$
+as also defined in the paper in equation 16. Easy enough to define, we just need to put the right transform of theta in the right space
+
+```{r get_R, warning=FALSE,message=FALSE}
+get_R <- function(theta) {
+  #R fills down first so these aren't the wrong way round
+  R = matrix(c(cos(theta), sin(theta), -sin(theta), cos(theta)), nrow = 2)
+  return(R)
+}
+
+R <- get_R(theta)
+
+```
+
+For simplicity, I earlier said that the scaling matrix (S) was equivalent to the speed of the player in x and y dimensions, which was a bit of a white lie. It _is_ derived from that, but itself scaled by the influence radius of the player (Ri)
+
+$$S = 
+\begin{bmatrix}
+s_{x} & 0 \\
+0 & s_{y} \\
+\end{bmatrix}
+$$
+$$S_{i}(t) = 
+\begin{bmatrix}
+\frac{R_{i}(t) \cdot (1 + Srat_{i}(\overrightarrow{s}_{i}(t)))}{2} & 0 \\
+0 & \frac{R_{i}(t) \cdot (1-Srat_{i}(\overrightarrow{s}_{i}(t)))}{2} \\
+\end{bmatrix}
+$$
+
+This is the same as equation 19, I've just taken the Ri outside the brackets. As with the rotation matrix R, this is just matrix building and putting the right variables in the right place
+
+```{r get_S, warning=FALSE,message=FALSE}
+get_S <- function(ri, srat) {
+  top_left <- ri * (1 + srat) / 2
+  bottom_right <- ri * (1-srat) / 2
+  S = matrix(c(top_left, 0, 0, bottom_right), nrow = 2)
+}
+
+S <- get_S(ri, srat)
+```
+
+Once we have R and S, Σ is just equal to the dot product of these as in equation 15
+
+```{r get_Sigma, warning=FALSE,message=FALSE}
+get_Sigma <- function(R, S) {
+  inv_R <- solve(R)
+  Sigma = R %*% S %*% S %*% inv_R
+  return(Sigma)
+}
+
+Sigma <- get_Sigma(R, S)
+```
+
+So now we have the mean (μ), sigma (Σ) arguments to our dmvnorm function to calculate a players pitch control. We just to plug in the p term (corresponding to x in the R function arguments). 
+
+As in equation 1 (and 13), we actually need _two_ p terms: 
+
+$$I_{i}(p,t) = \frac{f_{i}(p,t)}{f_{i}(p_{i}(t), t)} $$
+
+the first (p) account for every 'unit' of the pitch (we divide the pitch up into each squares and calculate a players influence on each) and a second (p_i) which is the control of a player on their own area of pitch p. The denominator (control of pitch at player i's x,y) is used to normalise the control they exert across the pitch from 0-1.
+
+To create the matrix of pitch zones, we can simply use seq and expand.grid on the dimensions of the pitch. Splitting each dimension 200 ways leaves us with a 40000 x 2 data.frame to apply as p. For p_i, we just use the player's x and y coordinates. 
+
+```{r get_I, warning=FALSE,message=FALSE}
+#use statsbomb coords - 120m x 80m pitch
+#split into 200x200 rectangles
+pitch <- expand.grid(seq(0, 120, length.out = 200), seq(0, 80, length.out = 200)) %>%
+    rename(x = Var1, y = Var2)
+
+#function to calculate I as in equation 1/13
+calc_I <- function(pitch_area, x, y, mu_x, mu_y, Sigma) {
+  #create vectors
+  mu <- c(mu_x, mu_y)
+  player_loc <- c(x, y)
+  
+  numerator <- dmvnorm(as.matrix(pitch_area), mu, Sigma)
+  denominator <- dmvnorm(t(matrix(player_loc)), mu, Sigma)
+  #and normalise
+  norm_pdf = numerator/denominator
+  return(norm_pdf)
+}
+
+#column I is the control on pitch area x,y of player I
+I <- calc_I(pitch, x_start, y_start, mu_x, mu_y, Sigma)
+head(mutate(pitch, I))
+```
+
+We of course need to do this across the whole team, summing the pitch influence per team then finding the difference between them as per equation 2 in the paper
+
+$$PC_{(p,t)} = \sigma \sum_{i} I_{(p,t)} - \sum_{j} I_{(p,t)}$$
+
+I've neatly nested all the functions we've written into one larger function which every row of a team is then applied to using pmap from the purrr package. 
+
+```{r get_team_PC, warning=FALSE,message=FALSE}
+#test our functions on one frame of the tracking data
+testing_data <- tracking_data %>%
+  filter(time == 600) 
+
+#sum all our little functions into one bigger function
+calc_PC <- function(time, next_time, ball_x, ball_y, x, y, next_x, next_y, team, player, pitch_area) {
+  speed_x <- get_speed(x, next_x, time, next_time)
+  speed_y <- get_speed(y, next_y, time, next_time)
+  srat <- get_srat(speed_x, speed_y)
+  theta <- get_theta(speed_x, speed_y)
+  
+  mu_x <- get_mu(x, speed_x)
+  mu_y <- get_mu(y, speed_y)
+  
+  ri <- get_ri(x, y, ball_x, ball_y)
+
+  R <- get_R(theta)
+  S <- get_S(ri, srat)
+  
+  Sigma <- get_Sigma(R, S)
+  
+  pitch_area$I <- calc_I(as.matrix(pitch), x, y, mu_x, mu_y, Sigma)
+  pitch_area$team <- team
+  pitch_area$time <- time
+  pitch_area$player <- player
+  return(pitch_area)
+}
+
+#run the pitch control function
+pitch_control <- testing_data %>%
+  select(time, next_time, ball_x, ball_y, x, y, next_x, next_y, player, team) %>%
+  #run func
+  pmap_df(., calc_PC, pitch_area = pitch) %>%
+  #sum by team and area
+  group_by(team, x, y) %>%
+  summarise(team_sum = sum(I)) %>%
+  pivot_wider(names_from = team, values_from = team_sum) %>%
+  #σ - logistic function
+  mutate(PC = 1 / (1 + exp(Home_Team - Away_Team)))
+
+```
+
+After calculating the individual pitch control metrics, we sum by team and pixel and then subtract the away team sum from the home team sum and run it through a simple logistic function (σ)
+
+```{r plot_PC, warning=FALSE,message=FALSE}
+#get the position of the ball for this frame
+ball_location <- testing_data %>%
+  select(ball_x, ball_y) %>%
+  unique()
+
+#plot it all
+p6 <- ggplot() +
+  #pitch layout background
+  annotate_pitch(dimensions = pitch_statsbomb) +
+  #pitch control raster
+  geom_tile(data = pitch_control, aes(x = x, y = y, fill = PC), alpha = 0.7) +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0.5) +
+  #players for each team
+  #also add in little vector arrows
+  geom_segment(data = testing_data, aes(x = x, y = y, xend = forward_x, yend = forward_y, colour = team),
+               size = 1, arrow = arrow(length = unit(0.01, "npc"))) +
+  geom_point(data = testing_data, aes(x = x, y = y, colour = team), size = 3) +
+  scale_colour_manual(values = c("black", "gold"), guide = FALSE) +
+  #ball location
+  geom_point(data = ball_location, aes(x = ball_x, y = ball_y),
+             colour = "black", fill = "white", shape = 21, size = 2.5, stroke = 2) +
+  theme_pitch()
+
+p6
+
+```
+
+It looks pretty good! We can see which areas on the pitch the yellow and black (blue and red areas respectively) control (the ball here is the white circle outlined in black). In theory we can now run this function over the whole tracking_data data frame and calculate the control of each time over every part of the pitch at any time. 
+
+If we know this, we can work out (e.g.) the potential of an attack by multiplying the pitch control by a second layer, the value of every area of the pitch. For a very good intro into why/how you might value pitch areas, see [Karun Singh's explanation of Expected Threat](https://karun.in/blog/expected-threat.html). The paper itself uses a neural network based on the ball location. It can be best understood as imaging that you only know the location of the ball and are asked where the best place to pass it to would be? Moving it towards the centre of the opposition goal (reducing distance and angle) is always better, but you also want to maximise the chance of the pass being successful. The paper includes a great mp4 of modeled real life play hosted on [Luke Bornn's website](http://www.lukebornn.com/sloan/field_value.mp4).
+
+This post is already long enough so I'm not going to go into pitch value more here, but will hopefully write a followup combining the two at some point.
+
+# (premature) optimisation
+
+(There's not really much gain from reading beyond here, but I attempted to implement it in Rcpp for some optimisation which worked a little bit- I'm sure this function could be vastly improved though so it might be of value leaving it here for others to run with)
+
+So this is all fine and good, but we probably want to run this at least over every frame in the game, and possibly many games! To do this we're really going to want to optimise the crap out of this function. I've had a first go at this using Rcpp and RcppArmadillo to implement the whole pitch control algorithm. It actually didn't speed things up as much as I wanted*, but does remove 20-30% of the time the R function takes. (it's also just good practice to write more C++ for myself).
+
+*lots more low hanging fruit to take out of it, but it does the job for now
+
+We'll need a few Rcpp libraries to implement this:
+
+```{r cpp_libraries, warning=FALSE,message=FALSE}
+library(Rcpp)
+library(RcppArmadillo)
+
+```
+
+And then can use a Rcpp chunk to export a compiled function that R can access 
+
+```{Rcpp}
+//namespaces
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
+
+using namespace Rcpp;
+
+/* C++ version of the dtrmv BLAS function */
+// stolen from https://gallery.rcpp.org/articles/dmvnorm_arma/
+void inplace_tri_mat_mult(arma::rowvec &x, arma::mat const &trimat){
+  arma::uword const n = trimat.n_cols;
+  
+  for(unsigned j = n; j-- > 0;){
+    double tmp(0.);
+    for(unsigned i = 0; i <= j; ++i)
+      tmp += trimat.at(i, j) * x[i];
+    x[j] = tmp;
+  }
+}
+
+//set log(2pi) as a constant
+static double const log2pi = std::log(2.0 * M_PI);
+
+//replaces the dmvnorm() multivariate sampling
+arma::vec dmvnrm_arma_fast(arma::mat const &x,  
+                           arma::rowvec const &mean,  
+                           arma::mat const &sigma, 
+                           bool const logd = false) { 
+    using arma::uword;
+    uword const n = x.n_rows, 
+             xdim = x.n_cols;
+    arma::vec out(n);
+    arma::mat const rooti = arma::inv(trimatu(arma::chol(sigma)));
+    double const rootisum = arma::sum(log(rooti.diag())), 
+                constants = -(double)xdim/2.0 * log2pi, 
+              other_terms = rootisum + constants;
+    
+    arma::rowvec z;
+    for (uword i = 0; i < n; i++) {
+        z = (x.row(i) - mean);
+        inplace_tri_mat_mult(z, rooti);
+        out(i) = other_terms - 0.5 * arma::dot(z, z);     
+    }  
+      
+    if (logd)
+      return out;
+    return exp(out);
+}
+
+//does all the calculations in the paper
+//outputs a vector
+// [[Rcpp::export]]
+arma::vec calc_I_cpp(arma::vec coords, arma::vec next_coords, arma::vec ball_coords, double t, double next_t, arma::mat pitch, arma::mat coord_mat) {
+  //arma::vec rng = runif(1);
+  //arma::vec velocity = ((next_coords - coords) + (rng[0] / 10000)) / (next_t - t);
+  arma::vec velocity = ((next_coords - coords)) / (next_t - t);
+  double speed = norm(velocity);
+  double srat =pow((speed / 13), 2.0);
+  double theta = acos(velocity[0] / speed);
+  
+  //sometimes players reach 'impossible' speeds
+  if(srat > 1) {
+    velocity = {(12.5 * cos(theta)), (12.5 * sin(theta))};
+    speed = norm(velocity);
+    srat = pow((speed / 13), 2.0);
+  }
+  
+  arma::mat R = {{+cos(theta), -sin(theta)},
+                 {+sin(theta), +cos(theta)}};
+  
+  arma::vec m = coords + velocity / 2;
+  arma::rowvec mu = arma::conv_to<arma::rowvec>::from(m);
+
+  
+  double ri_val = 4.0 + (pow(norm(ball_coords - coords), 3.0) / (pow(18.0, 3) / 6));
+  double ri = std::min(ri_val, 10.0);
+  arma::mat S = {{ri * (1 + srat) / 2, 0},
+                 {0, ri * (1 - srat) / 2}};
+  arma::mat inv_R = arma::inv(R);
+  arma::mat Sigma = R * S * S * inv_R;
+  
+  arma::vec numerator = dmvnrm_arma_fast(pitch, mu, Sigma);
+  arma::vec denominator = dmvnrm_arma_fast(coord_mat, mu, Sigma);
+  arma::vec I = numerator / denominator[0];
+  return I;
+}
+
+
+```
+
+And we can now start running this over multiple frames. My laptop is pretty hideously falling apart at the moment, so I've limited it here, but really you could for sure run it over many frames. For plotting as a single object, remember, we're using a 40000 (200 * 200) row df to store stuff which is surely less than optimal, but even cutting that down as much as feasible, with 25 frames a second, memory bloat is going to happen fast. 
+
+In a future post at some point I'd like to actually try some analysis using this work, and I think the key is really to analyse within frame and output a condensed pitch area controlled * value for each player.
+
+For now though, I've posted a plot of ten seconds (not consecutive frames) of data. If you click on that, it links to an imgur of the gif of the proper combination of those frames.
+
+```{r run_cpp_func, warning=FALSE,message=FALSE}
+#ugly packaged up function
+calc_PC_cpp <- function(time, next_time, ball_x, ball_y, x, y, next_x, next_y, team, player, pitch_area) {
+  #blargh terribly written- run out of energy to improve
+  pitch_area$I <- calc_I_cpp(c(x, y), c(next_x, next_y), c(ball_x, ball_y), time, next_time, as.matrix(pitch_area), t(c(x, y)))
+  pitch_area$team <- team
+  pitch_area$time <- time
+  pitch_area$player <- player
+  return(pitch_area)
+}
+
+#sample 10 seconds worth of data
+animation_data <- tracking_data %>%
+  filter(time %in% 600:610) %>%
+  dplyr::select(time, next_time, ball_x, ball_y, x, y, next_x, next_y, team, player) 
+
+#run the function over the data
+anim_pitch_control <- animation_data %>%
+  #run func
+  pmap_df(., calc_PC_cpp, pitch_area = pitch) %>%
+  #sum by team and area
+  group_by(team, x, y, time) %>%
+  summarise(team_sum = sum(I)) %>%
+  pivot_wider(names_from = team, values_from = team_sum) %>%
+  #σ - logistic function
+  mutate(PC = 1 / (1 + exp(Home_Team - Away_Team)))
+
+#plot
+p7 <- ggplot(anim_pitch_control, aes(x = x, y = y, colour = PC)) +
+  annotate_pitch(dimensions = pitch_statsbomb) +
+  geom_point(alpha = 0.7, shape = 15) +
+  scale_colour_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0.5) +
+  theme_pitch() +
+  labs(title = "pitch control rasters by match time (s)") +
+  facet_wrap(~time)
+
+```
+
+[![plot of surface control](/img/pitch_control_raster.png)](https://i.imgur.com/fYIfjaR.mp4 "plot of surface control")
+
+(click for link to gif)
+
+I actually really like these plots of just the surface control; they remind me of high dimensional (e.g. biological sample) sorting and I think just look pretty funky
+
+I mentioned I benchmarked the functions themselves earlier, here's some sample code of benchmarking. It's not really apples to oranges because of the tweaks to the cpp function, and obviously calling pmap_df on a single row of a data.frame isn't really what it's for... it's more just to document a little bit (also please ignore the spaghetti passing of functions).
+
+```{r benchmark, warning=FALSE,message=FALSE}
+library(microbenchmark)
+microbenchmark(
+  pmap_calc_pc = pmap_df(animation_data[1,], calc_PC, pitch_area = pitch),
+  pmap_calc_pc_cpp = pmap_df(animation_data[1,], calc_PC_cpp, pitch_area = pitch),
+  calc_pc = calc_PC(animation_data$time[1], animation_data$next_time[1], animation_data$ball_x[1], animation_data$ball_y[1], animation_data$x[1], animation_data$y[1], animation_data$next_x[1], animation_data$next_y[1], "teamA", "playera", pitch),
+  calc_pc_cpp = calc_PC_cpp(animation_data$time[1], animation_data$next_time[1], animation_data$ball_x[1], animation_data$ball_y[1], animation_data$x[1], animation_data$y[1], animation_data$next_x[1], animation_data$next_y[1], "teamA", "playera", pitch),
+  times = 100
+)
+
+
+```
+
+That's all for this post! As I said at some point (soon? later? who knows) I'd like to include the value term because conceptually it's not hard to get a stupid version of it going. Hopefully this is of use to some people. As I said up top, written in evenings locked inside during quarantine so probably maths mistakes/ huge coding errors etc. If people point them out and get in touch I'll fix them.
+
+Best!
