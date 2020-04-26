@@ -455,11 +455,8 @@ p5 &amp;lt;- pars_2020 %&amp;gt;%
   ggplot(aes(x = attack, y = defence, colour = attack + defence, label = team)) +
   geom_point(size = 3, alpha = 0.7) +
   geom_text_repel() +
-  labs(title = &amp;quot;Dixon Coles parameters per team 2019/2020&amp;quot;,
-       x = &amp;quot;attacking strength&amp;quot;,
-       y = &amp;quot;defensive strength&amp;quot;) +
   scale_colour_continuous(guide = FALSE) +
-  labs(title = &amp;quot;Dixon-Coles parameters for the 2019/2020 Premier League Season&amp;quot;,
+  labs(title = &amp;quot;Dixon-Coles parameters for the 2019/2020 EPL&amp;quot;,
        x = &amp;quot;attacking strength&amp;quot;,
        y = &amp;quot;defensive strength&amp;quot;) +
   theme_minimal()
@@ -529,7 +526,7 @@ predicted_finishes_2020 &amp;lt;- map_df(fixture_sims_2020, function(sim_fixture
   mutate(team = factor(team, levels = unique(team)))&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;If we then plot these predicted finishes (ordered by the chance of their highest finish position), we can get an idea of where we expect teams to end the season:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#list of team colours
-team_cols &amp;lt;- c(&amp;quot;red&amp;quot;, &amp;quot;skyblue&amp;quot;, &amp;quot;darkblue&amp;quot;, &amp;quot;darkred&amp;quot;, &amp;quot;darkblue&amp;quot;,
+team_cols &amp;lt;- c(&amp;quot;red&amp;quot;, &amp;quot;skyblue&amp;quot;, &amp;quot;darkblue&amp;quot;, &amp;quot;darkblue&amp;quot;, &amp;quot;darkred&amp;quot;,
                &amp;quot;orange&amp;quot;, &amp;quot;red&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;maroon&amp;quot;, 
                &amp;quot;blue&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;red&amp;quot;, &amp;quot;dodgerblue&amp;quot;, &amp;quot;yellow&amp;quot;, 
                &amp;quot;maroon&amp;quot;, &amp;quot;red&amp;quot;, &amp;quot;maroon&amp;quot;, &amp;quot;yellow&amp;quot;)
@@ -539,6 +536,12 @@ p6 &amp;lt;- ggplot(predicted_finishes_2020,
              aes(x = predicted_finish, y = perc, fill = team)) +
   geom_bar(stat = &amp;quot;identity&amp;quot;, colour = &amp;quot;black&amp;quot;) +
   scale_fill_manual(values = team_cols, guide = FALSE) +
+  labs(
+    title = &amp;quot;Predicted finish position of teams&amp;quot;,
+    subtitle = &amp;quot;for incomplete 2019/2020 EPL season&amp;quot;,
+    y = &amp;quot;fraction of finishes&amp;quot;,
+    x = &amp;quot;final position&amp;quot;
+  ) +
   theme_minimal() +
   facet_wrap(~team)
 

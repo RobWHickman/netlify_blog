@@ -450,11 +450,8 @@ p5 <- pars_2020 %>%
   ggplot(aes(x = attack, y = defence, colour = attack + defence, label = team)) +
   geom_point(size = 3, alpha = 0.7) +
   geom_text_repel() +
-  labs(title = "Dixon Coles parameters per team 2019/2020",
-       x = "attacking strength",
-       y = "defensive strength") +
   scale_colour_continuous(guide = FALSE) +
-  labs(title = "Dixon-Coles parameters for the 2019/2020 Premier League Season",
+  labs(title = "Dixon-Coles parameters for the 2019/2020 EPL",
        x = "attacking strength",
        y = "defensive strength") +
   theme_minimal()
@@ -536,7 +533,7 @@ If we then plot these predicted finishes (ordered by the chance of their highest
 
 ```{r plot_2020_prediction, warning=FALSE,message=FALSE}
 #list of team colours
-team_cols <- c("red", "skyblue", "darkblue", "darkred", "darkblue",
+team_cols <- c("red", "skyblue", "darkblue", "darkblue", "darkred",
                "orange", "red", "white", "red", "blue", "maroon", 
                "blue", "white", "red", "dodgerblue", "yellow", 
                "maroon", "red", "maroon", "yellow")
@@ -546,6 +543,12 @@ p6 <- ggplot(predicted_finishes_2020,
              aes(x = predicted_finish, y = perc, fill = team)) +
   geom_bar(stat = "identity", colour = "black") +
   scale_fill_manual(values = team_cols, guide = FALSE) +
+  labs(
+    title = "Predicted finish position of teams",
+    subtitle = "for incomplete 2019/2020 EPL season",
+    y = "fraction of finishes",
+    x = "final position"
+  ) +
   theme_minimal() +
   facet_wrap(~team)
 

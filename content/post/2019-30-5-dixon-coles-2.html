@@ -455,11 +455,8 @@ p5 &lt;- pars_2020 %&gt;%
   ggplot(aes(x = attack, y = defence, colour = attack + defence, label = team)) +
   geom_point(size = 3, alpha = 0.7) +
   geom_text_repel() +
-  labs(title = &quot;Dixon Coles parameters per team 2019/2020&quot;,
-       x = &quot;attacking strength&quot;,
-       y = &quot;defensive strength&quot;) +
   scale_colour_continuous(guide = FALSE) +
-  labs(title = &quot;Dixon-Coles parameters for the 2019/2020 Premier League Season&quot;,
+  labs(title = &quot;Dixon-Coles parameters for the 2019/2020 EPL&quot;,
        x = &quot;attacking strength&quot;,
        y = &quot;defensive strength&quot;) +
   theme_minimal()
@@ -529,7 +526,7 @@ predicted_finishes_2020 &lt;- map_df(fixture_sims_2020, function(sim_fixtures, t
   mutate(team = factor(team, levels = unique(team)))</code></pre>
 <p>If we then plot these predicted finishes (ordered by the chance of their highest finish position), we can get an idea of where we expect teams to end the season:</p>
 <pre class="r"><code>#list of team colours
-team_cols &lt;- c(&quot;red&quot;, &quot;skyblue&quot;, &quot;darkblue&quot;, &quot;darkred&quot;, &quot;darkblue&quot;,
+team_cols &lt;- c(&quot;red&quot;, &quot;skyblue&quot;, &quot;darkblue&quot;, &quot;darkblue&quot;, &quot;darkred&quot;,
                &quot;orange&quot;, &quot;red&quot;, &quot;white&quot;, &quot;red&quot;, &quot;blue&quot;, &quot;maroon&quot;, 
                &quot;blue&quot;, &quot;white&quot;, &quot;red&quot;, &quot;dodgerblue&quot;, &quot;yellow&quot;, 
                &quot;maroon&quot;, &quot;red&quot;, &quot;maroon&quot;, &quot;yellow&quot;)
@@ -539,6 +536,12 @@ p6 &lt;- ggplot(predicted_finishes_2020,
              aes(x = predicted_finish, y = perc, fill = team)) +
   geom_bar(stat = &quot;identity&quot;, colour = &quot;black&quot;) +
   scale_fill_manual(values = team_cols, guide = FALSE) +
+  labs(
+    title = &quot;Predicted finish position of teams&quot;,
+    subtitle = &quot;for incomplete 2019/2020 EPL season&quot;,
+    y = &quot;fraction of finishes&quot;,
+    x = &quot;final position&quot;
+  ) +
   theme_minimal() +
   facet_wrap(~team)
 
