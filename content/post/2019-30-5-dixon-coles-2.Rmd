@@ -1,11 +1,11 @@
 ---
 title: "An Introduction to Modelling Soccer Matches in R (part 2)"
 author: "Robert Hickman"
-date: '2019-06-05'
+date: '2020-04-26'
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 header:
   caption: ''
   image: ''
@@ -22,105 +22,592 @@ title: "Untitled"
 output: html_document
 ---
 
+_I wrote this one pretty quickly compared to part 1 (which goes much deeper into mathematical concepts), and only realized after how much of a similarity it has to many of [Ben Torvaney's](https://twitter.com/Torvaney?ref_src=twsrc%5Egoogle%7Ctwcamp%5Eserp%7Ctwgr%5Eauthor) posts on the subject. This probably isn't a coincidence given how much I've used his work previously in posts on this blog. Any imitation here is meant as flattery. The purpose of this post is really as a bridge between what I really want to write about- the maths behind the models in part 1, and extensions of these models into other distribution in parts 3-n so it might be a little derivative of stuff written elsewhere._
+
+
+On this blog I enjoy explaining various concepts from the more academic side of football analytics. One of my favourite results from this field are the papers in predicting future soccer matches based on limited information about past matches. Roughly 1 year ago I published [part 1](https://www.robert-hickman.eu/post/dixon_coles_1/) on a series of this and never got round to writing part 2 (of hopefully 2 or 3 more).
+
+In the first post, we saw how we can use the Poisson distribution to estimate the relative strengths of teams in a hypothetical summer league between Arsenal, Blackburn Rovers, Coventry City, Dover Athletic, Enfield Town, and Frimley Green. Now we want to move onto actually _using_ these estimates to predict matches, and eventually, whole leagues.
+
+A good way to sum up this post in one line is a quote (mis) attributed to Niels Bohr:
+
+### _"It’s Difficult to Make Predictions, Especially About the Future"_
+
+We've made our predictions about the past (estimating the relative strengths of teams based on past results), now we need to predict the future. I think it also nicely captures that even our predictions about the past are noisy- we can not ever truly know the exact strengths of football teams; the job of analytics is to estimate these are accurately as possible. But any noise in those past predictions will be carried forward and amplified when predicting the future.
+
+Onward to the code, first as always, loading libraries and setting a seed for reproducibility:
+
 ```{r libraries, warning=FALSE,message=FALSE}
 library(tidyverse)
+library(ggrepel)
 
+set.seed(3459)
 ```
 
+We're then going to load all the stuff we prepped and predicted in the last post. Remember the α parameter below refers to a teams attacking strength (the relative number of goals they are expected to score), and the β parameter refers to the attacking strength (the inverse of the relative number of goals they are expected to concede). Finally, γ refers to the extra advantage of playing at home.
 
-```{r}
+(all these files are on the github repo for this site)
+
+```{r load_last_post, warning=FALSE,message=FALSE}
 fixtures <- readRDS("../../static/files/dc_fixtures.rds")
 results <- readRDS("../../static/files/dc_results.rds")
 
-```
-
-```{r}
 model <- readRDS("../../static/files/dc_model.rds")
 
 model
 
 ```
+
+We'll define a quick function to do our prediction. For a quick explanation of exactly why it's coded as presented, see [the previous post](https://www.robert-hickman.eu/post/dixon_coles_1/#Tinkering), under the title 'Tinkering'.
+
+For a given string of a home team and an away team, the function finds the relevant parameters from a third argument (param_list) and calculates the expected goal for each team.
+
 ```{r}
 predict_results <- function(home, away, param_list) {
   e_goals_home <- exp(param_list$alpha[home] - param_list$beta[away] + param_list$gamma)
   e_goals_away <- exp(param_list$alpha[away] - param_list$beta[home])
   
   df <- data.frame(home = home, away = away,
-                   e_hgoal = e_goals_home, e_agoal = e_goals_away)
+                   e_hgoal = as.numeric(e_goals_home), 
+                   e_agoal = as.numeric(e_goals_away))
   
   return(df)
 }
 
 ```
 
+If we run this for two example teams for example: 
 ```{r}
+#two example teams
 home <- "Blackburn_Rovers"
 away <- "Arsenal"
 
-prediction <- predict_results(home, away, model)
+prediction <- predict_results(home, away, model) 
+prediction
 ```
 
-```{r}
+We can see that it gives Arsenal (the away team) a slightly more optimistic chance than Blackburn. The expected goals for each team of course can be rewritten as the mean, and in our Poisson model refers to λ (lambda)- the mean times an event (goal) happens per a time interval (match). We also set a maximum number of possible goals (7 in this case*) to bound the area under the distribution so we aren't sampling forever. 
+
+*sharp readers might notice that this is actually _lower_ than the lambda for our more extreme cases (e.g. Arsenal at home to Frimley Green), but for realistic matches (even between wildly different professional sides) this is a fair enough assumption.
+
+We then use dpois() to calculate the probability of this Poisson function returning a value (0:7 goals) given it's lambda value. So if we run this over the prediction we made for Blackburn Rovers vs. Arsenal we get:
+
+```{r predict_mach_goals, warning=FALSE,message=FALSE}
+#set a limit of where we'll calculate across
 max_goals <- 7
 
-x <- lapply(0:max_goals, dpois, lambda = prediction$e_hgoal)
-y <- lapply(0:max_goals, dpois, lambda = prediction$e_agoal)
+#calculate the probability of scoring x goals for either team
+blackburn_goal_probs <- lapply(0:max_goals, dpois, lambda = prediction$e_hgoal)
+arsenal_goal_probs <- lapply(0:max_goals, dpois, lambda = prediction$e_agoal)
 
+#bind together in a df
 df <- data.frame(goals = rep(0:max_goals, 2),
                  team = rep(c(home, away), each = max_goals+1),
-                 p = c(unlist(x), unlist(y)))
+                 p = c(unlist(blackburn_goal_probs), unlist(arsenal_goal_probs)))
 
-p <- ggplot(df, aes(x = goals, y = p, fill = team)) +
-  geom_density(stat = "identity", alpha = 0.5)
+#plot the p of scoring x goals for either team
+p1 <- ggplot(df, aes(x = goals, y = p, fill = team)) +
+  geom_density(stat = "identity", alpha = 0.5) +
+  scale_fill_manual(values = c("red", "blue")) +
+  labs(title = "Predicted goals for Blackburn Rovers and Arsenal",
+       y = "probability") +
+  theme_minimal()
 
-p
+p1
 ```
-```{r}
-matrix <- outer(unlist(x), unlist(y)) %>%
+
+Because of how maths works, these curves are the same result we would get if we ran rpois() (sampling from the Poisson function) lots of times. We'll do that quickly because it sets the stage nicely for what will come later.
+
+```{r monte_carlo_poisson, warning=FALSE,message=FALSE}
+#sample from the function lots of times for each team
+n <- 100000
+blackburn_goals_samples <- rpois(n, lambda = prediction$e_hgoal)
+arsenal_goals_samples <- rpois(n, lambda = prediction$e_agoal)
+
+df <- data.frame(team = rep(c(home, away), each = n),
+                 sampled_goals = c(blackburn_goals_samples, arsenal_goals_samples))
+
+#look its the same plot!
+p2 <- ggplot(df, aes(x = sampled_goals, fill = team)) +
+  geom_bar(stat = "count", position = "dodge", colour = "black", alpha = 0.5) +
+  geom_line(aes(colour = team), stat = "count", size = 3) +
+  scale_fill_manual(values = c("red", "blue"), guide = FALSE) +
+  scale_colour_manual(values = c("red", "blue"), guide = FALSE) +
+  labs(title = "Predicted goals for Blackburn Rovers and Arsenal",
+       y = "probability",
+       x = "sampled goals") +
+  theme_minimal() +
+  theme(axis.text.y = element_blank())
+
+p2
+```
+
+Ok great!, in terms of predicting the result, the rightwards shift of the red (Arsenal) curve here is the difference in the teams ability to generate a positive goal differential- it makes it more likely that if we sample event, Arsenal will have scored more goals than Blackburn Rovers at the end of the match. Of course, it's also obvious that while Arsenal's curve is right shifted, the bars for Arsenal scoring 0 goals and Blackburn scoring 6 are still sizable enough that it isn't outside the realm of possibility.
+
+This is a nice way of presenting the chance of each team scoring n goals, but doesn't really help us in predicting the result of a match given that this relies on the interaction of both these distributions (we need to know how many goals BOTH Arsenal AND Blackburn will score).
+
+To calculate this, we can do an outer product of the probabilities for both teams scoring n goals. We can then plot the probability of each _scoreline_ as a tile plot:
+
+
+```{r example_tileplot, warning=FALSE,message=FALSE}
+#calculate matrix of possible results and probabilities of those
+matrix <- outer(unlist(arsenal_goal_probs), unlist(blackburn_goal_probs)) %>%
   as.data.frame() %>%
   gather() %>%
+  #add in scorelines
   mutate(hgoals = rep(0:max_goals, max_goals+1),
          agoals = rep(0:max_goals, each = max_goals+1))
 
-p <- ggplot(matrix, aes(x = hgoals, y = agoals, fill = value)) +
+#make the tile plot
+p3 <- ggplot(matrix, aes(x = hgoals, y = agoals, fill = value)) +
   geom_tile() +
   geom_text(aes(label = paste(hgoals, agoals, sep = "-"))) +
   scale_fill_gradient2(low = "white", high = "red", guide = FALSE) +
   theme_minimal()
 
-p
+p3
 ```
 
-```{r}
-all_fixtures <- rbind(select(results, -hgoal, -agoal), fixtures)
+Where we can see that the most common scorelines are low scoring (football is a low scoring game), and slightly biased towards away goals (i.e. Arsenal are more likely to win than lose). The darkest (most likely) tiles being 1-1 or a 2-1 Arsenal win seem very plausible given our calculated λs earlier.
 
+We can then do this for every fixture and build a large graph of the expected results for each using a simple map2_ apply. Because of the huge plot, I've restricted it here to a 3x3 matrix of the results for Arsenal, Coventry City, and Enfield Town, but if you click you should be linked to the full image.
+
+```{r plot_all_matrix, warning=FALSE,message=FALSE}
+#want to predict over the whole fixture space
+all_fixtures <- bind_rows(fixtures, results) %>%
+  filter(!duplicated(paste(home, away), fromLast = TRUE))
+
+#get the lambda for each team per game
 predictions <- map2_df(all_fixtures$home, all_fixtures$away, 
                        predict_results,
                        model)
 
-hgoal_prob <- lapply(predictions$e_hgoal, dpois, x = 0:max_goals) %>%
-  lapply(., `names<-`, 0:max_goals) 
-agoal_prob <- lapply(predictions$e_agoal, dpois, x = 0:max_goals) %>%
-  lapply(., `names<-`, 0:max_goals) 
-
-all_predictions <- map2_df(hgoal_prob, agoal_prob, function(home, away) {
-    df <- outer(home, away) %>%
+#calc out probabilities and bind up
+all_predictions <- map2_df(
+  predictions$e_hgoal, predictions$e_agoal, 
+  function(lambda_home, lambda_away, max_goals) {
+    hgoal_prob <- dpois(0:max_goals, lambda_home) %>% `names<-`(0:max_goals)
+    agoal_prob <- dpois(0:max_goals, lambda_away) %>% `names<-`(0:max_goals)
+    outer(hgoal_prob, agoal_prob) %>%
       as.data.frame() %>% 
       gather() %>% 
       rownames_to_column("row") %>%
       mutate(hgoal = as.numeric(row) %% (max_goals+1)-1) %>% 
       mutate(hgoal = case_when(hgoal < 0 ~ max_goals, TRUE ~ hgoal),
              agoal = as.numeric(key)) %>%
-      select(hgoal, agoal, prob = value)
-}) %>%
-  cbind(all_fixtures[rep(seq_len(nrow(all_fixtures)), each=(max_goals+1)^2),], .)
+      select(sample_hgoal = hgoal, sample_agoal = agoal, prob = value)
+}, max_goals) %>%
+  cbind(all_fixtures[rep(seq_len(nrow(all_fixtures)), each=(max_goals+1)^2),], .) %>%
+  group_by(home, away) %>%
+  mutate(prob = prob / sum(prob)) %>%
+  ungroup()
 
-p <- ggplot(all_predictions, aes(x = hgoal, y = agoal, fill = prob)) +
+#plot again
+p3 <- all_predictions %>%
+  #filter only a few out to scale plot 
+  filter(home %in% c("Arsenal", "Coventry_City", "Enfield_Town"),
+         away %in% c("Arsenal", "Coventry_City", "Enfield_Town")) %>%
+  ggplot(aes(x = sample_hgoal, y = sample_agoal, fill = prob)) +
   geom_tile() +
-  geom_text(aes(label = paste(hgoal, agoal, sep = "-"))) +
+  geom_point(aes(x = hgoal, y = agoal), 
+             colour = "blue", size = 5, alpha = 0.5 / max_goals^2) +
+  geom_text(aes(label = paste(sample_hgoal, sample_agoal, sep = "-")), size = 2.3) +
   scale_fill_gradient2(low = "white", high = "red", guide = FALSE) +
+  labs(
+    title = "predictions for final score across all fixtures",
+    y = "away goals",
+    x = "home goals") +
   theme_minimal() +
-  facet_grid(away~home)
+  facet_grid(away~home, scales = "free")
+
+p3
+```
+
+For the whole matrix, click [here](https://www.robert-hickman.eu/img/results_matrix.png) 
+
+## So what?
+
+These graphs are nice, but whats important is what they show: _we have a way to quantify how likely any result is in a match between two given teams_. Why is this useful
+
+- Firstly, we can use the output of this to build betting models. Given the odds on final scores for any match, we can hedge effectively by betting on (e.g.) the five overwhelmingly most likely results. 
+- Secondly, we can simulate leagues. This is [perhaps especially of interest given the context of writing this post](https://www.bloomberg.com/graphics/2020-coronavirus-european-football/). I'm going to focus on this application because I don't bet on football, and also because it's hard to get a nice database of odds at the moment given the aforementioned situation.
+
+[The Verve - Monte Carlo](https://www.youtube.com/watch?v=DYb8gS-wDrM)
+
+We can do this using a technique called [Monte Carlo simulation](https://en.wikipedia.org/wiki/Monte_Carlo_method). There are lots of good explanation of the technique on the internet, but it basically boils down to this: 
+
+### "if events follow a known distribution*, you can sample these events lots of times to get stochastic guesstimates, but over many samples you will reproduce exactly that distribution"
+
+*a Poisson distribution for the expected number of goals scored in our case
+
+For football, this means that while on an individual match level results are noisy (sometimes better teams lose!), if we simulate matches lots and lots of times, eventually they should converge to the 'truth'*
+
+*as defined by our Poisson distribution (which may or may not be a good/accurate 'truth' but go with it for now).
+
+To work with this highly repetitive data, first we want to 'nest' the probabilities for each match. This basically means storing a df of all the possible results and their probabilities as a column inside a larger df so we can move between the data in those two structures easier.
+
+For instance, the nest match results probability information for the next match to be played (Coventry City and home to Arsenal):
+
+```{r nest_probabilities, warning=FALSE,message=FALSE}
+nested_probabilities <- all_predictions %>%
+  filter(is.na(hgoal)) %>%
+  select(-hgoal, -agoal) %>%
+  nest(probabilities = c(sample_hgoal, sample_agoal, prob))
+
+nested_probabilities$probabilities[[1]] %>%
+  rename("Coventry City" = sample_hgoal, "Arsenal" = sample_agoal) %>%
+  arrange(-prob) %>%
+  #show first 15 rows
+  .[1:15,]
+```
+
+The probability for any single result is small (otherwise match betting would be easy), but the probabilities for a 2-0 and 1-0 Arsenal wins are highest (as we found earlier). Indeed all of the most likely results are within a goal or two for either side of these.
+
+To make sure these probabilities makes sense, we can sum them and see that the results space of 0:max_goals for either side sums to 1
+
+```{r sum_probs, warning=FALSE,message=FALSE}
+sum(nested_probabilities$probabilities[[1]]$prob)
+```
+
+Then we can easily use this data to simulate results. We sample a single row (a 'result' of the match) weighted by the probability of it occurring. For instance, when we sample from the Coventry City vs Arsenal match it picks a 3-1 Arsenal away win (not the likeliest result, but not the most unlikely either).
+
+```{r simulate_match, warning=FALSE,message=FALSE}
+nested_probabilities$probabilities[[1]] %>%
+  rename("Coventry_City" = sample_hgoal, "Arsenal" = sample_agoal) %>%
+  sample_n(1, weight = prob)
+```
+
+We can of course repeat this across every match and see that the probabilities of the chosen results vary (because we're randomly sampling we won't always choose the most likely, or even a likely result), but all are within a reasonable range given the team playing:
+
+```{r simulate_all_matches, warning=FALSE,message=FALSE}
+nested_probabilities %>%
+    mutate(sampled_result = map(probabilities, sample_n, 1, weight = prob)) %>%
+    select(-probabilities) %>%
+    unnest(cols = c(sampled_result))
+```
+
+But when we are predicting what will happen, we want to find the _most likely_ result. As mentioned earlier, if we sample enough, our average will converge towards this, so we can repeat this sampling technique n times (here I've done it 10 times), depending on how much time we want to wait for it to process.
+
+You can see that as we do this many times, the results with the highest probability turn up more than others- as we would expect if we were to (e.g.) actually play Blackburn Rovers vs Arsenal many times.
+
+```{r simulate_match_n_times, warning=FALSE,message=FALSE}
+rerun(10, nested_probabilities %>%
+    filter(home == "Coventry_City" & away == "Arsenal") %>%
+    mutate(sampled_result = map(probabilities, sample_n, 1, weight = prob)) %>%
+    select(-probabilities) %>%
+    unnest(cols = c(sampled_result))
+) %>%
+  bind_rows() %>%
+  arrange(-prob)
+  
+```
+
+If we do this a few more times per fixture (here 100, for a better estimate I'd advise at least 10000- it should only take a few minutes), we can then start assigning points and goal difference to each team based upon the result we've sampled. E.g. if one sample predicts Arsenal to beat Blackburn Rovers 4-0, we assign 3 points to Arsenal and 0 points to Blackburn Rovers for that simulation and +4 and -4 goal difference respectively.
+
+```{r simulate_matches, warning=FALSE,message=FALSE}
+n <- 100
+fixture_sims <- rerun(n, nested_probabilities %>%
+    mutate(sampled_result = map(probabilities, sample_n, 1, weight = prob)) %>%
+    select(-probabilities) %>%
+    unnest(cols = c(sampled_result)) %>%
+  select(-gameweek, -prob) %>%
+  pivot_longer(c(home, away), names_to = "location", values_to = "team") %>%
+  mutate(points = case_when(
+    location == "home" & sample_hgoal > sample_agoal ~ 3,
+    location == "away" & sample_agoal > sample_hgoal ~ 3,
+    sample_hgoal == sample_agoal ~ 1,
+    TRUE ~ 0
+  )) %>%
+  mutate(gd = case_when(
+    location == "home" ~ sample_hgoal - sample_agoal,
+    location == "away" ~ sample_agoal - sample_hgoal
+  )))
+
+fixture_sims[1]
+```
+
+We can then average the points and goal difference won in these sims across each team and see what teams are predicted to win across their fixtures.
+
+```{r show_simulated_points, warning=FALSE,message=FALSE}
+fixture_sims %>%
+  bind_rows() %>%
+  group_by(team) %>%
+  summarise(av_points = sum(points)/n,
+            av_gd = sum(gd) / n)
+```
+Where we can see that we expect Arsenal to win 4.19 out of a possible 6 points (with games remaining against Coventry and Blackburn Rovers they are expected to drop points but win at least one and probably draw the other). Coventry City are expected to also do well- probably because their final game is at home to Frimley Green, whereas Blackburn have tougher fixtures away at Arsenal and home to Dover Athletic.
+
+We can then add this to the calculated points teams have _already_ accrued to get a prediction of where teams will end the season position wise:
+
+```{r predict_finishes, warning=FALSE,message=FALSE}
+table <- results %>%
+  pivot_longer(c(home, away), names_to = "location", values_to = "team") %>%
+  mutate(points = case_when(
+    location == "home" & hgoal > agoal ~ 3,
+    location == "away" & agoal > hgoal ~ 3,
+    hgoal == agoal ~ 1,
+    TRUE ~ 0
+  )) %>%
+  mutate(gd = case_when(
+    location == "home" ~ hgoal - agoal,
+    location == "away" ~ agoal - hgoal
+  )) %>%
+  group_by(team) %>%
+  summarise(points = sum(points),
+            gd = sum(gd))
+
+predicted_finishes <- map_df(fixture_sims, function(simulated_fixtures, table) {
+  simulated_fixtures %>%
+    select(team, points, gd) %>%
+    bind_rows(., table) %>%
+    group_by(team) %>%
+    summarise(points = sum(points),
+              gd = sum(gd)) %>%
+    arrange(-points, -gd) %>%
+    mutate(predicted_finish = 1:n())
+}, table) %>%
+  group_by(team, predicted_finish) %>%
+  summarise(perc = n() / n)
+
+predicted_finishes
+```
+Which gives Arsenal an 82% chance of finishing champions, with only a 18% chance Blackburn manage to leapfrog them into 1st place. Given there are only 2 matches left with teams designed to have fairly large gulfs in ability, it's not surprising most of the final positions are nailed on- e.g. Enfield Town finish 5th in every single simulation:
+
+```{r plot_predicted_finishes, warning=FALSE,message=FALSE}
+p4 <- ggplot(predicted_finishes, aes(x = predicted_finish, y = perc, fill = team)) +
+  geom_bar(stat = "identity", colour = "black") +
+  scale_fill_manual(values = c("red", "blue", "skyblue", "white", "dodgerblue4", "blue")) +
+  labs(
+    title = "Predicted finish position of teams",
+    subtitle = "with two gameweeks left to play",
+    y = "fraction of finishes",
+    x = "final position"
+  ) +
+  theme_minimal() +
+  facet_wrap(~team)
+
+p4
+```
+
+## The Real Thing
+
+We're now at the stage where we can start to look at real data. One of the motivating forces which drew me back to this putative blog series was the [current football situation](https://www.theguardian.com/football/blog/2020/apr/25/finishing-premier-league-season-pointless-football)- with season ending with games left to play. 
+
+We can use the knowledge we've built up over these last posts to see what we expect to happen in these unplayed games, if they cannot be completed.
+
+To make code more concise, I've used Ben Torvaney's code in his [regista](https://github.com/Torvaney/regista) package (he also has some nice usage blogs similar to this post at his [blog](http://www.statsandsnakeoil.com/)). The underlying maths is exactly the same as in my previous post though with a few different design choices. If we run the simulations using the code from the previous post we should get exactly the same answer.
+
+The code following is also extremely similar to the final chunks of one of my previous [posts](https://www.robert-hickman.eu/post/five_min_trivia_invincibles/) in analysing the current Liverpool team's achievements. 
+
+```{r real_data_libraries, warning=FALSE,message=FALSE}
+library(rvest)
+library(regista)
+```
+
+First we need to download the data on the current English Premier League season. Once we have this we can split it into played matches (where we 100% know the result) and unplayed matches which we need to predict the result of. For the basis of the team strength estimates I've used the xg created and allowed per game, as I believe these give a better estimate of team strength (indeed Ben Torvaney has a [nice post on using even the shot-by-shot xg to produce Dixon-Coles models](http://www.statsandsnakeoil.com/2019/01/06/predicting-the-premier-league-with-dixon-coles-and-xg/)).
+
+```{r get_real_data, warning=FALSE,message=FALSE}
+#download the match data from 2019/2020
+fixtures_2020 <- "https://fbref.com/en/comps/9/schedule/Premier-League-Fixtures" %>%
+  read_html() %>%
+  html_nodes("#sched_ks_3232_1") %>%
+  html_table() %>%
+  as.data.frame() %>%
+  separate(Score, into = c("hgoal", "agoal"), sep = "–") %>%
+  #only care about goals and expected goals
+  select(home = Home, away = Away, home_xg = xG, away_xg = xG.1, hgoal, agoal) %>%
+  filter(home != "") %>%
+  mutate(home = factor(home), away = factor(away)) %>%
+  #round expected goals to nearest integer
+  mutate_at(c("home_xg", "away_xg", "hgoal", "agoal"), .funs = funs(round(as.numeric(.))))
+
+#matches with a known result
+#used for modelling
+played_matches <- fixtures_2020 %>%
+  filter(!is.na(home_xg))
+
+#matches with an unknown result
+#used for simulation
+unplayed_matches <- fixtures_2020 %>%
+  filter(is.na(home_xg)) %>%
+  select_if(negate(is.numeric))
+
+#fit the dixon coles model
+#use xg per game, not 'actual' goals
+fit_2020 <- dixoncoles(home_xg, away_xg, home, away, data = played_matches)
 
 ```
 
+To get a look at what the team parameters in a real-life league look like we can extract them from the model and plot them:
+
+```{r plot_real_params, warning=FALSE,message=FALSE}
+#extract Dixon-Coles team strenth parameters
+pars_2020 <- fit_2020$par %>%
+  .[grepl("def_|off_", names(.))] %>%
+  matrix(., ncol = 2) %>%
+  as.data.frame() %>%
+  rename(attack = V1, defence = V2)
+pars_2020$team <- unique(gsub("def_*|off_*", "", names(fit_2020$par)))[1:20]
+
+#plot as before
+p5 <- pars_2020 %>%
+  mutate(defence = 1 - defence) %>%
+  ggplot(aes(x = attack, y = defence, colour = attack + defence, label = team)) +
+  geom_point(size = 3, alpha = 0.7) +
+  geom_text_repel() +
+  labs(title = "Dixon Coles parameters per team 2019/2020",
+       x = "attacking strength",
+       y = "defensive strength") +
+  scale_colour_continuous(guide = FALSE) +
+  labs(title = "Dixon-Coles parameters for the 2019/2020 Premier League Season",
+       x = "attacking strength",
+       y = "defensive strength") +
+  theme_minimal()
+
+p5
+
+```
+It might surprise some that Manchester City are predicted to be better than Liverpool by this model, but it shouldn't given the underlying numbers for both teams. Liverpool have run very hot and Manchester City have run very cold this season.
+
+Finally, we can then calculate the current Premier League table, and simulate remaining games to predict where teams will finish the season if the remainder of games were to be played. I've chosen 1000 sims just for sake of processing time, but you can scale up and down as desired.
+
+```{r real_data, warning=FALSE,message=FALSE,eval=FALSE}
+#calculate the current EPL table
+current_epl_table <- played_matches %>%
+  select(home, away, hgoal, agoal) %>%
+  pivot_longer(c(home, away), names_to = "location", values_to = "team") %>%
+  mutate(points = case_when(
+    location == "home" & hgoal > agoal ~ 3,
+    location == "away" & agoal > hgoal ~ 3,
+    hgoal == agoal ~ 1,
+    TRUE ~ 0
+  )) %>%
+  mutate(gd = case_when(
+    location == "home" ~ hgoal - agoal,
+    location == "away" ~ agoal - hgoal
+  )) %>%
+  group_by(team) %>%
+  summarise(points = sum(points),
+            gd = sum(gd))
+
+#the number of sims to run
+n <- 10000
+
+#simulate remaining matches
+fixture_sims_2020 <- rerun(
+  n,
+  augment.dixoncoles(fit_2020, unplayed_matches, type.predict = "scorelines") %>%                     
+    mutate(sampled_result = map(.scorelines, sample_n, 1, weight = prob)) %>%
+    select(-.scorelines) %>%
+    unnest(cols = c(sampled_result)) %>%
+  pivot_longer(c(home, away), names_to = "location", values_to = "team") %>%
+  mutate(points = case_when(
+    location == "home" & hgoal > agoal ~ 3,
+    location == "away" & agoal > hgoal ~ 3,
+    hgoal == agoal ~ 1,
+    TRUE ~ 0
+  )) %>%
+  mutate(gd = case_when(
+    location == "home" ~ hgoal - agoal,
+    location == "away" ~ agoal - hgoal
+  )) %>%
+    select(team, points, gd))
+
+#calculate final EPL tables
+predicted_finishes_2020 <- map_df(fixture_sims_2020, function(sim_fixtures, table) {
+  sim_fixtures %>%
+    select(team, points, gd) %>%
+    bind_rows(., table) %>%
+    group_by(team) %>%
+    summarise(points = sum(points),
+              gd = sum(gd)) %>%
+    arrange(-points, -gd) %>%
+    mutate(predicted_finish = 1:n())
+}, current_epl_table) %>%
+  group_by(team, predicted_finish) %>%
+  summarise(perc = n() / n) %>%
+  group_by(team) %>%
+  mutate(mean_finish = mean(predicted_finish)) %>%
+  arrange(mean_finish) %>%
+  ungroup() %>%
+  mutate(team = factor(team, levels = unique(team)))
+```
+
+```{r load_predicted_finishes, warning=FALSE,message=FALSE,echo=FALSE}
+predicted_finishes_2020 <- readRDS("../../static/files/predicted_2020_finishes.rds")
+```
+
+If we then plot these predicted finishes (ordered by the chance of their highest finish position), we can get an idea of where we expect teams to end the season:
+
+```{r plot_2020_prediction, warning=FALSE,message=FALSE}
+#list of team colours
+team_cols <- c("red", "skyblue", "darkblue", "darkred", "darkblue",
+               "orange", "red", "white", "red", "blue", "maroon", 
+               "blue", "white", "red", "dodgerblue", "yellow", 
+               "maroon", "red", "maroon", "yellow")
+
+#plot the finishing position by chance based on these simualtions
+p6 <- ggplot(predicted_finishes_2020, 
+             aes(x = predicted_finish, y = perc, fill = team)) +
+  geom_bar(stat = "identity", colour = "black") +
+  scale_fill_manual(values = team_cols, guide = FALSE) +
+  theme_minimal() +
+  facet_wrap(~team)
+
+p6
+```
+
+So great news for Liverpool fans who the model believes have a 100% chance of finishing in first place. Leicester also might be happy with a nailed on 3rd place, with Chelsea or Manchester United probably rounding out the top four, and Wolves joining the loser of the two in the Europa League.
+
+```{r get_european_finishes, warning=FALSE,message=FALSE}
+#get the predictions for the 2019/2020 champion
+winner <- predicted_finishes_2020 %>%
+  filter(predicted_finish < 2)%>%
+  mutate(prediction = "Champion chance")
+
+winner
+
+#get prediction for those who qualify for champions league
+#and for europa league
+champs_league <- predicted_finishes_2020 %>%
+  filter(predicted_finish < 5) %>%
+  group_by(team) %>%
+  summarise(perc = sum(perc)) %>%
+  arrange(-perc) %>%
+  mutate(prediction = "Champions League chance")
+
+champs_league
+
+europa_league  <- predicted_finishes_2020 %>%
+  filter(predicted_finish < 7) %>%
+  group_by(team) %>%
+  summarise(perc = sum(perc)) %>%
+  arrange(-perc) %>%
+  mutate(prediction = "(at least) Europa League chance")
+
+europa_league
+```
+
+(obviously this model does not account for any ramifications of [Manchester City's European ban](https://www.itv.com/news/2020-02-14/manchester-city-banned-from-champions-league-for-two-years-by-uefa/))
+
+At the foot of the table, the model is fairly bullish on Norwich being relegated, with Aston Villa probably joining them, and then probably West Ham rounding out the relegation spots.
+
+```{r predict_relegation, warning=FALSE,message=FALSE}
+#get predictions for those who would be relegated
+relegated  <- predicted_finishes_2020 %>%
+  filter(predicted_finish > 17) %>%
+  group_by(team) %>%
+  summarise(perc = sum(perc)) %>%
+  arrange(-perc) %>%
+  mutate(prediction = "Relegation chance")
+
+relegated
+
+```
+## Final Remarks
+
+I want to make it clear at the end of this post that this probably isn't the most sophisticated model for predicting football matches (more to come in a part 3, maybe this time within less than a year), but does a pretty good job!
+
+In any case though, I don't think that running these sims is a good way to end the season- in truth, there's probably no good way. This post is more about _how_ to use this technique than _whether_ to use it.
+
+Best, stay safe as always!
