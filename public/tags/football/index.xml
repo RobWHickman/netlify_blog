@@ -7,8 +7,633 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
-    <lastBuildDate>Mon, 20 Apr 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 26 Apr 2020 00:00:00 +0000</lastBuildDate>
     <atom:link href="/tags/football/" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>An Introduction to Modelling Soccer Matches in R (part 2)</title>
+      <link>/post/dixon_coles_2/</link>
+      <pubDate>Sun, 26 Apr 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/dixon_coles_2/</guid>
+      <description>
+
+
+&lt;p&gt;&lt;em&gt;I wrote this one pretty quickly compared to part 1 (which goes much deeper into mathematical concepts), and only realized after how much of a similarity it has to many of &lt;a href=&#34;https://twitter.com/Torvaney?ref_src=twsrc%5Egoogle%7Ctwcamp%5Eserp%7Ctwgr%5Eauthor&#34;&gt;Ben Torvaney’s&lt;/a&gt; posts on the subject. This probably isn’t a coincidence given how much I’ve used his work previously in posts on this blog. Any imitation here is meant as flattery. The purpose of this post is really as a bridge between what I really want to write about- the maths behind the models in part 1, and extensions of these models into other distribution in parts 3-n so it might be a little derivative of stuff written elsewhere.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;On this blog I enjoy explaining various concepts from the more academic side of football analytics. One of my favourite results from this field are the papers in predicting future soccer matches based on limited information about past matches. Roughly 1 year ago I published &lt;a href=&#34;https://www.robert-hickman.eu/post/dixon_coles_1/&#34;&gt;part 1&lt;/a&gt; on a series of this and never got round to writing part 2 (of hopefully 2 or 3 more).&lt;/p&gt;
+&lt;p&gt;In the first post, we saw how we can use the Poisson distribution to estimate the relative strengths of teams in a hypothetical summer league between Arsenal, Blackburn Rovers, Coventry City, Dover Athletic, Enfield Town, and Frimley Green. Now we want to move onto actually &lt;em&gt;using&lt;/em&gt; these estimates to predict matches, and eventually, whole leagues.&lt;/p&gt;
+&lt;p&gt;A good way to sum up this post in one line is a quote (mis) attributed to Niels Bohr:&lt;/p&gt;
+&lt;div id=&#34;its-difficult-to-make-predictions-especially-about-the-future&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;&lt;em&gt;“It’s Difficult to Make Predictions, Especially About the Future”&lt;/em&gt;&lt;/h3&gt;
+&lt;p&gt;We’ve made our predictions about the past (estimating the relative strengths of teams based on past results), now we need to predict the future. I think it also nicely captures that even our predictions about the past are noisy- we can not ever truly know the exact strengths of football teams; the job of analytics is to estimate these are accurately as possible. But any noise in those past predictions will be carried forward and amplified when predicting the future.&lt;/p&gt;
+&lt;p&gt;Onward to the code, first as always, loading libraries and setting a seed for reproducibility:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
+library(ggrepel)
+
+set.seed(3459)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We’re then going to load all the stuff we prepped and predicted in the last post. Remember the α parameter below refers to a teams attacking strength (the relative number of goals they are expected to score), and the β parameter refers to the attacking strength (the inverse of the relative number of goals they are expected to concede). Finally, γ refers to the extra advantage of playing at home.&lt;/p&gt;
+&lt;p&gt;(all these files are on the github repo for this site)&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;fixtures &amp;lt;- readRDS(&amp;quot;../../static/files/dc_2/dc_fixtures.rds&amp;quot;)
+results &amp;lt;- readRDS(&amp;quot;../../static/files/dc_2/dc_results.rds&amp;quot;)
+
+model &amp;lt;- readRDS(&amp;quot;../../static/files/dc_2/dc_model.rds&amp;quot;)
+
+model&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## $alpha
+##          Arsenal Blackburn_Rovers    Coventry_City   Dover_Athletic 
+##        1.1106558        0.6370160        0.3023048       -0.2875353 
+##     Enfield_Town    Frimley_Green 
+##       -0.3767038       -1.3857376 
+## 
+## $beta
+##          Arsenal Blackburn_Rovers    Coventry_City   Dover_Athletic 
+##        0.6457175        0.4289270        0.3647815       -0.1362931 
+##     Enfield_Town    Frimley_Green 
+##       -0.3852812       -0.9178517 
+## 
+## $gamma
+##    gamma 
+## 0.189462&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We’ll define a quick function to do our prediction. For a quick explanation of exactly why it’s coded as presented, see &lt;a href=&#34;https://www.robert-hickman.eu/post/dixon_coles_1/#Tinkering&#34;&gt;the previous post&lt;/a&gt;, under the title ‘Tinkering’.&lt;/p&gt;
+&lt;p&gt;For a given string of a home team and an away team, the function finds the relevant parameters from a third argument (param_list) and calculates the expected goal for each team.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;predict_results &amp;lt;- function(home, away, param_list) {
+  e_goals_home &amp;lt;- exp(param_list$alpha[home] - param_list$beta[away] + param_list$gamma)
+  e_goals_away &amp;lt;- exp(param_list$alpha[away] - param_list$beta[home])
+  
+  df &amp;lt;- data.frame(home = home, away = away,
+                   e_hgoal = as.numeric(e_goals_home), 
+                   e_agoal = as.numeric(e_goals_away))
+  
+  return(df)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If we run this for two example teams for example:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#two example teams
+home &amp;lt;- &amp;quot;Blackburn_Rovers&amp;quot;
+away &amp;lt;- &amp;quot;Arsenal&amp;quot;
+
+prediction &amp;lt;- predict_results(home, away, model) 
+prediction&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##               home    away  e_hgoal  e_agoal
+## 1 Blackburn_Rovers Arsenal 1.198128 1.977293&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can see that it gives Arsenal (the away team) a slightly more optimistic chance than Blackburn. The expected goals for each team of course can be rewritten as the mean, and in our Poisson model refers to λ (lambda)- the mean times an event (goal) happens per a time interval (match). We also set a maximum number of possible goals (7 in this case*) to bound the area under the distribution so we aren’t sampling forever.&lt;/p&gt;
+&lt;p&gt;*sharp readers might notice that this is actually &lt;em&gt;lower&lt;/em&gt; than the lambda for our more extreme cases (e.g. Arsenal at home to Frimley Green), but for realistic matches (even between wildly different professional sides) this is a fair enough assumption.&lt;/p&gt;
+&lt;p&gt;We then use dpois() to calculate the probability of this Poisson function returning a value (0:7 goals) given it’s lambda value. So if we run this over the prediction we made for Blackburn Rovers vs. Arsenal we get:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#set a limit of where we&amp;#39;ll calculate across
+max_goals &amp;lt;- 7
+
+#calculate the probability of scoring x goals for either team
+blackburn_goal_probs &amp;lt;- lapply(0:max_goals, dpois, lambda = prediction$e_hgoal)
+arsenal_goal_probs &amp;lt;- lapply(0:max_goals, dpois, lambda = prediction$e_agoal)
+
+#bind together in a df
+df &amp;lt;- data.frame(goals = rep(0:max_goals, 2),
+                 team = rep(c(home, away), each = max_goals+1),
+                 p = c(unlist(blackburn_goal_probs), unlist(arsenal_goal_probs)))
+
+#plot the p of scoring x goals for either team
+p1 &amp;lt;- ggplot(df, aes(x = goals, y = p, fill = team)) +
+  geom_density(stat = &amp;quot;identity&amp;quot;, alpha = 0.5) +
+  scale_fill_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;)) +
+  labs(title = &amp;quot;Predicted goals for Blackburn Rovers and Arsenal&amp;quot;,
+       y = &amp;quot;probability&amp;quot;) +
+  theme_minimal()
+
+p1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-2_files/figure-html/predict_mach_goals-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Because of how maths works, these curves are the same result we would get if we ran rpois() (sampling from the Poisson function) lots of times. We’ll do that quickly because it sets the stage nicely for what will come later.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#sample from the function lots of times for each team
+n &amp;lt;- 100000
+blackburn_goals_samples &amp;lt;- rpois(n, lambda = prediction$e_hgoal)
+arsenal_goals_samples &amp;lt;- rpois(n, lambda = prediction$e_agoal)
+
+df &amp;lt;- data.frame(team = rep(c(home, away), each = n),
+                 sampled_goals = c(blackburn_goals_samples, arsenal_goals_samples))
+
+#look its the same plot!
+p2 &amp;lt;- ggplot(df, aes(x = sampled_goals, fill = team)) +
+  geom_bar(stat = &amp;quot;count&amp;quot;, position = &amp;quot;dodge&amp;quot;, colour = &amp;quot;black&amp;quot;, alpha = 0.5) +
+  geom_line(aes(colour = team), stat = &amp;quot;count&amp;quot;, size = 3) +
+  scale_fill_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;), guide = FALSE) +
+  scale_colour_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;), guide = FALSE) +
+  labs(title = &amp;quot;Predicted goals for Blackburn Rovers and Arsenal&amp;quot;,
+       y = &amp;quot;probability&amp;quot;,
+       x = &amp;quot;sampled goals&amp;quot;) +
+  theme_minimal() +
+  theme(axis.text.y = element_blank())
+
+p2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-2_files/figure-html/monte_carlo_poisson-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Ok great!, in terms of predicting the result, the rightwards shift of the red (Arsenal) curve here is the difference in the teams ability to generate a positive goal differential- it makes it more likely that if we sample event, Arsenal will have scored more goals than Blackburn Rovers at the end of the match. Of course, it’s also obvious that while Arsenal’s curve is right shifted, the bars for Arsenal scoring 0 goals and Blackburn scoring 6 are still sizable enough that it isn’t outside the realm of possibility.&lt;/p&gt;
+&lt;p&gt;This is a nice way of presenting the chance of each team scoring n goals, but doesn’t really help us in predicting the result of a match given that this relies on the interaction of both these distributions (we need to know how many goals BOTH Arsenal AND Blackburn will score).&lt;/p&gt;
+&lt;p&gt;To calculate this, we can do an outer product of the probabilities for both teams scoring n goals. We can then plot the probability of each &lt;em&gt;scoreline&lt;/em&gt; as a tile plot:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#calculate matrix of possible results and probabilities of those
+matrix &amp;lt;- outer(unlist(arsenal_goal_probs), unlist(blackburn_goal_probs)) %&amp;gt;%
+  as.data.frame() %&amp;gt;%
+  gather() %&amp;gt;%
+  #add in scorelines
+  mutate(hgoals = rep(0:max_goals, max_goals+1),
+         agoals = rep(0:max_goals, each = max_goals+1))
+
+#make the tile plot
+p3 &amp;lt;- ggplot(matrix, aes(x = hgoals, y = agoals, fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = paste(hgoals, agoals, sep = &amp;quot;-&amp;quot;))) +
+  scale_fill_gradient2(low = &amp;quot;white&amp;quot;, high = &amp;quot;red&amp;quot;, guide = FALSE) +
+  theme_minimal()
+
+p3&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-2_files/figure-html/example_tileplot-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Where we can see that the most common scorelines are low scoring (football is a low scoring game), and slightly biased towards away goals (i.e. Arsenal are more likely to win than lose). The darkest (most likely) tiles being 1-1 or a 2-1 Arsenal win seem very plausible given our calculated λs earlier.&lt;/p&gt;
+&lt;p&gt;We can then do this for every fixture and build a large graph of the expected results for each using a simple map2_ apply. Because of the huge plot, I’ve restricted it here to a 3x3 matrix of the results for Arsenal, Coventry City, and Enfield Town, but if you click you should be linked to the full image.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#want to predict over the whole fixture space
+all_fixtures &amp;lt;- bind_rows(fixtures, results) %&amp;gt;%
+  filter(!duplicated(paste(home, away), fromLast = TRUE))
+
+#get the lambda for each team per game
+predictions &amp;lt;- map2_df(all_fixtures$home, all_fixtures$away, 
+                       predict_results,
+                       model)
+
+#calc out probabilities and bind up
+all_predictions &amp;lt;- map2_df(
+  predictions$e_hgoal, predictions$e_agoal, 
+  function(lambda_home, lambda_away, max_goals) {
+    hgoal_prob &amp;lt;- dpois(0:max_goals, lambda_home) %&amp;gt;% `names&amp;lt;-`(0:max_goals)
+    agoal_prob &amp;lt;- dpois(0:max_goals, lambda_away) %&amp;gt;% `names&amp;lt;-`(0:max_goals)
+    outer(hgoal_prob, agoal_prob) %&amp;gt;%
+      as.data.frame() %&amp;gt;% 
+      gather() %&amp;gt;% 
+      rownames_to_column(&amp;quot;row&amp;quot;) %&amp;gt;%
+      mutate(hgoal = as.numeric(row) %% (max_goals+1)-1) %&amp;gt;% 
+      mutate(hgoal = case_when(hgoal &amp;lt; 0 ~ max_goals, TRUE ~ hgoal),
+             agoal = as.numeric(key)) %&amp;gt;%
+      select(sample_hgoal = hgoal, sample_agoal = agoal, prob = value)
+}, max_goals) %&amp;gt;%
+  cbind(all_fixtures[rep(seq_len(nrow(all_fixtures)), each=(max_goals+1)^2),], .) %&amp;gt;%
+  group_by(home, away) %&amp;gt;%
+  mutate(prob = prob / sum(prob)) %&amp;gt;%
+  ungroup()
+
+#plot again
+p3 &amp;lt;- all_predictions %&amp;gt;%
+  #filter only a few out to scale plot 
+  filter(home %in% c(&amp;quot;Arsenal&amp;quot;, &amp;quot;Coventry_City&amp;quot;, &amp;quot;Enfield_Town&amp;quot;),
+         away %in% c(&amp;quot;Arsenal&amp;quot;, &amp;quot;Coventry_City&amp;quot;, &amp;quot;Enfield_Town&amp;quot;)) %&amp;gt;%
+  ggplot(aes(x = sample_hgoal, y = sample_agoal, fill = prob)) +
+  geom_tile() +
+  geom_point(aes(x = hgoal, y = agoal), 
+             colour = &amp;quot;blue&amp;quot;, size = 5, alpha = 0.5 / max_goals^2) +
+  geom_text(aes(label = paste(sample_hgoal, sample_agoal, sep = &amp;quot;-&amp;quot;)), size = 2.3) +
+  scale_fill_gradient2(low = &amp;quot;white&amp;quot;, high = &amp;quot;red&amp;quot;, guide = FALSE) +
+  labs(
+    title = &amp;quot;predictions for final score across all fixtures&amp;quot;,
+    y = &amp;quot;away goals&amp;quot;,
+    x = &amp;quot;home goals&amp;quot;) +
+  theme_minimal() +
+  facet_grid(away~home, scales = &amp;quot;free&amp;quot;)
+
+p3&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-2_files/figure-html/plot_all_matrix-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;For the whole matrix, click &lt;a href=&#34;https://www.robert-hickman.eu/img/results_matrix.png&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;so-what&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;So what?&lt;/h2&gt;
+&lt;p&gt;These graphs are nice, but whats important is what they show: &lt;em&gt;we have a way to quantify how likely any result is in a match between two given teams&lt;/em&gt;. Why is this useful&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Firstly, we can use the output of this to build betting models. Given the odds on final scores for any match, we can hedge effectively by betting on (e.g.) the five overwhelmingly most likely results.&lt;/li&gt;
+&lt;li&gt;Secondly, we can simulate leagues. This is &lt;a href=&#34;https://www.bloomberg.com/graphics/2020-coronavirus-european-football/&#34;&gt;perhaps especially of interest given the context of writing this post&lt;/a&gt;. I’m going to focus on this application because I don’t bet on football, and also because it’s hard to get a nice database of odds at the moment given the aforementioned situation.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.youtube.com/watch?v=DYb8gS-wDrM&#34;&gt;The Verve - Monte Carlo&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;We can do this using a technique called &lt;a href=&#34;https://en.wikipedia.org/wiki/Monte_Carlo_method&#34;&gt;Monte Carlo simulation&lt;/a&gt;. There are lots of good explanation of the technique on the internet, but it basically boils down to this:&lt;/p&gt;
+&lt;div id=&#34;if-events-follow-a-known-distribution-you-can-sample-these-events-lots-of-times-to-get-stochastic-guesstimates-but-over-many-samples-you-will-reproduce-exactly-that-distribution&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;&#34;if events follow a known distribution*, you can sample these events lots of times to get stochastic guesstimates, but over many samples you will reproduce exactly that distribution&#34;&lt;/h3&gt;
+&lt;p&gt;*a Poisson distribution for the expected number of goals scored in our case&lt;/p&gt;
+&lt;p&gt;For football, this means that while on an individual match level results are noisy (sometimes better teams lose!), if we simulate matches lots and lots of times, eventually they should converge to the ‘truth’*&lt;/p&gt;
+&lt;p&gt;*as defined by our Poisson distribution (which may or may not be a good/accurate ‘truth’ but go with it for now).&lt;/p&gt;
+&lt;p&gt;To work with this highly repetitive data, first we want to ‘nest’ the probabilities for each match. This basically means storing a df of all the possible results and their probabilities as a column inside a larger df so we can move between the data in those two structures easier.&lt;/p&gt;
+&lt;p&gt;For instance, the nest match results probability information for the next match to be played (Coventry City and home to Arsenal):&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;nested_probabilities &amp;lt;- all_predictions %&amp;gt;%
+  filter(is.na(hgoal)) %&amp;gt;%
+  select(-hgoal, -agoal) %&amp;gt;%
+  nest(probabilities = c(sample_hgoal, sample_agoal, prob))
+
+nested_probabilities$probabilities[[1]] %&amp;gt;%
+  rename(&amp;quot;Coventry City&amp;quot; = sample_hgoal, &amp;quot;Arsenal&amp;quot; = sample_agoal) %&amp;gt;%
+  arrange(-prob) %&amp;gt;%
+  #show first 15 rows
+  .[1:15,]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 15 x 3
+##    `Coventry City` Arsenal   prob
+##              &amp;lt;dbl&amp;gt;   &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt;
+##  1               0       2 0.115 
+##  2               0       1 0.109 
+##  3               1       2 0.0983
+##  4               1       1 0.0933
+##  5               0       3 0.0806
+##  6               1       3 0.0691
+##  7               0       0 0.0516
+##  8               1       0 0.0442
+##  9               0       4 0.0425
+## 10               2       2 0.0422
+## 11               2       1 0.0400
+## 12               1       4 0.0364
+## 13               2       3 0.0296
+## 14               2       0 0.0190
+## 15               0       5 0.0179&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The probability for any single result is small (otherwise match betting would be easy), but the probabilities for a 2-0 and 1-0 Arsenal wins are highest (as we found earlier). Indeed all of the most likely results are within a goal or two for either side of these.&lt;/p&gt;
+&lt;p&gt;To make sure these probabilities makes sense, we can sum them and see that the results space of 0:max_goals for either side sums to 1&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;sum(nested_probabilities$probabilities[[1]]$prob)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then we can easily use this data to simulate results. We sample a single row (a ‘result’ of the match) weighted by the probability of it occurring. For instance, when we sample from the Coventry City vs Arsenal match it picks a 3-1 Arsenal away win (not the likeliest result, but not the most unlikely either).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;nested_probabilities$probabilities[[1]] %&amp;gt;%
+  rename(&amp;quot;Coventry_City&amp;quot; = sample_hgoal, &amp;quot;Arsenal&amp;quot; = sample_agoal) %&amp;gt;%
+  sample_n(1, weight = prob)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 1 x 3
+##   Coventry_City Arsenal   prob
+##           &amp;lt;dbl&amp;gt;   &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt;
+## 1             1       3 0.0691&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can of course repeat this across every match and see that the probabilities of the chosen results vary (because we’re randomly sampling we won’t always choose the most likely, or even a likely result), but all are within a reasonable range given the team playing:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;nested_probabilities %&amp;gt;%
+    mutate(sampled_result = map(probabilities, sample_n, 1, weight = prob)) %&amp;gt;%
+    select(-probabilities) %&amp;gt;%
+    unnest(cols = c(sampled_result))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 6
+##   home             away             gameweek sample_hgoal sample_agoal   prob
+##   &amp;lt;chr&amp;gt;            &amp;lt;chr&amp;gt;               &amp;lt;int&amp;gt;        &amp;lt;dbl&amp;gt;        &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt;
+## 1 Coventry_City    Arsenal                 9            0            5 0.0179
+## 2 Blackburn_Rovers Dover_Athletic          9            1            1 0.0575
+## 3 Frimley_Green    Enfield_Town            9            0            4 0.0418
+## 4 Arsenal          Blackburn_Rovers       10            2            1 0.0966
+## 5 Coventry_City    Frimley_Green          10            3            0 0.170 
+## 6 Dover_Athletic   Enfield_Town           10            2            1 0.0839&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;But when we are predicting what will happen, we want to find the &lt;em&gt;most likely&lt;/em&gt; result. As mentioned earlier, if we sample enough, our average will converge towards this, so we can repeat this sampling technique n times (here I’ve done it 10 times), depending on how much time we want to wait for it to process.&lt;/p&gt;
+&lt;p&gt;You can see that as we do this many times, the results with the highest probability turn up more than others- as we would expect if we were to (e.g.) actually play Blackburn Rovers vs Arsenal many times.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;rerun(10, nested_probabilities %&amp;gt;%
+    filter(home == &amp;quot;Coventry_City&amp;quot; &amp;amp; away == &amp;quot;Arsenal&amp;quot;) %&amp;gt;%
+    mutate(sampled_result = map(probabilities, sample_n, 1, weight = prob)) %&amp;gt;%
+    select(-probabilities) %&amp;gt;%
+    unnest(cols = c(sampled_result))
+) %&amp;gt;%
+  bind_rows() %&amp;gt;%
+  arrange(-prob)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 10 x 6
+##    home          away    gameweek sample_hgoal sample_agoal   prob
+##    &amp;lt;chr&amp;gt;         &amp;lt;chr&amp;gt;      &amp;lt;int&amp;gt;        &amp;lt;dbl&amp;gt;        &amp;lt;dbl&amp;gt;  &amp;lt;dbl&amp;gt;
+##  1 Coventry_City Arsenal        9            0            2 0.115 
+##  2 Coventry_City Arsenal        9            1            2 0.0983
+##  3 Coventry_City Arsenal        9            1            1 0.0933
+##  4 Coventry_City Arsenal        9            0            3 0.0806
+##  5 Coventry_City Arsenal        9            1            3 0.0691
+##  6 Coventry_City Arsenal        9            1            0 0.0442
+##  7 Coventry_City Arsenal        9            0            4 0.0425
+##  8 Coventry_City Arsenal        9            0            4 0.0425
+##  9 Coventry_City Arsenal        9            0            4 0.0425
+## 10 Coventry_City Arsenal        9            1            5 0.0154&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If we do this a few more times per fixture (here 100, for a better estimate I’d advise at least 10000- it should only take a few minutes), we can then start assigning points and goal difference to each team based upon the result we’ve sampled. E.g. if one sample predicts Arsenal to beat Blackburn Rovers 4-0, we assign 3 points to Arsenal and 0 points to Blackburn Rovers for that simulation and +4 and -4 goal difference respectively.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;n &amp;lt;- 100
+fixture_sims &amp;lt;- rerun(n, nested_probabilities %&amp;gt;%
+    mutate(sampled_result = map(probabilities, sample_n, 1, weight = prob)) %&amp;gt;%
+    select(-probabilities) %&amp;gt;%
+    unnest(cols = c(sampled_result)) %&amp;gt;%
+  select(-gameweek, -prob) %&amp;gt;%
+  pivot_longer(c(home, away), names_to = &amp;quot;location&amp;quot;, values_to = &amp;quot;team&amp;quot;) %&amp;gt;%
+  mutate(points = case_when(
+    location == &amp;quot;home&amp;quot; &amp;amp; sample_hgoal &amp;gt; sample_agoal ~ 3,
+    location == &amp;quot;away&amp;quot; &amp;amp; sample_agoal &amp;gt; sample_hgoal ~ 3,
+    sample_hgoal == sample_agoal ~ 1,
+    TRUE ~ 0
+  )) %&amp;gt;%
+  mutate(gd = case_when(
+    location == &amp;quot;home&amp;quot; ~ sample_hgoal - sample_agoal,
+    location == &amp;quot;away&amp;quot; ~ sample_agoal - sample_hgoal
+  )))
+
+fixture_sims[1]&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [[1]]
+## # A tibble: 12 x 6
+##    sample_hgoal sample_agoal location team             points    gd
+##           &amp;lt;dbl&amp;gt;        &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;    &amp;lt;chr&amp;gt;             &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;
+##  1            0            0 home     Coventry_City         1     0
+##  2            0            0 away     Arsenal               1     0
+##  3            4            0 home     Blackburn_Rovers      3     4
+##  4            4            0 away     Dover_Athletic        0    -4
+##  5            0            0 home     Frimley_Green         1     0
+##  6            0            0 away     Enfield_Town          1     0
+##  7            3            0 home     Arsenal               3     3
+##  8            3            0 away     Blackburn_Rovers      0    -3
+##  9            6            1 home     Coventry_City         3     5
+## 10            6            1 away     Frimley_Green         0    -5
+## 11            1            1 home     Dover_Athletic        1     0
+## 12            1            1 away     Enfield_Town          1     0&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then average the points and goal difference won in these sims across each team and see what teams are predicted to win across their fixtures.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;fixture_sims %&amp;gt;%
+  bind_rows() %&amp;gt;%
+  group_by(team) %&amp;gt;%
+  summarise(av_points = sum(points)/n,
+            av_gd = sum(gd) / n)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 3
+##   team             av_points av_gd
+##   &amp;lt;chr&amp;gt;                &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;
+## 1 Arsenal               4.19  2.44
+## 2 Blackburn_Rovers      3.16  0.7 
+## 3 Coventry_City         3.61  2.42
+## 4 Dover_Athletic        2.26 -1.26
+## 5 Enfield_Town          2.95  0.23
+## 6 Frimley_Green         0.6  -4.53&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Where we can see that we expect Arsenal to win 4.19 out of a possible 6 points (with games remaining against Coventry and Blackburn Rovers they are expected to drop points but win at least one and probably draw the other). Coventry City are expected to also do well- probably because their final game is at home to Frimley Green, whereas Blackburn have tougher fixtures away at Arsenal and home to Dover Athletic.&lt;/p&gt;
+&lt;p&gt;We can then add this to the calculated points teams have &lt;em&gt;already&lt;/em&gt; accrued to get a prediction of where teams will end the season position wise:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;table &amp;lt;- results %&amp;gt;%
+  pivot_longer(c(home, away), names_to = &amp;quot;location&amp;quot;, values_to = &amp;quot;team&amp;quot;) %&amp;gt;%
+  mutate(points = case_when(
+    location == &amp;quot;home&amp;quot; &amp;amp; hgoal &amp;gt; agoal ~ 3,
+    location == &amp;quot;away&amp;quot; &amp;amp; agoal &amp;gt; hgoal ~ 3,
+    hgoal == agoal ~ 1,
+    TRUE ~ 0
+  )) %&amp;gt;%
+  mutate(gd = case_when(
+    location == &amp;quot;home&amp;quot; ~ hgoal - agoal,
+    location == &amp;quot;away&amp;quot; ~ agoal - hgoal
+  )) %&amp;gt;%
+  group_by(team) %&amp;gt;%
+  summarise(points = sum(points),
+            gd = sum(gd))
+
+predicted_finishes &amp;lt;- map_df(fixture_sims, function(simulated_fixtures, table) {
+  simulated_fixtures %&amp;gt;%
+    select(team, points, gd) %&amp;gt;%
+    bind_rows(., table) %&amp;gt;%
+    group_by(team) %&amp;gt;%
+    summarise(points = sum(points),
+              gd = sum(gd)) %&amp;gt;%
+    arrange(-points, -gd) %&amp;gt;%
+    mutate(predicted_finish = 1:n())
+}, table) %&amp;gt;%
+  group_by(team, predicted_finish) %&amp;gt;%
+  summarise(perc = n() / n)
+
+predicted_finishes&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 10 x 3
+## # Groups:   team [6]
+##    team             predicted_finish  perc
+##    &amp;lt;chr&amp;gt;                       &amp;lt;int&amp;gt; &amp;lt;dbl&amp;gt;
+##  1 Arsenal                         1  0.82
+##  2 Arsenal                         2  0.18
+##  3 Blackburn_Rovers                1  0.18
+##  4 Blackburn_Rovers                2  0.82
+##  5 Coventry_City                   3  0.97
+##  6 Coventry_City                   4  0.03
+##  7 Dover_Athletic                  3  0.03
+##  8 Dover_Athletic                  4  0.97
+##  9 Enfield_Town                    5  1   
+## 10 Frimley_Green                   6  1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Which gives Arsenal an 82% chance of finishing champions, with only a 18% chance Blackburn manage to leapfrog them into 1st place. Given there are only 2 matches left with teams designed to have fairly large gulfs in ability, it’s not surprising most of the final positions are nailed on- e.g. Enfield Town finish 5th in every single simulation:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p4 &amp;lt;- ggplot(predicted_finishes, aes(x = predicted_finish, y = perc, fill = team)) +
+  geom_bar(stat = &amp;quot;identity&amp;quot;, colour = &amp;quot;black&amp;quot;) +
+  scale_fill_manual(values = c(&amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;skyblue&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;dodgerblue4&amp;quot;, &amp;quot;blue&amp;quot;)) +
+  labs(
+    title = &amp;quot;Predicted finish position of teams&amp;quot;,
+    subtitle = &amp;quot;with two gameweeks left to play&amp;quot;,
+    y = &amp;quot;fraction of finishes&amp;quot;,
+    x = &amp;quot;final position&amp;quot;
+  ) +
+  theme_minimal() +
+  facet_wrap(~team)
+
+p4&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-2_files/figure-html/plot_predicted_finishes-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-real-thing&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;The Real Thing&lt;/h2&gt;
+&lt;p&gt;We’re now at the stage where we can start to look at real data. One of the motivating forces which drew me back to this putative blog series was the &lt;a href=&#34;https://www.theguardian.com/football/blog/2020/apr/25/finishing-premier-league-season-pointless-football&#34;&gt;current football situation&lt;/a&gt;- with season ending with games left to play.&lt;/p&gt;
+&lt;p&gt;We can use the knowledge we’ve built up over these last posts to see what we expect to happen in these unplayed games, if they cannot be completed.&lt;/p&gt;
+&lt;p&gt;To make code more concise, I’ve used Ben Torvaney’s code in his &lt;a href=&#34;https://github.com/Torvaney/regista&#34;&gt;regista&lt;/a&gt; package (he also has some nice usage blogs similar to this post at his &lt;a href=&#34;http://www.statsandsnakeoil.com/&#34;&gt;blog&lt;/a&gt;). The underlying maths is exactly the same as in my previous post though with a few different design choices. If we run the simulations using the code from the previous post we should get exactly the same answer.&lt;/p&gt;
+&lt;p&gt;The code following is also extremely similar to the final chunks of one of my previous &lt;a href=&#34;https://www.robert-hickman.eu/post/five_min_trivia_invincibles/&#34;&gt;posts&lt;/a&gt; in analysing the current Liverpool team’s achievements.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(rvest)
+library(regista)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;First we need to download the data on the current English Premier League season. Once we have this we can split it into played matches (where we 100% know the result) and unplayed matches which we need to predict the result of. For the basis of the team strength estimates I’ve used the xg created and allowed per game, as I believe these give a better estimate of team strength (indeed Ben Torvaney has a &lt;a href=&#34;http://www.statsandsnakeoil.com/2019/01/06/predicting-the-premier-league-with-dixon-coles-and-xg/&#34;&gt;nice post on using even the shot-by-shot xg to produce Dixon-Coles models&lt;/a&gt;).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#download the match data from 2019/2020
+fixtures_2020 &amp;lt;- &amp;quot;https://fbref.com/en/comps/9/schedule/Premier-League-Fixtures&amp;quot; %&amp;gt;%
+  read_html() %&amp;gt;%
+  html_nodes(&amp;quot;#sched_ks_3232_1&amp;quot;) %&amp;gt;%
+  html_table() %&amp;gt;%
+  as.data.frame() %&amp;gt;%
+  separate(Score, into = c(&amp;quot;hgoal&amp;quot;, &amp;quot;agoal&amp;quot;), sep = &amp;quot;–&amp;quot;) %&amp;gt;%
+  #only care about goals and expected goals
+  select(home = Home, away = Away, home_xg = xG, away_xg = xG.1, hgoal, agoal) %&amp;gt;%
+  filter(home != &amp;quot;&amp;quot;) %&amp;gt;%
+  mutate(home = factor(home), away = factor(away)) %&amp;gt;%
+  #round expected goals to nearest integer
+  mutate_at(c(&amp;quot;home_xg&amp;quot;, &amp;quot;away_xg&amp;quot;, &amp;quot;hgoal&amp;quot;, &amp;quot;agoal&amp;quot;), .funs = funs(round(as.numeric(.))))
+
+#matches with a known result
+#used for modelling
+played_matches &amp;lt;- fixtures_2020 %&amp;gt;%
+  filter(!is.na(home_xg))
+
+#matches with an unknown result
+#used for simulation
+unplayed_matches &amp;lt;- fixtures_2020 %&amp;gt;%
+  filter(is.na(home_xg)) %&amp;gt;%
+  select_if(negate(is.numeric))
+
+#fit the dixon coles model
+#use xg per game, not &amp;#39;actual&amp;#39; goals
+fit_2020 &amp;lt;- dixoncoles(home_xg, away_xg, home, away, data = played_matches)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To get a look at what the team parameters in a real-life league look like we can extract them from the model and plot them:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#extract Dixon-Coles team strenth parameters
+pars_2020 &amp;lt;- fit_2020$par %&amp;gt;%
+  .[grepl(&amp;quot;def_|off_&amp;quot;, names(.))] %&amp;gt;%
+  matrix(., ncol = 2) %&amp;gt;%
+  as.data.frame() %&amp;gt;%
+  rename(attack = V1, defence = V2)
+pars_2020$team &amp;lt;- unique(gsub(&amp;quot;def_*|off_*&amp;quot;, &amp;quot;&amp;quot;, names(fit_2020$par)))[1:20]
+
+#plot as before
+p5 &amp;lt;- pars_2020 %&amp;gt;%
+  mutate(defence = 1 - defence) %&amp;gt;%
+  ggplot(aes(x = attack, y = defence, colour = attack + defence, label = team)) +
+  geom_point(size = 3, alpha = 0.7) +
+  geom_text_repel() +
+  labs(title = &amp;quot;Dixon Coles parameters per team 2019/2020&amp;quot;,
+       x = &amp;quot;attacking strength&amp;quot;,
+       y = &amp;quot;defensive strength&amp;quot;) +
+  scale_colour_continuous(guide = FALSE) +
+  labs(title = &amp;quot;Dixon-Coles parameters for the 2019/2020 Premier League Season&amp;quot;,
+       x = &amp;quot;attacking strength&amp;quot;,
+       y = &amp;quot;defensive strength&amp;quot;) +
+  theme_minimal()
+
+p5&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-2_files/figure-html/plot_real_params-1.png&#34; width=&#34;672&#34; /&gt;
+It might surprise some that Manchester City are predicted to be better than Liverpool by this model, but it shouldn’t given the underlying numbers for both teams. Liverpool have run very hot and Manchester City have run very cold this season.&lt;/p&gt;
+&lt;p&gt;Finally, we can then calculate the current Premier League table, and simulate remaining games to predict where teams will finish the season if the remainder of games were to be played. I’ve chosen 1000 sims just for sake of processing time, but you can scale up and down as desired.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#calculate the current EPL table
+current_epl_table &amp;lt;- played_matches %&amp;gt;%
+  select(home, away, hgoal, agoal) %&amp;gt;%
+  pivot_longer(c(home, away), names_to = &amp;quot;location&amp;quot;, values_to = &amp;quot;team&amp;quot;) %&amp;gt;%
+  mutate(points = case_when(
+    location == &amp;quot;home&amp;quot; &amp;amp; hgoal &amp;gt; agoal ~ 3,
+    location == &amp;quot;away&amp;quot; &amp;amp; agoal &amp;gt; hgoal ~ 3,
+    hgoal == agoal ~ 1,
+    TRUE ~ 0
+  )) %&amp;gt;%
+  mutate(gd = case_when(
+    location == &amp;quot;home&amp;quot; ~ hgoal - agoal,
+    location == &amp;quot;away&amp;quot; ~ agoal - hgoal
+  )) %&amp;gt;%
+  group_by(team) %&amp;gt;%
+  summarise(points = sum(points),
+            gd = sum(gd))
+
+#the number of sims to run
+n &amp;lt;- 10000
+
+#simulate remaining matches
+fixture_sims_2020 &amp;lt;- rerun(
+  n,
+  augment.dixoncoles(fit_2020, unplayed_matches, type.predict = &amp;quot;scorelines&amp;quot;) %&amp;gt;%                     
+    mutate(sampled_result = map(.scorelines, sample_n, 1, weight = prob)) %&amp;gt;%
+    select(-.scorelines) %&amp;gt;%
+    unnest(cols = c(sampled_result)) %&amp;gt;%
+  pivot_longer(c(home, away), names_to = &amp;quot;location&amp;quot;, values_to = &amp;quot;team&amp;quot;) %&amp;gt;%
+  mutate(points = case_when(
+    location == &amp;quot;home&amp;quot; &amp;amp; hgoal &amp;gt; agoal ~ 3,
+    location == &amp;quot;away&amp;quot; &amp;amp; agoal &amp;gt; hgoal ~ 3,
+    hgoal == agoal ~ 1,
+    TRUE ~ 0
+  )) %&amp;gt;%
+  mutate(gd = case_when(
+    location == &amp;quot;home&amp;quot; ~ hgoal - agoal,
+    location == &amp;quot;away&amp;quot; ~ agoal - hgoal
+  )) %&amp;gt;%
+    select(team, points, gd))
+
+#calculate final EPL tables
+predicted_finishes_2020 &amp;lt;- map_df(fixture_sims_2020, function(sim_fixtures, table) {
+  sim_fixtures %&amp;gt;%
+    select(team, points, gd) %&amp;gt;%
+    bind_rows(., table) %&amp;gt;%
+    group_by(team) %&amp;gt;%
+    summarise(points = sum(points),
+              gd = sum(gd)) %&amp;gt;%
+    arrange(-points, -gd) %&amp;gt;%
+    mutate(predicted_finish = 1:n())
+}, current_epl_table) %&amp;gt;%
+  group_by(team, predicted_finish) %&amp;gt;%
+  summarise(perc = n() / n) %&amp;gt;%
+  group_by(team) %&amp;gt;%
+  mutate(mean_finish = mean(predicted_finish)) %&amp;gt;%
+  arrange(mean_finish) %&amp;gt;%
+  ungroup() %&amp;gt;%
+  mutate(team = factor(team, levels = unique(team)))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If we then plot these predicted finishes (ordered by the chance of their highest finish position), we can get an idea of where we expect teams to end the season:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#list of team colours
+team_cols &amp;lt;- c(&amp;quot;red&amp;quot;, &amp;quot;skyblue&amp;quot;, &amp;quot;darkblue&amp;quot;, &amp;quot;darkred&amp;quot;, &amp;quot;darkblue&amp;quot;,
+               &amp;quot;orange&amp;quot;, &amp;quot;red&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;red&amp;quot;, &amp;quot;blue&amp;quot;, &amp;quot;maroon&amp;quot;, 
+               &amp;quot;blue&amp;quot;, &amp;quot;white&amp;quot;, &amp;quot;red&amp;quot;, &amp;quot;dodgerblue&amp;quot;, &amp;quot;yellow&amp;quot;, 
+               &amp;quot;maroon&amp;quot;, &amp;quot;red&amp;quot;, &amp;quot;maroon&amp;quot;, &amp;quot;yellow&amp;quot;)
+
+#plot the finishing position by chance based on these simualtions
+p6 &amp;lt;- ggplot(predicted_finishes_2020, 
+             aes(x = predicted_finish, y = perc, fill = team)) +
+  geom_bar(stat = &amp;quot;identity&amp;quot;, colour = &amp;quot;black&amp;quot;) +
+  scale_fill_manual(values = team_cols, guide = FALSE) +
+  theme_minimal() +
+  facet_wrap(~team)
+
+p6&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2019-30-5-dixon-coles-2_files/figure-html/plot_2020_prediction-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;So great news for Liverpool fans who the model believes have a 100% chance of finishing in first place. Leicester also might be happy with a nailed on 3rd place, with Chelsea or Manchester United probably rounding out the top four, and Wolves joining the loser of the two in the Europa League.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the predictions for the 2019/2020 champion
+winner &amp;lt;- predicted_finishes_2020 %&amp;gt;%
+  filter(predicted_finish &amp;lt; 2)%&amp;gt;%
+  mutate(prediction = &amp;quot;Champion chance&amp;quot;)
+
+winner&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 2 x 5
+##   team            predicted_finish   perc mean_finish prediction     
+##   &amp;lt;fct&amp;gt;                      &amp;lt;int&amp;gt;  &amp;lt;dbl&amp;gt;       &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;          
+## 1 Liverpool                      1 1.00           1.5 Champion chance
+## 2 Manchester City                1 0.0001         2.5 Champion chance&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get prediction for those who qualify for champions league
+#and for europa league
+champs_league &amp;lt;- predicted_finishes_2020 %&amp;gt;%
+  filter(predicted_finish &amp;lt; 5) %&amp;gt;%
+  group_by(team) %&amp;gt;%
+  summarise(perc = sum(perc)) %&amp;gt;%
+  arrange(-perc) %&amp;gt;%
+  mutate(prediction = &amp;quot;Champions League chance&amp;quot;)
+
+champs_league&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 10 x 3
+##    team              perc prediction             
+##    &amp;lt;fct&amp;gt;            &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;                  
+##  1 Liverpool       1      Champions League chance
+##  2 Manchester City 1      Champions League chance
+##  3 Leicester City  0.933  Champions League chance
+##  4 Chelsea         0.479  Champions League chance
+##  5 Manchester Utd  0.46   Champions League chance
+##  6 Wolves          0.106  Champions League chance
+##  7 Sheffield Utd   0.0155 Champions League chance
+##  8 Tottenham       0.004  Champions League chance
+##  9 Arsenal         0.0018 Champions League chance
+## 10 Everton         0.0005 Champions League chance&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;europa_league  &amp;lt;- predicted_finishes_2020 %&amp;gt;%
+  filter(predicted_finish &amp;lt; 7) %&amp;gt;%
+  group_by(team) %&amp;gt;%
+  summarise(perc = sum(perc)) %&amp;gt;%
+  arrange(-perc) %&amp;gt;%
+  mutate(prediction = &amp;quot;(at least) Europa League chance&amp;quot;)
+
+europa_league&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 13 x 3
+##    team              perc prediction                     
+##    &amp;lt;fct&amp;gt;            &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;                          
+##  1 Liverpool       1      (at least) Europa League chance
+##  2 Manchester City 1      (at least) Europa League chance
+##  3 Leicester City  0.999  (at least) Europa League chance
+##  4 Manchester Utd  0.954  (at least) Europa League chance
+##  5 Chelsea         0.954  (at least) Europa League chance
+##  6 Wolves          0.729  (at least) Europa League chance
+##  7 Sheffield Utd   0.196  (at least) Europa League chance
+##  8 Tottenham       0.096  (at least) Europa League chance
+##  9 Arsenal         0.0479 (at least) Europa League chance
+## 10 Everton         0.0139 (at least) Europa League chance
+## 11 Burnley         0.0089 (at least) Europa League chance
+## 12 Crystal Palace  0.0009 (at least) Europa League chance
+## 13 Southampton     0.0008 (at least) Europa League chance&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;(obviously this model does not account for any ramifications of &lt;a href=&#34;https://www.itv.com/news/2020-02-14/manchester-city-banned-from-champions-league-for-two-years-by-uefa/&#34;&gt;Manchester City’s European ban&lt;/a&gt;)&lt;/p&gt;
+&lt;p&gt;At the foot of the table, the model is fairly bullish on Norwich being relegated, with Aston Villa probably joining them, and then probably West Ham rounding out the relegation spots.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get predictions for those who would be relegated
+relegated  &amp;lt;- predicted_finishes_2020 %&amp;gt;%
+  filter(predicted_finish &amp;gt; 17) %&amp;gt;%
+  group_by(team) %&amp;gt;%
+  summarise(perc = sum(perc)) %&amp;gt;%
+  arrange(-perc) %&amp;gt;%
+  mutate(prediction = &amp;quot;Relegation chance&amp;quot;)
+
+relegated&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## # A tibble: 8 x 3
+##   team             perc prediction       
+##   &amp;lt;fct&amp;gt;           &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;            
+## 1 Norwich City  0.934   Relegation chance
+## 2 Aston Villa   0.700   Relegation chance
+## 3 Bournemouth   0.507   Relegation chance
+## 4 West Ham      0.402   Relegation chance
+## 5 Watford       0.270   Relegation chance
+## 6 Brighton      0.171   Relegation chance
+## 7 Newcastle Utd 0.0126  Relegation chance
+## 8 Southampton   0.00270 Relegation chance&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;final-remarks&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Final Remarks&lt;/h2&gt;
+&lt;p&gt;I want to make it clear at the end of this post that this probably isn’t the most sophisticated model for predicting football matches (more to come in a part 3, maybe this time within less than a year), but does a pretty good job!&lt;/p&gt;
+&lt;p&gt;In any case though, I don’t think that running these sims is a good way to end the season- in truth, there’s probably no good way. This post is more about &lt;em&gt;how&lt;/em&gt; to use this technique than &lt;em&gt;whether&lt;/em&gt; to use it.&lt;/p&gt;
+&lt;p&gt;Best, stay safe as always!&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>Papers Please! &#39;Wide Open Spaces A statistical technique for measuring space creation in professional soccer&#39; pt 1</title>
@@ -6608,352 +7233,6 @@ simulated_tables %&amp;gt;%
 ## 4 Manchester City expected goals     0.099&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Chelsea only sneak into the mix for the expected goals model but it doesn’t look likely they’ll win the league. In the accomplished goals model there may be a slight title race (3/4 that Arsenal win, 1/4 that Man City overtake them), but using expected goals, Arsenal should be pretty confident of winning the league this season.&lt;/p&gt;
 &lt;p&gt;That’s all for now. Will hopefully do a lot more football analysis in the coming year(s) first to expand on this post then look at other stuff.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>The Knowledge 4th August 2018</title>
-      <link>/post/the-knowledge-4th-august-2018/</link>
-      <pubDate>Sat, 04 Aug 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/the-knowledge-4th-august-2018/</guid>
-      <description>
-
-
-&lt;p&gt;The Guardian publish a weekly set of questions and answers on a variety of football minutiae at &lt;a href=&#34;https://www.theguardian.com/football/series/theknowledge&#34;&gt;The Knowledge&lt;/a&gt;. Forutnately, some of these are extremely tractable using R, so I thought I’d have a go at working through the archives to see if I can shed light on any of the questions.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(rvest)
-library(dplyr)
-library(magrittr)
-library(data.table)
-library(zoo)
-library(ggplot2)
-library(rvest)
-library(stringr)
-
-#jalapic/engsoccerdata
-library(engsoccerdata)&lt;/code&gt;&lt;/pre&gt;
-&lt;div id=&#34;we-aint-going-to-the-town..&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;We Ain’t Going To The Town..&lt;/h1&gt;
-&lt;p&gt;&lt;a href=&#34;https://twitter.com/topes_lose/status/1023537060668473344?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E1023537060668473344&amp;amp;ref_url=https%3A%2F%2Fwww.theguardian.com%2Ffootball%2F2018%2Faug%2F01%2Ffootballers-who-have-backed-out-of-a-transfer-for-another-late-in-the-day&#34;&gt;‘This season, Tranmere Rovers return to contest League Two alongside eight teams with the suffix Town, including six successive fixtures against these clubs over the New Year. What is the record for successive fixtures versus clubs with the same (or no) prefix or suffix?’&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;For this question I decided to ignore prefixes as the dataset I’m using doesn’t have any that could be matches between teams except the ‘West’ in West Ham and West Bromwich Albion. That dataset is the excellent engsoccerdata from James Curley found at his github &lt;a href=&#34;https://github.com/jalapic/engsoccerdata&#34;&gt;here&lt;/a&gt; and on CRAN.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#take all of the english soccer data in the package and bind it together
-england_data &amp;lt;- bind_rows(
-    select(engsoccerdata::england,
-           .data$home, .data$visitor, date = .data$Date),
-    select(engsoccerdata::englandplayoffs,
-           .data$home, .data$visitor, date = .data$Date),
-    select(engsoccerdata::england1939,
-           .data$home, .data$visitor, date = .data$Date)) %&amp;gt;%
-  setDT() %&amp;gt;%
-  #convert the date to date class
-  .[, date := as.Date(date)]
-
-#get a list of each unique team in the dataset
-all_teams &amp;lt;- unique(c(as.character(england_data$home),
-                      as.character(england_data$visitor)))
-
-#melt the dataset by each teams matches
-find_chains &amp;lt;- rbindlist(lapply(all_teams, function(team) {
-  england_data %&amp;gt;%
-    .[home == team | visitor == team] %&amp;gt;%
-    .[, matching_team := team]
-  })) %&amp;gt;%
-  .[home == matching_team, other := visitor] %&amp;gt;%
-  .[visitor == matching_team, other := home] %&amp;gt;%
-  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;)] %&amp;gt;%
-  #get the suffixes and prefixes of the other team
-  .[, other_prefix := gsub(&amp;quot; .*&amp;quot;, &amp;quot;&amp;quot;, other)] %&amp;gt;%
-  .[, other_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, other)] %&amp;gt;%
-  #arrange by team and date
-  .[order(matching_team, date)] %&amp;gt;%
-  #convert to an id
-  .[, suffix_id := as.numeric(as.factor(other_suffix))] %&amp;gt;%
-  #if playing consecutively against the same suffix id (ignoring prefixes for now) put in same &amp;#39;chain&amp;#39;
-  .[, match := suffix_id - lead(suffix_id), by = &amp;quot;matching_team&amp;quot;] %&amp;gt;%
-  .[match == 0 &amp;amp; lead(match) != 0, chain_id := 1:.N] %&amp;gt;%
-  .[match == 0] %&amp;gt;%
-  .[, chain_id := na.locf(chain_id, fromLast = TRUE)] %&amp;gt;%
-  .[, chain_length := .N, by = chain_id] %&amp;gt;%
-  #take only chains at least as long as Tranmere&amp;#39;s run (6)
-  .[chain_length &amp;gt; 5] %&amp;gt;%
-  .[order(chain_length)] %&amp;gt;%
-  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;, &amp;quot;chain_length&amp;quot;)]
-
-#print the chains of equal length to Tranmere&amp;#39;s run
-print(find_chains)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##           date  matching_team               other chain_length
-##  1: 1950-12-30   Chesterfield      Leicester City            6
-##  2: 1951-01-13   Chesterfield     Manchester City            6
-##  3: 1951-01-20   Chesterfield       Coventry City            6
-##  4: 1951-02-03   Chesterfield        Cardiff City            6
-##  5: 1951-02-17   Chesterfield     Birmingham City            6
-##  6: 1951-02-24   Chesterfield        Swansea City            6
-##  7: 2009-03-21 Leicester City   Colchester United            6
-##  8: 2009-03-28 Leicester City Peterborough United            6
-##  9: 2009-04-04 Leicester City     Carlisle United            6
-## 10: 2009-04-11 Leicester City     Hereford United            6
-## 11: 2009-04-13 Leicester City        Leeds United            6
-## 12: 2009-04-18 Leicester City     Southend United            6
-## 13: 1921-05-02         Fulham           Hull City            7
-## 14: 1921-05-07         Fulham           Hull City            7
-## 15: 1921-08-27         Fulham       Coventry City            7
-## 16: 1921-08-29         Fulham      Leicester City            7
-## 17: 1921-09-03         Fulham       Coventry City            7
-## 18: 1921-09-05         Fulham      Leicester City            7
-## 19: 1921-09-10         Fulham           Hull City            7
-## 20: 1920-04-17  Leyton Orient     Birmingham City            7
-## 21: 1920-04-24  Leyton Orient     Birmingham City            7
-## 22: 1920-04-26  Leyton Orient      Leicester City            7
-## 23: 1920-05-01  Leyton Orient      Leicester City            7
-## 24: 1920-08-28  Leyton Orient      Leicester City            7
-## 25: 1920-08-30  Leyton Orient        Cardiff City            7
-## 26: 1920-09-04  Leyton Orient      Leicester City            7
-## 27: 1920-10-09   Notts County          Stoke City            7
-## 28: 1920-10-16   Notts County          Stoke City            7
-## 29: 1920-10-23   Notts County        Cardiff City            7
-## 30: 1920-10-30   Notts County        Cardiff City            7
-## 31: 1920-11-06   Notts County       Coventry City            7
-## 32: 1920-11-13   Notts County       Coventry City            7
-## 33: 1920-11-20   Notts County      Leicester City            7
-##           date  matching_team               other chain_length&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;so In fact an identical length chain on matching suffixes has occured twice, with Chesterfield playing a range of cities at the start of 1951 in League Two, and much more recently, Leicester playing 6 different Uniteds in a row at the tail end of the 2008/2009 season. This is also the season that saw them recover from being relegated from the Chmapionship and start moving towards winning the title in 2015-2016 season.&lt;/p&gt;
-&lt;p&gt;Some longer chains involving cities happened in the 1920-1921 seasons in the Second Division, but it seems like the scheduling worked differently then and teams played back to back more, so doesn’t really count.&lt;/p&gt;
-&lt;p&gt;Having originally misread the question, I also wanted to find out the longest chain of a team playing teams that matched &lt;em&gt;their own&lt;/em&gt; suffix. We can do this using a similar method&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;matching_fixtures &amp;lt;- england_data %&amp;gt;%
-  #get only matches between teams with matching prefix/suffixes
-  .[, home_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, home)] %&amp;gt;%
-  .[, away_suffix := gsub(&amp;quot;.* &amp;quot;, &amp;quot;&amp;quot;, visitor)] %&amp;gt;%
-  .[home_suffix == away_suffix, match := home_suffix] %&amp;gt;%
-  .[!is.na(match)] %&amp;gt;%
-  #remove matches where teams from the same city play each other
-  .[!match %in% c(&amp;quot;Bradford&amp;quot;, &amp;quot;Bristol&amp;quot;, &amp;quot;Burton&amp;quot;, &amp;quot;Manchester&amp;quot;, &amp;quot;Sheffield&amp;quot;)]
-
-#get all the teams that have played teams with matching suffixes
-matching_teams &amp;lt;- unique(c(as.character(matching_fixtures$home),
-                           as.character(matching_fixtures$visitor)))
-
-#elongate the data and look for chains
-find_chains &amp;lt;- rbindlist(lapply(matching_teams, function(team) {
-  england_data %&amp;gt;%
-    .[home == team | visitor == team] %&amp;gt;%
-    .[order(date)] %&amp;gt;%
-    .[, matching_team := team]
-  })) %&amp;gt;%
-  .[home == matching_team, other := visitor] %&amp;gt;%
-  .[visitor == matching_team, other := home] %&amp;gt;%
-  #id matches and remove matches not involving teams with identical suffixes
-  .[, match_id := 1:.N, by = matching_team] %&amp;gt;%
-  .[!is.na(match)] %&amp;gt;%
-  #find chains of identical suffixed matches
-  .[, chain := match_id - lag(match_id)] %&amp;gt;%
-  .[chain == 1 &amp;amp; lag(chain) != 1, chain_id := 1:.N] %&amp;gt;%
-  .[chain == 1] %&amp;gt;%
-  .[, chain_id := na.locf(chain_id)] %&amp;gt;%
-    .[, chain_length := .N, by = chain_id] %&amp;gt;%
-  #take only chains at least as long as Tranmere&amp;#39;s run (6)
-  .[chain_length &amp;gt; 4] %&amp;gt;%
-  .[order(chain_length)] %&amp;gt;%
-  .[, c(&amp;quot;date&amp;quot;, &amp;quot;matching_team&amp;quot;, &amp;quot;other&amp;quot;, &amp;quot;chain_length&amp;quot;)]
-
-print(find_chains)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##           date   matching_team             other chain_length
-##  1: 1919-12-13      Stoke City   Birmingham City            5
-##  2: 1919-12-20      Stoke City    Leicester City            5
-##  3: 1919-12-25      Stoke City     Coventry City            5
-##  4: 1919-12-26      Stoke City     Coventry City            5
-##  5: 1919-12-27      Stoke City    Leicester City            5
-##  6: 1919-09-01       Hull City        Stoke City            5
-##  7: 1919-09-06       Hull City   Birmingham City            5
-##  8: 1919-09-08       Hull City        Stoke City            5
-##  9: 1919-09-13       Hull City        Leeds City            5
-## 10: 1919-09-20       Hull City        Leeds City            5
-## 11: 1988-09-24 Carlisle United  Rotherham United            5
-## 12: 1988-09-30 Carlisle United  Cambridge United            5
-## 13: 1988-10-04 Carlisle United Colchester United            5
-## 14: 1988-10-08 Carlisle United   Hereford United            5
-## 15: 1988-10-15 Carlisle United    Torquay United            5&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So the record for that is only slightly shorter! with Stoke and Hull City playing a range of cities in the 1919-1920 season (but see above for scheduling differences) and Carlisle United playing 5 other different Uniteds in a row in the old Fourth Division.&lt;/p&gt;
-&lt;div id=&#34;answer&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Answer&lt;/h2&gt;
-&lt;p&gt;The record is 7 matches set by Notts County, Leyton Orient, and Fulham in 1920/1921 playing 7 teams with the suffix ‘city’ in a row. The Leyton Orient and Fulham chains stretch over the end of one season and into the next, so only Notts County really satisifies the question. However, the scheduling in these years involved a lot of back to back matches and so is cheating a bit.&lt;/p&gt;
-&lt;p&gt;More recently Chesterfield played 6 different teams with the suffix ‘city’ in a row in 1950/1951, and Leceister played 6 different ’united’s in a row in their promotion season from League One in 2008/2009.&lt;/p&gt;
-&lt;p&gt;Even more bizarre, Carlisle United played 5 other different United’s at the start of the 1988/1989 old Fourth Division season.&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div id=&#34;youth-of-the-nation&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Youth Of The Nation&lt;/h1&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.theguardian.com/football/2018/aug/01/footballers-who-have-backed-out-of-a-transfer-for-another-late-in-the-day&#34;&gt;“If Lucas Hernández was born a year and a half later, his age would be a lower than his shirt number (21). Have any World Cup winners achieved this?” muses Edward Gibson.&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;The easiest way to check this is just to scrape all of the squads off of the wiki pages for the World Cups. I only did from 1954 onwards as before this the squad no and birthdate data is a bit patchy.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#links to the world cup squads pages
-wiki_cup_squads &amp;lt;- sprintf(&amp;quot;https://en.wikipedia.org/wiki/%s_FIFA_World_Cup_squads&amp;quot;,
-                           seq(1954, 2018, by = 4))
-
-#scrape all the player data we need
-world_cup_squads &amp;lt;- rbindlist(lapply(wiki_cup_squads[1:17], function(link) {
-  year &amp;lt;- gsub(&amp;quot;.*\\/wiki\\/&amp;quot;, &amp;quot;&amp;quot;, gsub(&amp;quot;_FIFA_World.*&amp;quot;, &amp;quot;&amp;quot;, link))
-  read &amp;lt;- read_html(link)
-  
-  sq_no &amp;lt;- read %&amp;gt;% 
-    html_nodes(&amp;quot;.plainrowheaders td:nth-child(1)&amp;quot;) %&amp;gt;%
-    html_text() %&amp;gt;%
-    as.numeric()
-  sq_names &amp;lt;- read %&amp;gt;%
-    html_nodes(&amp;quot;.plainrowheaders a:nth-child(1)&amp;quot;) %&amp;gt;% 
-    html_text() %&amp;gt;%
-    .[. != &amp;quot;&amp;quot;] %&amp;gt;%
-    .[!grepl(&amp;quot;^\\[&amp;quot;, .)] %&amp;gt;%
-    .[. != &amp;quot;Unattached&amp;quot;] %&amp;gt;% 
-    .[!grepl(&amp;quot;captain&amp;quot;, .)]
-  sq_dobs &amp;lt;- read %&amp;gt;% 
-    html_nodes(&amp;quot;.plainrowheaders td:nth-child(4)&amp;quot;) %&amp;gt;%
-    html_text() %&amp;gt;%
-    str_extract(., &amp;quot;[0-9]{4}-[0-9]{2}-[0-9]{2}&amp;quot;) %&amp;gt;% 
-    as.Date()
-  countries &amp;lt;- read %&amp;gt;% html_nodes(&amp;quot;h3 .mw-headline&amp;quot;) %&amp;gt;% 
-    html_text() %&amp;gt;% 
-    trimws()
-
-  if(year &amp;gt; 2006) countries &amp;lt;- countries[1:32]
-  
-  squad_data &amp;lt;- data.frame(name = sq_names,
-                           no = sq_no,
-                           dob = sq_dobs,
-                           year= year) %&amp;gt;%
-    setDT() %&amp;gt;%
-    .[!grepl(&amp;quot;Nery Pumpido&amp;quot;, name)] %&amp;gt;%
-    .[no == 1, country := countries] %&amp;gt;%
-    .[, country := na.locf(country)] %&amp;gt;%
-    .[, c(&amp;quot;name&amp;quot;, &amp;quot;no&amp;quot;, &amp;quot;dob&amp;quot;, &amp;quot;year&amp;quot;, &amp;quot;country&amp;quot;)]
-}))
-
-#find all world cup squad players with shirt numbers greater than their age in years
-young_players &amp;lt;- world_cup_squads %&amp;gt;%
-  .[, age := as.numeric(difftime(as.Date(paste0(year, &amp;quot;-07-01&amp;quot;)), dob)) / 365] %&amp;gt;%
-  .[age &amp;lt; no]
-
-print(young_players)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##                        name no        dob year    country      age
-##   1:   Aleksandar Petakovic 22 1932-08-06 1954 Yugoslavia 21.91507
-##   2:         Ranulfo Cortés 22 1934-07-09 1954     Mexico 19.99178
-##   3:             Coskun Tas 22 1935-04-23 1954     Turkey 19.20274
-##   4:            Omar Méndez 20 1934-08-07 1954    Uruguay 19.91233
-##   5:          Johnny Haynes 21 1934-10-17 1954    England 19.71781
-##  ---                                                              
-## 110: Trent Alexander-Arnold 22 1998-10-07 2018    England 19.74521
-## 111:    José Luis Rodríguez 21 1998-06-19 2018     Panama 20.04658
-## 112:       Dávinson Sánchez 23 1996-06-12 2018   Colombia 22.06575
-## 113:         Dawid Kownacki 23 1997-03-14 2018     Poland 21.31233
-## 114:           Moussa Wagué 22 1998-10-04 2018    Senegal 19.75342&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Overall 114 players are found. England actually have the most players with shirt numbers higher than their age with 9: Haynes, Hooper, Owen, Ferdinand, Carson, Walcott, Barkeley, Shaw, Alexander-Arnold. Surprisingly, most of these young English callups are pretty recent.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p &amp;lt;- ggplot(data = young_players, aes(year)) +
-  geom_bar() +
-  ggtitle(&amp;quot;Number of Players in World Cup Squads With Nos &amp;gt; Age&amp;quot;) +
-  xlab(&amp;quot;World Cup Year&amp;quot;) +
-  ylab(&amp;quot;Number&amp;quot;)
-
-print(p)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-08-05-The_Knowledge_1_files/figure-html/unnamed-chunk-4-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;It seems that the real high point for this was the turn of the century with young players being given a shot at the tail end of squads, which is returning to pre-1998 levels by 2018.&lt;/p&gt;
-&lt;p&gt;The data on these squad players is then merged with the data on the winning teams to find those who played for nations who went on to win the world cup.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;wc_winners &amp;lt;- data.frame(winner = c(&amp;quot;West Germany&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;England&amp;quot;,
-                                    &amp;quot;Brazil&amp;quot;,&amp;quot;West Germany&amp;quot;,&amp;quot;Argentina&amp;quot;,&amp;quot;Italy&amp;quot;,
-                                    &amp;quot;Argentina&amp;quot;,&amp;quot;West Germany&amp;quot;,&amp;quot;Brazil&amp;quot;,&amp;quot;France&amp;quot;,
-                                    &amp;quot;Brazil&amp;quot;,&amp;quot;Italy&amp;quot;,&amp;quot;Spain&amp;quot;,&amp;quot;Germany&amp;quot;,&amp;quot;France&amp;quot;),
-                         year = seq(1954, 2018, 4))
-
-#merge data with winners and find matches
-young_players %&amp;lt;&amp;gt;% .[, year := as.numeric(as.character(year))] %&amp;gt;%
-  .[, country := gsub(&amp;quot;(^\\s+)|(\\s+$)&amp;quot;, &amp;quot;&amp;quot;, country)] %&amp;gt;%
-  merge(., wc_winners, by = &amp;quot;year&amp;quot;) %&amp;gt;%
-  .[winner == country]
-
-#kaka only one to have played as per https://en.wikipedia.org/wiki/List_of_FIFA_World_Cup_winners#By_year
-print(young_players)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##    year    name no        dob country      age winner
-## 1: 1970    Leão 22 1949-07-11  Brazil 20.98630 Brazil
-## 2: 1994 Ronaldo 20 1976-09-22  Brazil 17.78356 Brazil
-## 3: 2002    Kaká 23 1982-04-22  Brazil 20.20548 Brazil&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So only the great &lt;a href=&#34;https://en.wikipedia.org/wiki/%C3%89merson_Le%C3%A3o&#34;&gt;Émerson Leão&lt;/a&gt;, &lt;a href=&#34;https://en.wikipedia.org/wiki/Ronaldo_(Brazilian_footballer)&#34;&gt;Ronaldo&lt;/a&gt; and &lt;a href=&#34;https://en.wikipedia.org/wiki/Kak%C3%A1&#34;&gt;Kaka&lt;/a&gt; satisfy the question. However, of these only Kaka played any part during the tournament, which only amounted to 25 minutes vs Costa Rica.&lt;/p&gt;
-&lt;p&gt;Which players &lt;em&gt;could&lt;/em&gt; have satisfied this if they had a larger squad number?&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;youngest_players &amp;lt;- world_cup_squads %&amp;gt;%
-  .[, age := as.numeric(difftime(as.Date(paste0(year, &amp;quot;-07-01&amp;quot;)), dob)) / 365] %&amp;gt;%
-  .[age &amp;lt; 23] %&amp;gt;%
-  .[, country := gsub(&amp;quot;(^\\s+)|(\\s+$)&amp;quot;, &amp;quot;&amp;quot;, country)] %&amp;gt;%
-  .[, year := as.numeric(as.character(year))] %&amp;gt;%
-  merge(., wc_winners, by = &amp;quot;year&amp;quot;) %&amp;gt;%
-  .[winner == country] %&amp;gt;%
-  .[, dob := NULL]
-
-#gives 53 potential results with world cup winners under the age of 23
-print(youngest_players)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##     year                 name no      country      age       winner
-##  1: 1954          Horst Eckel  6 West Germany 22.40822 West Germany
-##  2: 1954     Ulrich Biesinger 18 West Germany 20.91507 West Germany
-##  3: 1958                 Pelé 10       Brazil 17.69863       Brazil
-##  4: 1958               Moacir 13       Brazil 22.13425       Brazil
-##  5: 1958              Orlando 15       Brazil 22.79452       Brazil
-##  6: 1958              Mazzola 18       Brazil 19.95068       Brazil
-##  7: 1962             Coutinho  9       Brazil 19.06849       Brazil
-##  8: 1962                 Pelé 10       Brazil 21.70137       Brazil
-##  9: 1962             Jurandir 14       Brazil 21.64658       Brazil
-## 10: 1962            Mengálvio 17       Brazil 22.55342       Brazil
-## 11: 1962        Jair da Costa 18       Brazil 21.99178       Brazil
-## 12: 1966            Alan Ball  7      England 21.15068      England
-## 13: 1966        Martin Peters 16      England 22.66027      England
-## 14: 1966        Norman Hunter 18      England 22.68767      England
-## 15: 1970            Clodoaldo  5       Brazil 20.77534       Brazil
-## 16: 1970        Marco Antônio  6       Brazil 19.41096       Brazil
-## 17: 1970          Paulo Cézar 18       Brazil 21.05479       Brazil
-## 18: 1970                  Edu 19       Brazil 20.91507       Brazil
-## 19: 1970             Zé Maria 21       Brazil 21.13425       Brazil
-## 20: 1970                 Leão 22       Brazil 20.98630       Brazil
-## 21: 1974        Paul Breitner  3 West Germany 22.83562 West Germany
-## 22: 1974           Uli Hoeneß 14 West Germany 22.50137 West Germany
-## 23: 1974        Rainer Bonhof 16 West Germany 22.27123 West Germany
-## 24: 1978    Alberto Tarantini 20    Argentina 22.59178    Argentina
-## 25: 1978 José Daniel Valencia 21    Argentina 22.75890    Argentina
-## 26: 1982        Franco Baresi  2        Italy 22.16164        Italy
-## 27: 1982     Giuseppe Bergomi  3        Italy 18.53699        Italy
-## 28: 1982      Daniele Massaro 17        Italy 21.12055        Italy
-## 29: 1986       Claudio Borghi  4    Argentina 21.76986    Argentina
-## 30: 1986           Luis Islas 15    Argentina 20.53699    Argentina
-## 31: 1990       Andreas Möller 17 West Germany 22.84384 West Germany
-## 32: 1994              Ronaldo 20       Brazil 17.78356       Brazil
-## 33: 1998       Patrick Vieira  4       France 22.03562       France
-## 34: 1998        Thierry Henry 12       France 20.88493       France
-## 35: 1998      David Trezeguet 20       France 20.72329       France
-## 36: 2002           Ronaldinho 11       Brazil 22.29315       Brazil
-## 37: 2002                 Kaká 23       Brazil 20.20548       Brazil
-## 38: 2006     Daniele De Rossi  4        Italy 22.95342        Italy
-## 39: 2010            Juan Mata 13        Spain 22.18904        Spain
-## 40: 2010      Sergio Busquets 16        Spain 21.97260        Spain
-## 41: 2010                Pedro 18        Spain 22.94247        Spain
-## 42: 2010        Javi Martínez 20        Spain 21.84110        Spain
-## 43: 2014      Matthias Ginter  3      Germany 20.46027      Germany
-## 44: 2014       Julian Draxler 14      Germany 20.79178      Germany
-## 45: 2014            Erik Durm 15      Germany 22.15068      Germany
-## 46: 2014          Mario Götze 19      Germany 22.09041      Germany
-## 47: 2014     Shkodran Mustafi 21      Germany 22.21918      Germany
-## 48: 2018      Benjamin Pavard  2       France 22.27397       France
-## 49: 2018     Presnel Kimpembe  3       France 22.89863       France
-## 50: 2018         Thomas Lemar  8       France 22.64932       France
-## 51: 2018        Kylian Mbappé 10       France 19.54247       France
-## 52: 2018      Ousmane Dembélé 11       France 21.14247       France
-## 53: 2018      Lucas Hernández 21       France 22.39178       France
-##     year                 name no      country      age       winner&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#most of these young players actually played at their world cups and many appeared in finals
-youngest_players_appeared &amp;lt;- youngest_players[c(1, 3:6, 8, 12:13, 15:18, 21:23, 24:25, 27, 29, 31, 33:35, 36:37, 38, 39:42, 44, 46:47, 48:53)]
-
-#find nearest matches
-youngest_players_appeared %&amp;lt;&amp;gt;% .[, diff := age - no]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The closest other players to make it are David Trezeguet (1998, 20.7years no 20), Shkodran Mustafi (2014, 22.2years, no 21) and then Lucas Hernandez (22.4years, no 21). Hernandez is the closest one to actually play in the World Cup final. Alberto Tarantini is his closest competition at 22.6 years old and wearing shirt number 20 in the 1978 final.&lt;/p&gt;
-&lt;div id=&#34;answer-1&#34; class=&#34;section level2&#34;&gt;
-&lt;h2&gt;Answer&lt;/h2&gt;
-&lt;p&gt;Yes, three winners have appeared in World Cups with an age less than their shirt number. All Brazilians: Émerson Leão in 1970, Ronaldo in 1994, and Kaka in 2002. However only Kaka actually played (for 25 minutes vs. Costa Rica) in the finals.&lt;/p&gt;
-&lt;p&gt;Other close calls are David Trezeguet (20.7, no 20 in 1998) and Shkodran Mustafi (22.2, no 21 in 2014).&lt;/p&gt;
-&lt;p&gt;Hernandez &lt;em&gt;is&lt;/em&gt; the closest to acheiving this having played in the final itself, with only Alberto Tarantini (22.5, no 20 in 1978) and Mario Goetze (22.1, no 19 in 2014) in close competition.&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
 </description>
     </item>
     
