@@ -22,6 +22,7 @@
 &lt;p&gt;Every Tuesday, the R4DataScience community posts a dataset online as part of &lt;a href=&#34;https://github.com/rfordatascience/tidytuesday&#34;&gt;#TidyTuesday&lt;/a&gt; as practice wrangling and modelling data. For the week of 5th May 2020, the dataset concerned the video game &lt;a href=&#34;https://en.wikipedia.org/wiki/Animal_Crossing&#34;&gt;Animal Crossing&lt;/a&gt;.&lt;/p&gt;
 &lt;div id=&#34;intro&#34; class=&#34;section level2&#34;&gt;
 &lt;h2&gt;Intro&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.youtube.com/watch?v=n10JC0BOWF8&#34;&gt;Radiohead - How I Made My Millions&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;I don’t play Animal Crossing (unfortunately Nintendo Switches sold out as the UK went into lockdown), but it seems that everyone around me does so I’ve become fascinated by how it has created almost a surrogate life for people, performing manual tasks to pay off loans to Tom Nook, the nefarious bankster of the player’s island.&lt;/p&gt;
 &lt;p&gt;One aspect in particular that captured my attention was the weekly market for turnips on each player’s island. Every Sunday, the player has the opportunity to buy turnips from a salesperson, which they then have a week to sell (before the turnips rot). The prices of turnips fluctuate over the week and (as far as I know) the vegetables have little function outside of buying/selling, so in essence they work as stocks which can be bought once per week, and the player must clear before the next offering.&lt;/p&gt;
 &lt;p&gt;To formalise this (taken from &lt;a href=&#34;https://animalcrossing.fandom.com/wiki/White_turnip&#34;&gt;here&lt;/a&gt;):&lt;/p&gt;
@@ -54,7 +55,7 @@ source(&amp;quot;../../static/files/turnips/turnip_funs.R&amp;quot;)&lt;/code&gt
 &lt;li&gt;‘spike’ upwards around midweek (where prices will decrease before shooting up past the ~$100 purchase price around Wednesday). This is actually two separate but similar patterns, where ‘large spike’ leads to greater selling prices than ‘small spike’&lt;/li&gt;
 &lt;li&gt;decreasing in which the player has no hope of making a profit that week as prices will decrease every day before resetting on the Sunday&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;for a few more details see &lt;a href=&#34;https://animalcrossing.fandom.com/wiki/White_turnip&#34;&gt;the game’s wiki&lt;/a&gt; or the &lt;a href=&#34;&#34;&gt;C++ code I ripped my functions from&lt;/a&gt;. The R translations I use here can be found on the Github repo for my site &lt;a href=&#34;&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;for a few more details see &lt;a href=&#34;https://animalcrossing.fandom.com/wiki/White_turnip&#34;&gt;the game’s wiki&lt;/a&gt; or the &lt;a href=&#34;https://gist.github.com/Treeki/85be14d297c80c8b3c0a76375743325b&#34;&gt;C++ code I ripped my functions from&lt;/a&gt;. The R translations I use here can be found on the Github repo for my site &lt;a href=&#34;https://github.com/RobWHickman/netlify_blog/blob/master/static/files/turnips/turnip_funs.R&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;The patterns are not completely memory-less, and progress as a Markov Chain, where the probability of prices following a pattern next week are dependent on the current price pattern. Let’s say however that we are only playing video games to relax and not paying too much attention to virtual stock markets, the chance of seeing a pattern can be estimated as the stationary probabilities of each node of the chain.&lt;/p&gt;
 &lt;p&gt;There are two ways to solve this, first (and easiest) we have full knowledge of the transitions from week to week, so can solve analytically. The chance of seeing a pattern next week (column names) is related to the observed pattern this week (rownames) in the following matrix:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#the four patterns
@@ -144,10 +145,10 @@ pattern_likelihood&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## # A tibble: 4 x 2
 ##   pattern      prob
 ##   &amp;lt;chr&amp;gt;       &amp;lt;dbl&amp;gt;
-## 1 decreasing  0.151
-## 2 fluctuating 0.347
+## 1 decreasing  0.145
+## 2 fluctuating 0.346
 ## 3 large_spike 0.244
-## 4 small_spike 0.258&lt;/code&gt;&lt;/pre&gt;
+## 4 small_spike 0.265&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;And we get pretty much the same numbers (as we would expect). To show the relative frequencies and how well our two methods of finding the stationary probabilities work, we can easily graph this using ggplot:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p1 &amp;lt;- pattern_likelihood_analytic %&amp;gt;%
   as.data.frame() %&amp;gt;%
@@ -172,7 +173,7 @@ p1&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;div id=&#34;modelling-turnips-prices&#34; class=&#34;section level2&#34;&gt;
 &lt;h2&gt;Modelling Turnips Prices&lt;/h2&gt;
-&lt;p&gt;To calculate exactly how much we might expect, it’s easiest, just to simulate the prices a load of times. We can do this by using a simple function that samples from &lt;a href=&#34;https://gist.github.com/Treeki/85be14d297c80c8b3c0a76375743325b&#34;&gt;the C++ code provided by Treeki&lt;/a&gt; (for a translation into R which I’m using here see my Github &lt;a href=&#34;&#34;&gt;here&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;To calculate exactly how much we might expect, it’s easiest, just to simulate the prices a load of times. We can do this by using a simple function that samples from &lt;a href=&#34;https://gist.github.com/Treeki/85be14d297c80c8b3c0a76375743325b&#34;&gt;the C++ code provided by Treeki&lt;/a&gt; (for a translation into R which I’m using here see my Github &lt;a href=&#34;https://github.com/RobWHickman/netlify_blog/blob/master/static/files/turnips/turnip_funs.R&#34;&gt;here&lt;/a&gt;).&lt;/p&gt;
 &lt;p&gt;The function randomly selects an initial (Sunday) price for turnips to be bought at, and then, runs the simulation code for a given pattern of prices. The second argument simply gives a list of names for the epochs (each day for both AM or PM, which will have different selling prices). I wrap the simulation up into a df because I find it easier to work with though the real meat of the simulation is a vector of length 14 which contains the ‘two’ Sunday buying prices (which will be identical- it’s just to make it easier for me to count), and the 12 selling prices from Monday AM - Saturday PM.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#the epochs for buying and selling turnips
 #14 epochs, 2 identical buying epochs, and 12 unique selling epochs
@@ -251,7 +252,7 @@ p2&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;/post/2019-05-17-playing_the_stalk_market_files/figure-html/run_simulations-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
 &lt;p&gt;So the period of Wednesday-Thursday seems to have the greatest mean profit, which we could have predicted, given that that the two known profitable patterns both have their ‘spike’ around this time. For all days though, we can see a large hump under the break even point (a return of 1) which is due to the fact that &lt;em&gt;all&lt;/em&gt; patterns (even the profitable spike ones) have a random amount of decrease in prices over the week.&lt;/p&gt;
 &lt;p&gt;What might be most concerning to a turnip investor is that the mean return the next weekend (which might be the next time they get to play the game) is fairly lower (~0.8) than break even, so they are going to have to pay attention to the movement of prices during the week.&lt;/p&gt;
-&lt;p&gt;The histograms struggle to portray the movement of time across epochs, so I also wanted to plot the prices using the &lt;a href=&#34;&#34;&gt;ggridges&lt;/a&gt; package to produce density &lt;a href=&#34;&#34;&gt;joy plots&lt;/a&gt; over time. Here we can see a bit clearer that it’s only the long positive tails on the distributions which give us an expected return slightly above break even from Wednesday AM- Thursday PM:&lt;/p&gt;
+&lt;p&gt;The histograms struggle to portray the movement of time across epochs, so I also wanted to plot the prices using the &lt;a href=&#34;https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html&#34;&gt;ggridges&lt;/a&gt; package to produce density &lt;a href=&#34;https://upload.wikimedia.org/wikipedia/en/7/70/Unknown_Pleasures_Joy_Division_LP_sleeve.jpg&#34;&gt;joy plots&lt;/a&gt; over time. Here we can see a bit clearer that it’s only the long positive tails on the distributions which give us an expected return slightly above break even from Wednesday AM- Thursday PM:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(ggridges)
 
 p3 &amp;lt;- ggplot(prices, aes(x = return, y = day, fill = mean_return)) +
@@ -273,7 +274,7 @@ p3&lt;/code&gt;&lt;/pre&gt;
 &lt;div id=&#34;astute-turnip-investment&#34; class=&#34;section level2&#34;&gt;
 &lt;h2&gt;Astute Turnip Investment&lt;/h2&gt;
 &lt;p&gt;Given the potential constraints of any person’s (even one quarantined at home’s) time, an astute investor of turnips may want to calculate which days they should check prices to ensure the greatest return on investment. This is simply done, but first we must introduce one last factor in the stalk market- the risk free interest banked money accrues.&lt;/p&gt;
-&lt;p&gt;In addition to performing manual tasks or investing in turnip stocks, the player can also bank their hard-earned money and collect the interest. As far as I can tell banked money earns interest at a rate of 0.05%* which is payed out monthly. To work with this a bit easier, I’m going to make a slight tweak and calculate as if the interested was earned daily. Therefore, if we take time 0 to be a Sunday morning at the beginning of the month, by the following Saturday, the player who put $100 dollars in the bank will know have (1 + (0.05/ 100)) ^ (6/30) * 100 in their bank account (or an extra 1cent if you calculate that).&lt;/p&gt;
+&lt;p&gt;In addition to performing manual tasks or investing in turnip stocks, the player can also bank their hard-earned money and collect the interest. As far as I can tell banked money earns interest at a rate of 0.05%* which is payed out monthly. To work with this a bit easier, I’m going to make a slight tweak and calculate as if the interested was earned daily. Therefore, if we take time 0 to be a Sunday morning at the beginning of the month, by the following Saturday, the player who put $100 dollars in the bank will know have (1 + (0.05/ 100)) ^ (6/30) * 100 in their bank account (or an extra 1cent if you calculate).&lt;/p&gt;
 &lt;p&gt;The risk-free return over that one week will therefore have been 1cent- it is the return the player receives without having to risk their money buying/selling turnips. For each day over the week, this risk-free return is easy to calculate. Because we are only interested in this compared to the returns on investing savings in turnips, the amount in the bank doesn’t actually matter- we only care on the interest gained as a proportion of savings.&lt;/p&gt;
 &lt;p&gt;*the FT has an &lt;a href=&#34;https://www.ft.com/content/68f96d24-02f0-42fd-b132-aba0acba777f&#34;&gt;article on&lt;/a&gt; the recent Animal Crossing interest rate cut and why it forces players into riskier assets like turnips&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;monthly_interest &amp;lt;- 1.005
@@ -300,7 +301,7 @@ interest_df&lt;/code&gt;&lt;/pre&gt;
 ## 14   sat PM             6    0.0009980060&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;We can then work out the return on investment compared to risk. The simplest way to do this is to use the &lt;a href=&#34;https://en.wikipedia.org/wiki/Sharpe_ratio&#34;&gt;Sharpe ratio&lt;/a&gt; which can be formalized as:&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[S_{a} = \frac{E[R_{a} - R_{b}]}{\sqrt{var[R_{a} - R_{b}]}} \]&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;Where we calculate the Sharpe ratio &lt;span class=&#34;math display&#34;&gt;\[S\]&lt;/span&gt; of an asset a which is a function of the expected excess return (aka profit) R of that asset above the expected excess return of a ‘safe’ asset b (in this case the interest on money in the bank). This is then divided by the variance of the expected gain above the risk free asset. We call the difference in return of the risky and safe asset Ra - Rb the ‘excess return’.&lt;/p&gt;
+&lt;p&gt;Where we calculate the Sharpe ratio S of an asset a which is a function of the expected excess return (aka profit) R of that asset above the expected excess return of a ‘safe’ asset b (in this case the interest on money in the bank). This is then divided by the variance of the expected gain above the risk free asset. We call the difference in return of the risky and safe asset Ra - Rb the ‘excess return’.&lt;/p&gt;
 &lt;p&gt;It should also be clear that we want a Sharpe ratio of &lt;em&gt;at least&lt;/em&gt; greater than 0 to make our investment worthwhile (as a risky asset is time discounted and the possibility of prospect-like losses); generally we want a Sharpe ratio of 1 to indicate a good investment.&lt;/p&gt;
 &lt;p&gt;As we have the interest gained per day, we can calculate the excess return by joining our interest df and taking the return by day for each simulation as Ra, which we average to find the expected and variance.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#join in interest data
@@ -318,18 +319,18 @@ select(Sharpe_mean_returns, day, sharpe_ratio)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## # A tibble: 12 x 2
 ##    day      sharpe_ratio
 ##    &amp;lt;fct&amp;gt;           &amp;lt;dbl&amp;gt;
-##  1 mon AM        -0.260 
-##  2 mon PM        -0.327 
-##  3 tues AM       -0.198 
-##  4 tues PM        0.107 
-##  5 wed AM         0.119 
-##  6 wed PM         0.113 
-##  7 thurs AM       0.117 
-##  8 thurs PM       0.132 
-##  9 fri AM         0.0738
-## 10 fri PM        -0.0710
-## 11 sat AM        -0.585 
-## 12 sat PM        -0.788&lt;/code&gt;&lt;/pre&gt;
+##  1 mon AM        -0.250 
+##  2 mon PM        -0.340 
+##  3 tues AM       -0.212 
+##  4 tues PM        0.0574
+##  5 wed AM         0.0993
+##  6 wed PM         0.108 
+##  7 thurs AM       0.0618
+##  8 thurs PM       0.0866
+##  9 fri AM         0.0574
+## 10 fri PM        -0.0494
+## 11 sat AM        -0.536 
+## 12 sat PM        -0.812&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;So, as expected, the only epochs which show a positive Sharpe ratio are in the middle of the week, where prices spike. If we plot this we get a clearer indication of this:&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p4 &amp;lt;- ggplot(Sharpe_mean_returns, aes(x = day, y = sharpe_ratio, group = 1)) +
   geom_line(colour = &amp;quot;dodgerblue&amp;quot;) +
@@ -406,19 +407,19 @@ p5&lt;/code&gt;&lt;/pre&gt;
   arrange(-mean_return) %&amp;gt;%
   head(n = 10)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## # A tibble: 10 x 3
-## # Groups:   islands [2]
+## # Groups:   islands [3]
 ##    islands day      mean_return
 ##      &amp;lt;int&amp;gt; &amp;lt;fct&amp;gt;          &amp;lt;dbl&amp;gt;
-##  1      10 wed PM          2.71
-##  2      10 thurs AM        2.67
-##  3      10 wed AM          2.64
-##  4      10 fri AM          2.63
-##  5      10 fri PM          2.61
-##  6       9 thurs AM        2.60
-##  7      10 thurs PM        2.60
-##  8       9 fri AM          2.60
-##  9       9 thurs PM        2.55
-## 10       9 wed AM          2.54&lt;/code&gt;&lt;/pre&gt;
+##  1      10 wed AM          2.71
+##  2      10 thurs PM        2.65
+##  3      10 thurs AM        2.65
+##  4      10 wed PM          2.59
+##  5       9 thurs AM        2.58
+##  6      10 fri AM          2.58
+##  7      10 tues PM         2.58
+##  8       9 thurs PM        2.57
+##  9       9 fri AM          2.56
+## 10       8 thurs AM        2.55&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;If we use our Sharpe ratio calculation to then calculate when a player should collude with friends to all check their local turnip prices* we might expect therefore that it will also suggest checking somewhere in this midweek spike. However, if we plot it, we find an unexpected result:&lt;/p&gt;
 &lt;p&gt;*if we assume that quarantined players probably &lt;em&gt;can&lt;/em&gt; manage to check prices more than once/twice a week, managing to co-ordinate between multiple players is going to get very hard very quickly so this constraint really will become a factor&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#calculate Sharpe ratio per island as before
@@ -492,8 +493,8 @@ p7&lt;/code&gt;&lt;/pre&gt;
 - the daily change in prices (roughly) follows a normal distribution* (with a mean slightly above 0 over a given time frame)
 - the daily change in price is fairly small, i.e. the price is fairly stable
 - there is a greater downside risk in large price moves- you’re more likely to see a big reduction in price than a big increase (see the recent downturn in Nintendo stock due to COVID-19 for example**)&lt;/p&gt;
-&lt;p&gt;*stock returns don’t follow a normal distribution if you rigorously test it, but it’s close enough to be useful
-**yes, I know it has bounced back up, the data was selectively chosen to make a point&lt;/p&gt;
+&lt;p&gt;*stock returns don’t follow a normal distribution if you rigorously test it, but it’s close enough to be useful&lt;/p&gt;
+&lt;p&gt;**yes, I know it has bounced back up, the data was selectively chosen to make a point&lt;/p&gt;
 &lt;p&gt;These are important basic heuristics for portfolio building and we can see that our stalk market fails on all three. Luckily, the fact that our turnip returns are skewed (even if they are skewed upwards instead of downwards as in the real life data).&lt;/p&gt;
 &lt;p&gt;Instead of using the Sharpe ratio, which considers the total standard deviation of the returns, we can use the &lt;a href=&#34;https://en.wikipedia.org/wiki/Sortino_ratio&#34;&gt;Sortino ratio&lt;/a&gt; which is a risk-adjusted version to control for the downside risk of investment (i.e. you’re more likely to make big losses than big gains). We know that with multiple friends, we can be pretty confident of making big returns,&lt;/p&gt;
 &lt;p&gt;&lt;span class=&#34;math display&#34;&gt;\[S_{a} = \frac{E(R_{a} - MAR)}{\sqrt{\frac{1}{n}\cdot\int_{-\infty}^{MAR}{(MAR - R_{a})^2}}dR} \]&lt;/span&gt;&lt;/p&gt;
@@ -572,7 +573,7 @@ p10&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;img src=&#34;/post/2019-05-17-playing_the_stalk_market_files/figure-html/calc_sortinos-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
 &lt;p&gt;There’s two things to really take away here- as we increase the MAR, the ratio decreases. This is because the df of returns stays constant, so as a player demands more and more return, the ratio is more and more pessimistic on their chances. Given that the maximum possible profit is roughly buying turnips for $90 and selling for $600 ($510 profit, an excess return of 5.6x our initial investment), demanding a MAR of 6 is literally impossible even with infinite friend’s islands, and for our relatively small number, the ratio approaches it’s limit at -1.&lt;/p&gt;
 &lt;p&gt;Conversely, if a player only wanted to buy turnips for fun and didn’t mind losing 50% of their initial investment (a MAR of -0.5), they can be reasonably confident of being fine even just checking their own island inconsistently. By the time they have a few friends islands thrown in, they are guaranteed to make that much, and the ratio goes to infinity (there is no downside risk).&lt;/p&gt;
-&lt;p&gt;That’s all for this post. As I’ve mentioned, thanks to &lt;a href=&#34;https://gist.github.com/Treeki/85be14d297c80c8b3c0a76375743325b&#34;&gt;Treeki&lt;/a&gt; for putting the turnip pricing mechanism code online, and if you want to play with it, my R translation is hosted on the Github repo for this site. Thanks for reading, and also to the organizers of #TidyTuesday for giving me the idea :)&lt;/p&gt;
+&lt;p&gt;That’s all for this post. As I’ve mentioned, thanks to &lt;a href=&#34;https://gist.github.com/Treeki/85be14d297c80c8b3c0a76375743325b&#34;&gt;Treeki&lt;/a&gt; for putting the turnip pricing mechanism code online, and if you want to play with it, my R translation is hosted on the &lt;a href=&#34;https://github.com/RobWHickman/netlify_blog/blob/master/static/files/turnips/turnip_funs.R&#34;&gt;Github repo&lt;/a&gt; for this site. Thanks for reading, and also to the organizers of #TidyTuesday for giving me the idea :)&lt;/p&gt;
 &lt;/div&gt;
 </description>
     </item>
