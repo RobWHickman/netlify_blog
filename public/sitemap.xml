@@ -5,6 +5,15 @@
     
     <url>
     
+      <loc>/post/how_i_made_my_millions/</loc>
+      <lastmod>2020-05-17T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/dixon_coles_2/</loc>
       <lastmod>2020-04-26T00:00:00+00:00</lastmod>
     </url>
@@ -469,6 +478,16 @@
     
     <url>
     
+      <loc>/tags/animal_crossing/</loc>
+      <lastmod>2020-05-17T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/tags/bar_charts/</loc>
       <lastmod>2019-11-17T00:00:00+00:00</lastmod>
       <priority>0</priority>
@@ -730,7 +749,7 @@
     <url>
     
       <loc>/tags/rstats/</loc>
-      <lastmod>2020-04-26T00:00:00+00:00</lastmod>
+      <lastmod>2020-05-17T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
