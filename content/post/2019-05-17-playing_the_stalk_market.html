@@ -88,7 +88,7 @@ pattern_likelihood_analytic</code></pre>
 <pre><code>## fluctuating large_spike  decreasing small_spike 
 ##   0.3462773   0.2473628   0.1476074   0.2587525</code></pre>
 <p>Where we see that around half the time we have a chance of either a large or a small spike in prices around midweek (24.7% + 25.9%), with the majority of the remaining weeks showing a fluctuating pattern (where the player can still make a small profit). The worst case scenario of continually decreasing prices happens only 14.7% of the time, so overall, the stalk market looks like a pretty good bet for investors.</p>
-<p>Of course, we can also do this using Hamiltonian Monte Carlo methods but just simulating a few sets of independent weeks</p>
+<p>Of course, we can also do this using Hamiltonian Monte Carlo methods by simulating a few sets of independent weeks</p>
 <pre class="r"><code>#transition probabilities
 transition_df &lt;- as.data.frame(transition_matrix) %&gt;%
   rownames_to_column(var = &quot;current_state&quot;) %&gt;%
@@ -141,10 +141,10 @@ pattern_likelihood</code></pre>
 <pre><code>## # A tibble: 4 x 2
 ##   pattern      prob
 ##   &lt;chr&gt;       &lt;dbl&gt;
-## 1 decreasing  0.145
-## 2 fluctuating 0.346
+## 1 decreasing  0.147
+## 2 fluctuating 0.352
 ## 3 large_spike 0.244
-## 4 small_spike 0.265</code></pre>
+## 4 small_spike 0.256</code></pre>
 <p>And we get pretty much the same numbers (as we would expect). To show the relative frequencies and how well our two methods of finding the stationary probabilities work, we can easily graph this using ggplot:</p>
 <pre class="r"><code>p1 &lt;- pattern_likelihood_analytic %&gt;%
   as.data.frame() %&gt;%
@@ -315,18 +315,18 @@ select(Sharpe_mean_returns, day, sharpe_ratio)</code></pre>
 <pre><code>## # A tibble: 12 x 2
 ##    day      sharpe_ratio
 ##    &lt;fct&gt;           &lt;dbl&gt;
-##  1 mon AM        -0.250 
-##  2 mon PM        -0.340 
-##  3 tues AM       -0.212 
-##  4 tues PM        0.0574
-##  5 wed AM         0.0993
-##  6 wed PM         0.108 
-##  7 thurs AM       0.0618
-##  8 thurs PM       0.0866
-##  9 fri AM         0.0574
-## 10 fri PM        -0.0494
-## 11 sat AM        -0.536 
-## 12 sat PM        -0.812</code></pre>
+##  1 mon AM        -0.274 
+##  2 mon PM        -0.369 
+##  3 tues AM       -0.158 
+##  4 tues PM        0.0975
+##  5 wed AM         0.157 
+##  6 wed PM         0.135 
+##  7 thurs AM       0.0574
+##  8 thurs PM       0.0533
+##  9 fri AM         0.0347
+## 10 fri PM        -0.103 
+## 11 sat AM        -0.595 
+## 12 sat PM        -0.763</code></pre>
 <p>So, as expected, the only epochs which show a positive Sharpe ratio are in the middle of the week, where prices spike. If we plot this we get a clearer indication of this:</p>
 <pre class="r"><code>p4 &lt;- ggplot(Sharpe_mean_returns, aes(x = day, y = sharpe_ratio, group = 1)) +
   geom_line(colour = &quot;dodgerblue&quot;) +
@@ -403,19 +403,19 @@ p5</code></pre>
   arrange(-mean_return) %&gt;%
   head(n = 10)</code></pre>
 <pre><code>## # A tibble: 10 x 3
-## # Groups:   islands [3]
+## # Groups:   islands [2]
 ##    islands day      mean_return
 ##      &lt;int&gt; &lt;fct&gt;          &lt;dbl&gt;
-##  1      10 wed AM          2.71
-##  2      10 thurs PM        2.65
-##  3      10 thurs AM        2.65
+##  1      10 thurs AM        2.65
+##  2      10 fri AM          2.60
+##  3      10 wed AM          2.59
 ##  4      10 wed PM          2.59
-##  5       9 thurs AM        2.58
-##  6      10 fri AM          2.58
-##  7      10 tues PM         2.58
-##  8       9 thurs PM        2.57
-##  9       9 fri AM          2.56
-## 10       8 thurs AM        2.55</code></pre>
+##  5      10 thurs PM        2.58
+##  6       9 wed AM          2.58
+##  7      10 tues PM         2.57
+##  8      10 fri PM          2.56
+##  9       9 wed PM          2.54
+## 10       9 thurs AM        2.54</code></pre>
 <p>If we use our Sharpe ratio calculation to then calculate when a player should collude with friends to all check their local turnip prices* we might expect therefore that it will also suggest checking somewhere in this midweek spike. However, if we plot it, we find an unexpected result:</p>
 <p>*if we assume that quarantined players probably <em>can</em> manage to check prices more than once/twice a week, managing to co-ordinate between multiple players is going to get very hard very quickly so this constraint really will become a factor</p>
 <pre class="r"><code>#calculate Sharpe ratio per island as before
@@ -484,7 +484,10 @@ p7</code></pre>
     x = &quot;fractional daily change in price&quot;,
     y = &quot;count&quot;
   ) +
-  theme_minimal()</code></pre>
+  theme_minimal()
+
+p8</code></pre>
+<p><img src="/post/2019-05-17-playing_the_stalk_market_files/figure-html/show_stock_returns-1.png" width="672" /></p>
 <p>There’s three things to note here:
 - the daily change in prices (roughly) follows a normal distribution* (with a mean slightly above 0 over a given time frame)
 - the daily change in price is fairly small, i.e. the price is fairly stable

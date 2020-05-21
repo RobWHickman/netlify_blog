@@ -100,7 +100,7 @@ pattern_likelihood_analytic
 
 Where we see that around half the time we have a chance of either a large or a small spike in prices around midweek (24.7% + 25.9%), with the majority of the remaining weeks showing a fluctuating pattern (where the player can still make a small profit). The worst case scenario of continually decreasing prices happens only 14.7% of the time, so overall, the stalk market looks like a pretty good bet for investors.
 
-Of course, we can also do this using Hamiltonian Monte Carlo methods but just simulating a few sets of independent weeks
+Of course, we can also do this using Hamiltonian Monte Carlo methods by simulating a few sets of independent weeks
 
 ```{r hmc_transitions, warning=FALSE,message=FALSE}
 #transition probabilities
@@ -510,6 +510,8 @@ p8 <- nintendo %>%
     y = "count"
   ) +
   theme_minimal()
+
+p8
 ```
 
 There's three things to note here:
