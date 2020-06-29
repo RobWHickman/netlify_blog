@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme" content="hugo-academic">
+  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="author" content="Robert Hickman">
+
+  
+  
+  
+  
+    
+      
+    
+  
+  <meta name="description" content="library(tidyverse)library(igraph)library(tidygraph)library(ggraph)vb_matches &lt;- readr::read_csv(&#39;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-19/vb_matches.csv&#39;, guess_max = 76000) %&gt;%mutate(w_team = paste(w_player1, w_player2, sep = &quot;/&quot;),l_team = paste(l_player1, l_player2, sep = &quot;/&quot;))get_score_ratio &lt;- function(score) {if(is.na(score) | grepl(&quot;Forfeit|retired&quot;, score)) {#check whatever min return isreturn(1.001)} else {sets &lt;- unlist(strsplit(score, &quot;, &quot;))w_points &lt;-0l_points &lt;- 0for(s in seq(length(sets))) {split_set_score &lt;- unlist(strsplit(sets[s], &quot;-&quot;))w_points &lt;- w_points &#43; as.numeric(split_set_score[1])l_points &lt;- l_points &#43; as.">
+
+  
+  <link rel="alternate" hreflang="en-us" href="/unfinished/five_min_trivia_invincibles/">
+
+  
+
+
+  
+
+  
+  
+  <meta name="theme-color" content="#0095eb">
+  
+  
+  
+  
+    
+  
+  
+    
+    
+      
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+      
+    
+  
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha512-6MXa8B6uaO18Hid6blRMetEIoPqHf7Ux1tnyIQdpt9qI5OACx7C+O3IVTr98vwGnlcg0LOLa02i9Y1HpVhlfiw==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.1/css/academicons.min.css" integrity="sha512-NThgw3XKQ1absAahW6to7Ey42uycrVvfNfyjqcFNgCmOCQ5AR4AO0SiXrN+8ZtYeappp56lk1WtvjVmEa+VR6A==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous">
+  
+  
+  
+  
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Montserrat:400,700%7cRoboto:400,400italic,700%7cRoboto&#43;Mono">
+  
+  <link rel="stylesheet" href="/styles.css">
+  
+
+  
+
+  
+  <link rel="alternate" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="feed" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  
+
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" href="/img/icon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
+
+  <link rel="canonical" href="/unfinished/five_min_trivia_invincibles/">
+
+  <meta property="twitter:card" content="summary_large_image">
+  
+  <meta property="twitter:site" content="@robert_squared">
+  <meta property="twitter:creator" content="@robert_squared">
+  
+  <meta property="og:site_name" content="Robert Hickman">
+  <meta property="og:url" content="/unfinished/five_min_trivia_invincibles/">
+  <meta property="og:title" content="Five Minute Football Trivia - Invincibles | Robert Hickman">
+  <meta property="og:description" content="library(tidyverse)library(igraph)library(tidygraph)library(ggraph)vb_matches &lt;- readr::read_csv(&#39;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-19/vb_matches.csv&#39;, guess_max = 76000) %&gt;%mutate(w_team = paste(w_player1, w_player2, sep = &quot;/&quot;),l_team = paste(l_player1, l_player2, sep = &quot;/&quot;))get_score_ratio &lt;- function(score) {if(is.na(score) | grepl(&quot;Forfeit|retired&quot;, score)) {#check whatever min return isreturn(1.001)} else {sets &lt;- unlist(strsplit(score, &quot;, &quot;))w_points &lt;-0l_points &lt;- 0for(s in seq(length(sets))) {split_set_score &lt;- unlist(strsplit(sets[s], &quot;-&quot;))w_points &lt;- w_points &#43; as.numeric(split_set_score[1])l_points &lt;- l_points &#43; as.">
+  <meta property="og:locale" content="en-us">
+  
+  <meta property="article:published_time" content="2020-03-04T00:00:00&#43;00:00">
+  
+  <meta property="article:modified_time" content="2020-03-04T00:00:00&#43;00:00">
+  
+
+  <script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+</script>
+<script async type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <title>Five Minute Football Trivia - Invincibles | Robert Hickman</title>
+
+</head>
+<body id="top" data-spy="scroll" data-target="#toc" data-offset="71" >
+
+<nav class="navbar navbar-default navbar-fixed-top" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="navbar-header">
+      
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+              data-target=".navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      
+      <a class="navbar-brand" href="/">Robert Hickman</a>
+    </div>
+
+    
+    <div class="collapse navbar-collapse">
+
+      
+      
+      <ul class="nav navbar-nav navbar-right">
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#about">
+            
+            <span>Home</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#publications_selected">
+            
+            <span>Publications</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#posts">
+            
+            <span>Posts</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#projects">
+            
+            <span>Projects</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/files/cv/cv.pdf">
+            
+            <span>CV</span>
+            
+          </a>
+        </li>
+
+        
+        
+      
+
+      
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+
+<article class="article" itemscope itemtype="http://schema.org/Article">
+
+  
+
+
+  <div class="article-container">
+    <div class="article-inner">
+      <h1 itemprop="name">Five Minute Football Trivia - Invincibles</h1>
+
+      
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2020-03-04 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Mar 4, 2020
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    3 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+  
+<div class="share-box" aria-hidden="true">
+  <ul class="share">
+    <li>
+      <a class="twitter"
+         href="https://twitter.com/intent/tweet?text=Five%20Minute%20Football%20Trivia%20-%20Invincibles&amp;url=%2funfinished%2ffive_min_trivia_invincibles%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-twitter"></i>
+      </a>
+    </li>
+    <li>
+      <a class="facebook"
+         href="https://www.facebook.com/sharer.php?u=%2funfinished%2ffive_min_trivia_invincibles%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-facebook"></i>
+      </a>
+    </li>
+    <li>
+      <a class="linkedin"
+         href="https://www.linkedin.com/shareArticle?mini=true&amp;url=%2funfinished%2ffive_min_trivia_invincibles%2f&amp;title=Five%20Minute%20Football%20Trivia%20-%20Invincibles"
+         target="_blank" rel="noopener">
+        <i class="fa fa-linkedin"></i>
+      </a>
+    </li>
+    <li>
+      <a class="weibo"
+         href="http://service.weibo.com/share/share.php?url=%2funfinished%2ffive_min_trivia_invincibles%2f&amp;title=Five%20Minute%20Football%20Trivia%20-%20Invincibles"
+         target="_blank" rel="noopener">
+        <i class="fa fa-weibo"></i>
+      </a>
+    </li>
+    <li>
+      <a class="email"
+         href="mailto:?subject=Five%20Minute%20Football%20Trivia%20-%20Invincibles&amp;body=%2funfinished%2ffive_min_trivia_invincibles%2f">
+        <i class="fa fa-envelope"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+  
+
+</div>
+
+
+      <div class="article-style" itemprop="articleBody">
+        
+
+
+<pre class="r"><code>library(tidyverse)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+
+vb_matches &lt;- readr::read_csv(&#39;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-19/vb_matches.csv&#39;, guess_max = 76000) %&gt;%
+  mutate(w_team = paste(w_player1, w_player2, sep = &quot;/&quot;),
+         l_team = paste(l_player1, l_player2, sep = &quot;/&quot;))</code></pre>
+<pre class="r"><code>get_score_ratio &lt;- function(score) {
+  if(is.na(score) | grepl(&quot;Forfeit|retired&quot;, score)) {
+    #check whatever min return is
+    return(1.001)
+  } else {
+    sets &lt;- unlist(strsplit(score, &quot;, &quot;))
+    
+    w_points &lt;-0
+    l_points &lt;- 0
+    for(s in seq(length(sets))) {
+      split_set_score &lt;- unlist(strsplit(sets[s], &quot;-&quot;))
+      w_points &lt;- w_points + as.numeric(split_set_score[1])
+      l_points &lt;- l_points + as.numeric(split_set_score[2])
+    }
+    
+    return(w_points / (l_points + 1))
+  }
+}  
+
+matchups &lt;- vb_matches %&gt;%
+  select(w_player1, w_player2, l_player1, l_player2, score) %&gt;%
+  rowwise() %&gt;%
+  mutate(score_ratio = get_score_ratio(score),
+         win_team = paste(w_player1, w_player2, sep = &quot;_&quot;),
+         lose_team = paste(l_player1, l_player2, sep = &quot;_&quot;)) %&gt;%
+  select(lose_team, win_team, score_ratio)</code></pre>
+<pre class="r"><code>winners &lt;- matchups %&gt;%
+  select(win_team, lose_team) %&gt;%
+  pivot_longer(cols = c(win_team, lose_team), names_to = &quot;result&quot;, values_to = &quot;name&quot;) %&gt;%
+  group_by(result, name) %&gt;%
+  count() %&gt;%
+  pivot_wider(id_cols = &quot;name&quot;, names_from = &quot;result&quot;, values_from = &quot;n&quot;, values_fill = list(n = 0)) %&gt;%
+  mutate(win_perc = win_team / (win_team + lose_team))</code></pre>
+<pre class="r"><code>E &lt;- matchups
+V &lt;- data.frame(team = unique(c(matchups$lose_team, matchups$win_team)))
+
+g &lt;- graph_from_data_frame(E, directed = TRUE, vertices = V) %&gt;%
+  as_tbl_graph() %&gt;%
+  mutate(pagerank = centrality_pagerank())
+
+x &lt;- g %&gt;%
+  as_tibble() %&gt;%
+  left_join(winners, by = &quot;name&quot;)</code></pre>
+<pre class="r"><code>prefix &lt;- &quot;https://www.kaggle.com/c/march-machine-learning-mania-2015&quot;
+url_teams &lt;- paste(prefix, &quot;download/teams.csv&quot;, sep = &quot;/&quot;)
+url_games &lt;- paste(prefix, 
+                   &quot;download/regular_season_compact_results.csv&quot;, sep = &quot;/&quot;)
+download.file(url_teams, destfile = &quot;C:/Users/robwh/Downloads/teams.csv&quot;)
+download.file(url_games, destfile = &quot;C:/Users/robwh/Downloads/games.csv&quot;)
+
+library(mdsr)
+teams &lt;- readr::read_csv(&quot;C:/Users/robwh/Downloads/teams.csv&quot;)
+games &lt;- readr::read_csv(&quot;C:/Users/robwh/Downloads/games.csv&quot;) %&gt;%
+  filter(season == 1996)
+dim(games)
+
+E &lt;- games %&gt;%
+  mutate(score_ratio = wscore/lscore) %&gt;%
+  select(lteam, wteam, score_ratio)
+V &lt;- teams %&gt;%
+  filter(team_id %in% unique(c(E$lteam, E$wteam)))
+library(tidygraph)
+library(igraph)
+g &lt;- graph_from_data_frame(E, directed = TRUE, vertices = V) %&gt;%
+  as_tbl_graph() %&gt;%
+  mutate(team_id = as.numeric(name))
+summary(g)
+
+g &lt;- g %&gt;%
+  mutate(pagerank = centrality_pagerank())
+g %&gt;%
+  as_tibble() %&gt;%
+  arrange(desc(pagerank)) %&gt;%
+  head(20)</code></pre>
+<pre class="r"><code>min_date &lt;- min(vb_matches$date)
+max_date &lt;- max(vb_matches$date)
+
+dates &lt;- seq(min_date, max_date, length.out = 1000)
+
+months &lt;- vb_matches %&gt;%
+  select(date) %&gt;%
+  separate(date, into = c(&quot;year&quot;, &quot;month&quot;, &quot;day&quot;), sep = &quot;-&quot;) %&gt;%
+  mutate(month_text = month.abb[as.numeric(month)],
+         month_first_day = as.Date(paste(year, month, &quot;01&quot;, sep = &quot;-&quot;)))
+  
+p &lt;- ggplot(months, aes(x = month_first_day, fill = factor(month_text, levels = month.abb))) +
+    geom_bar(width = 25) +
+  scale_fill_discrete(name = &quot;month&quot;) +
+  theme_minimal()
+
+
+count_week_matches &lt;- function(prev_week, week_end) {
+  i &lt;&lt;- week_end
+  j &lt;&lt;- prev_week
+  if(is.na(prev_week)) {
+    return(NA)
+  } else {
+    week_matches &lt;- vb_matches %&gt;%
+      filter(date &gt; prev_week - 1 &amp; date &lt; week_end)
+    
+    n_matches &lt;- nrow(week_matches)
+    return(n_matches)
+  }
+}
+
+week_matches &lt;- map2_dbl(lag(dates), dates, count_week_matches)</code></pre>
+<pre class="r"><code>x &lt;- vb_matches %&gt;%
+  count(circuit, tournament, year) %&gt;%
+  arrange(n) %&gt;%
+  slice(2) %&gt;%
+  left_join(vb_matches, by = c(&quot;circuit&quot;, &quot;tournament&quot;, &quot;year&quot;)) %&gt;%
+  select(circuit, tournament, year, gender, bracket, score, w_team, l_team) %&gt;%
+  filter(gender == &quot;W&quot;)
+
+teams &lt;- x %&gt;%
+  select(w_team, l_team)
+
+g &lt;- graph_from_data_frame(teams, directed = TRUE)
+
+
+p1 &lt;- ggraph(g, &#39;dendrogram&#39;) + 
+  geom_edge_diagonal() + 
+  geom_node_point() +
+  geom_node_text(aes(label = name)) +
+  theme_void()</code></pre>
+
+      </div>
+
+      
+
+
+<div class="article-tags">
+  
+  <a class="btn btn-primary btn-outline" href="/tags/fivemintrivia">fivemintrivia</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/football">football</a>
+  
+</div>
+
+
+
+    </div>
+  </div>
+
+</article>
+
+
+
+<div class="article-container article-widget">
+  <div class="hr-light"></div>
+  <h3>Related</h3>
+  <ul>
+    
+    <li><a href="/post/advent_calendar_trivia/">Advent Calendar of Football Trivia Analyses</a></li>
+    
+    <li><a href="/project/statsbomb_conference/">Statsbomb Conference</a></li>
+    
+    <li><a href="/project/guardian_knowledge/">Guardian: The Knowledge</a></li>
+    
+    <li><a href="/project/yorkshire_world_cup/">Could Yorkshire Win the World Cup</a></li>
+    
+    <li><a href="/post/guardian_knowledge_june/">The Guardian Knowledge June 2019</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="article-container">
+  
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="powered-by">
+
+      &copy; 2018 &middot; 
+
+      Powered by the
+      <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+      <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+      <span class="pull-right" aria-hidden="true">
+        <a href="#" id="back_to_top">
+          <span class="button_icon">
+            <i class="fa fa-chevron-up fa-2x"></i>
+          </span>
+        </a>
+      </span>
+
+    </p>
+  </div>
+</footer>
+
+
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close btn-large" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Cite</h4>
+      </div>
+      <div>
+        <pre><code class="modal-body tex"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-primary btn-outline js-copy-cite" href="#" target="_blank">
+          <i class="fa fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-primary btn-outline js-download-cite" href="#" target="_blank">
+          <i class="fa fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+    
+
+    
+
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.3/imagesloaded.pkgd.min.js" integrity="sha512-umsR78NN0D23AzgoZ11K7raBD+R6hqKojyBZs1w8WvYlsI+QuKRGBx3LFCwhatzBunCjDuJpDHwxD13sLMbpRA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha512-iztkobsvnjKfAtTNdHkGVjAYTrrtlC7mGp/54c40wowO7LhURYl3gVzzcEqGl/qKXQltJ2HwMrdLcNUdo+N/RQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.4/isotope.pkgd.min.js" integrity="sha512-VDBOIlDbuC4VWxGJNmuFRQ0Li0SKkDpmGyuhAG5LTDLd/dJ/S0WMVxriR2Y+CyPL5gzjpN4f/6iqWVBJlht0tQ==" crossorigin="anonymous"></script>
+    
+    
+    <script src="/js/hugo-academic.js"></script>
+    
+
+    
+    
+      
+      
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+      
+
+      
+
+      
+
+      <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    
+    
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_CHTML" integrity="sha512-tOav5w1OjvsSJzePRtt2uQPFwBoHt1VZcUq8l8nm5284LEKE9FSJBQryzMBzHxY5P0zRdNqEcpLIRVYFNgu1jw==" crossorigin="anonymous"></script>
+    
+    
+
+  </body>
+</html>
+

@@ -5,6 +5,15 @@
     
     <url>
     
+      <loc>/post/riddler_june_26th/</loc>
+      <lastmod>2020-06-29T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/how_i_made_my_millions/</loc>
       <lastmod>2020-05-17T00:00:00+00:00</lastmod>
     </url>
@@ -52,6 +61,15 @@
     
       <loc>/post/five_min_trivia_invincibles/</loc>
       <lastmod>2020-03-07T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
+      <loc>/unfinished/five_min_trivia_invincibles/</loc>
+      <lastmod>2020-03-04T00:00:00+00:00</lastmod>
     </url>
     
   
@@ -478,6 +496,16 @@
     
     <url>
     
+      <loc>/unfinished/</loc>
+      <lastmod>2020-03-04T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/tags/animal_crossing/</loc>
       <lastmod>2020-05-17T00:00:00+00:00</lastmod>
       <priority>0</priority>
@@ -719,7 +747,7 @@
     <url>
     
       <loc>/tags/riddler/</loc>
-      <lastmod>2019-02-03T00:00:00+00:00</lastmod>
+      <lastmod>2020-06-29T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -749,7 +777,7 @@
     <url>
     
       <loc>/tags/rstats/</loc>
-      <lastmod>2020-05-17T00:00:00+00:00</lastmod>
+      <lastmod>2020-06-29T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     

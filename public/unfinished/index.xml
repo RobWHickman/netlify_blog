@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Unfinisheds on Robert Hickman</title>
+    <link>/unfinished/</link>
+    <description>Recent content in Unfinisheds on Robert Hickman</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018</copyright>
+    <lastBuildDate>Wed, 04 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <atom:link href="/unfinished/" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Five Minute Football Trivia - Invincibles</title>
+      <link>/unfinished/five_min_trivia_invincibles/</link>
+      <pubDate>Wed, 04 Mar 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/unfinished/five_min_trivia_invincibles/</guid>
+      <description>
+
+
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+
+vb_matches &amp;lt;- readr::read_csv(&amp;#39;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-19/vb_matches.csv&amp;#39;, guess_max = 76000) %&amp;gt;%
+  mutate(w_team = paste(w_player1, w_player2, sep = &amp;quot;/&amp;quot;),
+         l_team = paste(l_player1, l_player2, sep = &amp;quot;/&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;get_score_ratio &amp;lt;- function(score) {
+  if(is.na(score) | grepl(&amp;quot;Forfeit|retired&amp;quot;, score)) {
+    #check whatever min return is
+    return(1.001)
+  } else {
+    sets &amp;lt;- unlist(strsplit(score, &amp;quot;, &amp;quot;))
+    
+    w_points &amp;lt;-0
+    l_points &amp;lt;- 0
+    for(s in seq(length(sets))) {
+      split_set_score &amp;lt;- unlist(strsplit(sets[s], &amp;quot;-&amp;quot;))
+      w_points &amp;lt;- w_points + as.numeric(split_set_score[1])
+      l_points &amp;lt;- l_points + as.numeric(split_set_score[2])
+    }
+    
+    return(w_points / (l_points + 1))
+  }
+}  
+
+matchups &amp;lt;- vb_matches %&amp;gt;%
+  select(w_player1, w_player2, l_player1, l_player2, score) %&amp;gt;%
+  rowwise() %&amp;gt;%
+  mutate(score_ratio = get_score_ratio(score),
+         win_team = paste(w_player1, w_player2, sep = &amp;quot;_&amp;quot;),
+         lose_team = paste(l_player1, l_player2, sep = &amp;quot;_&amp;quot;)) %&amp;gt;%
+  select(lose_team, win_team, score_ratio)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;winners &amp;lt;- matchups %&amp;gt;%
+  select(win_team, lose_team) %&amp;gt;%
+  pivot_longer(cols = c(win_team, lose_team), names_to = &amp;quot;result&amp;quot;, values_to = &amp;quot;name&amp;quot;) %&amp;gt;%
+  group_by(result, name) %&amp;gt;%
+  count() %&amp;gt;%
+  pivot_wider(id_cols = &amp;quot;name&amp;quot;, names_from = &amp;quot;result&amp;quot;, values_from = &amp;quot;n&amp;quot;, values_fill = list(n = 0)) %&amp;gt;%
+  mutate(win_perc = win_team / (win_team + lose_team))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;E &amp;lt;- matchups
+V &amp;lt;- data.frame(team = unique(c(matchups$lose_team, matchups$win_team)))
+
+g &amp;lt;- graph_from_data_frame(E, directed = TRUE, vertices = V) %&amp;gt;%
+  as_tbl_graph() %&amp;gt;%
+  mutate(pagerank = centrality_pagerank())
+
+x &amp;lt;- g %&amp;gt;%
+  as_tibble() %&amp;gt;%
+  left_join(winners, by = &amp;quot;name&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;prefix &amp;lt;- &amp;quot;https://www.kaggle.com/c/march-machine-learning-mania-2015&amp;quot;
+url_teams &amp;lt;- paste(prefix, &amp;quot;download/teams.csv&amp;quot;, sep = &amp;quot;/&amp;quot;)
+url_games &amp;lt;- paste(prefix, 
+                   &amp;quot;download/regular_season_compact_results.csv&amp;quot;, sep = &amp;quot;/&amp;quot;)
+download.file(url_teams, destfile = &amp;quot;C:/Users/robwh/Downloads/teams.csv&amp;quot;)
+download.file(url_games, destfile = &amp;quot;C:/Users/robwh/Downloads/games.csv&amp;quot;)
+
+library(mdsr)
+teams &amp;lt;- readr::read_csv(&amp;quot;C:/Users/robwh/Downloads/teams.csv&amp;quot;)
+games &amp;lt;- readr::read_csv(&amp;quot;C:/Users/robwh/Downloads/games.csv&amp;quot;) %&amp;gt;%
+  filter(season == 1996)
+dim(games)
+
+E &amp;lt;- games %&amp;gt;%
+  mutate(score_ratio = wscore/lscore) %&amp;gt;%
+  select(lteam, wteam, score_ratio)
+V &amp;lt;- teams %&amp;gt;%
+  filter(team_id %in% unique(c(E$lteam, E$wteam)))
+library(tidygraph)
+library(igraph)
+g &amp;lt;- graph_from_data_frame(E, directed = TRUE, vertices = V) %&amp;gt;%
+  as_tbl_graph() %&amp;gt;%
+  mutate(team_id = as.numeric(name))
+summary(g)
+
+g &amp;lt;- g %&amp;gt;%
+  mutate(pagerank = centrality_pagerank())
+g %&amp;gt;%
+  as_tibble() %&amp;gt;%
+  arrange(desc(pagerank)) %&amp;gt;%
+  head(20)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;min_date &amp;lt;- min(vb_matches$date)
+max_date &amp;lt;- max(vb_matches$date)
+
+dates &amp;lt;- seq(min_date, max_date, length.out = 1000)
+
+months &amp;lt;- vb_matches %&amp;gt;%
+  select(date) %&amp;gt;%
+  separate(date, into = c(&amp;quot;year&amp;quot;, &amp;quot;month&amp;quot;, &amp;quot;day&amp;quot;), sep = &amp;quot;-&amp;quot;) %&amp;gt;%
+  mutate(month_text = month.abb[as.numeric(month)],
+         month_first_day = as.Date(paste(year, month, &amp;quot;01&amp;quot;, sep = &amp;quot;-&amp;quot;)))
+  
+p &amp;lt;- ggplot(months, aes(x = month_first_day, fill = factor(month_text, levels = month.abb))) +
+    geom_bar(width = 25) +
+  scale_fill_discrete(name = &amp;quot;month&amp;quot;) +
+  theme_minimal()
+
+
+count_week_matches &amp;lt;- function(prev_week, week_end) {
+  i &amp;lt;&amp;lt;- week_end
+  j &amp;lt;&amp;lt;- prev_week
+  if(is.na(prev_week)) {
+    return(NA)
+  } else {
+    week_matches &amp;lt;- vb_matches %&amp;gt;%
+      filter(date &amp;gt; prev_week - 1 &amp;amp; date &amp;lt; week_end)
+    
+    n_matches &amp;lt;- nrow(week_matches)
+    return(n_matches)
+  }
+}
+
+week_matches &amp;lt;- map2_dbl(lag(dates), dates, count_week_matches)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;x &amp;lt;- vb_matches %&amp;gt;%
+  count(circuit, tournament, year) %&amp;gt;%
+  arrange(n) %&amp;gt;%
+  slice(2) %&amp;gt;%
+  left_join(vb_matches, by = c(&amp;quot;circuit&amp;quot;, &amp;quot;tournament&amp;quot;, &amp;quot;year&amp;quot;)) %&amp;gt;%
+  select(circuit, tournament, year, gender, bracket, score, w_team, l_team) %&amp;gt;%
+  filter(gender == &amp;quot;W&amp;quot;)
+
+teams &amp;lt;- x %&amp;gt;%
+  select(w_team, l_team)
+
+g &amp;lt;- graph_from_data_frame(teams, directed = TRUE)
+
+
+p1 &amp;lt;- ggraph(g, &amp;#39;dendrogram&amp;#39;) + 
+  geom_edge_diagonal() + 
+  geom_node_point() +
+  geom_node_text(aes(label = name)) +
+  theme_void()&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

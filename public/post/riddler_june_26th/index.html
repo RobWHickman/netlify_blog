@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme" content="hugo-academic">
+  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="author" content="Robert Hickman">
+
+  
+  
+  
+  
+    
+      
+    
+  
+  <meta name="description" content="#for working with polygonslibrary(sf)library(sfheaders)library(tidyverse)library(gtools)set.seed(22081992)Riddler ExpressThis weeks express deals with an erratic driver:
+In Riddler City, the city streets follow a grid layout, running north-south and east-west. You’re driving north when you decide to play a little game. Every time you reach an intersection, you randomly turn left or right, each with a 50 percent chance.
+After driving through 10 intersections, what is the probability that you are still driving north?">
+
+  
+  <link rel="alternate" hreflang="en-us" href="/post/riddler_june_26th/">
+
+  
+
+
+  
+
+  
+  
+  <meta name="theme-color" content="#0095eb">
+  
+  
+  
+  
+    
+  
+  
+    
+    
+      
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+      
+    
+  
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha512-6MXa8B6uaO18Hid6blRMetEIoPqHf7Ux1tnyIQdpt9qI5OACx7C+O3IVTr98vwGnlcg0LOLa02i9Y1HpVhlfiw==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.1/css/academicons.min.css" integrity="sha512-NThgw3XKQ1absAahW6to7Ey42uycrVvfNfyjqcFNgCmOCQ5AR4AO0SiXrN+8ZtYeappp56lk1WtvjVmEa+VR6A==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous">
+  
+  
+  
+  
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Montserrat:400,700%7cRoboto:400,400italic,700%7cRoboto&#43;Mono">
+  
+  <link rel="stylesheet" href="/styles.css">
+  
+
+  
+
+  
+  <link rel="alternate" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="feed" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  
+
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" href="/img/icon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
+
+  <link rel="canonical" href="/post/riddler_june_26th/">
+
+  <meta property="twitter:card" content="summary_large_image">
+  
+  <meta property="twitter:site" content="@robert_squared">
+  <meta property="twitter:creator" content="@robert_squared">
+  
+  <meta property="og:site_name" content="Robert Hickman">
+  <meta property="og:url" content="/post/riddler_june_26th/">
+  <meta property="og:title" content="The Riddler - June 26th | Robert Hickman">
+  <meta property="og:description" content="#for working with polygonslibrary(sf)library(sfheaders)library(tidyverse)library(gtools)set.seed(22081992)Riddler ExpressThis weeks express deals with an erratic driver:
+In Riddler City, the city streets follow a grid layout, running north-south and east-west. You’re driving north when you decide to play a little game. Every time you reach an intersection, you randomly turn left or right, each with a 50 percent chance.
+After driving through 10 intersections, what is the probability that you are still driving north?">
+  <meta property="og:locale" content="en-us">
+  
+  <meta property="article:published_time" content="2020-06-29T00:00:00&#43;00:00">
+  
+  <meta property="article:modified_time" content="2020-06-29T00:00:00&#43;00:00">
+  
+
+  <script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+</script>
+<script async type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <title>The Riddler - June 26th | Robert Hickman</title>
+
+</head>
+<body id="top" data-spy="scroll" data-target="#toc" data-offset="71" >
+
+<nav class="navbar navbar-default navbar-fixed-top" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="navbar-header">
+      
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+              data-target=".navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      
+      <a class="navbar-brand" href="/">Robert Hickman</a>
+    </div>
+
+    
+    <div class="collapse navbar-collapse">
+
+      
+      
+      <ul class="nav navbar-nav navbar-right">
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#about">
+            
+            <span>Home</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#publications_selected">
+            
+            <span>Publications</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#posts">
+            
+            <span>Posts</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#projects">
+            
+            <span>Projects</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/files/cv/cv.pdf">
+            
+            <span>CV</span>
+            
+          </a>
+        </li>
+
+        
+        
+      
+
+      
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+
+<article class="article" itemscope itemtype="http://schema.org/Article">
+
+  
+
+
+  <div class="article-container">
+    <div class="article-inner">
+      <h1 itemprop="name">The Riddler - June 26th</h1>
+
+      
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2020-06-29 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Jun 29, 2020
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    13 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+  
+<div class="share-box" aria-hidden="true">
+  <ul class="share">
+    <li>
+      <a class="twitter"
+         href="https://twitter.com/intent/tweet?text=The%20Riddler%20-%20June%2026th&amp;url=%2fpost%2friddler_june_26th%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-twitter"></i>
+      </a>
+    </li>
+    <li>
+      <a class="facebook"
+         href="https://www.facebook.com/sharer.php?u=%2fpost%2friddler_june_26th%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-facebook"></i>
+      </a>
+    </li>
+    <li>
+      <a class="linkedin"
+         href="https://www.linkedin.com/shareArticle?mini=true&amp;url=%2fpost%2friddler_june_26th%2f&amp;title=The%20Riddler%20-%20June%2026th"
+         target="_blank" rel="noopener">
+        <i class="fa fa-linkedin"></i>
+      </a>
+    </li>
+    <li>
+      <a class="weibo"
+         href="http://service.weibo.com/share/share.php?url=%2fpost%2friddler_june_26th%2f&amp;title=The%20Riddler%20-%20June%2026th"
+         target="_blank" rel="noopener">
+        <i class="fa fa-weibo"></i>
+      </a>
+    </li>
+    <li>
+      <a class="email"
+         href="mailto:?subject=The%20Riddler%20-%20June%2026th&amp;body=%2fpost%2friddler_june_26th%2f">
+        <i class="fa fa-envelope"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+  
+
+</div>
+
+
+      <div class="article-style" itemprop="articleBody">
+        
+
+
+<pre class="r"><code>#for working with polygons
+library(sf)
+library(sfheaders)
+
+library(tidyverse)
+library(gtools)
+
+set.seed(22081992)</code></pre>
+<div id="riddler-express" class="section level1">
+<h1>Riddler Express</h1>
+<p>This weeks express deals with an erratic driver:</p>
+<p><em>In Riddler City, the city streets follow a grid layout, running north-south and east-west. You’re driving north when you decide to play a little game. Every time you reach an intersection, you randomly turn left or right, each with a 50 percent chance.</em></p>
+<p><em>After driving through 10 intersections, what is the probability that you are still driving north?</em></p>
+<p>So all we have to do is create a biomial tree of depth 10 and then sum by final heading direction. As the driver <em>must</em> turn left or right at each junction, we actually only have to consider the final turn as this will change it from whichever North/South or East/West it is heading to the other with p = 0.5. But if we want to prove this, let’s consider it as a more canonical ball-drawing probability task where one can draw balls from a bag:</p>
+<ul>
+<li>Red (right) ball with probability p or</li>
+<li>Lime (left) ball with probability q</li>
+</ul>
+<p>drawing balls 10 times without replacement</p>
+<p>We know that as there are only two balls, the total probability is</p>
+<p><span class="math display">\[ (p + q) = 1 \]</span>
+on the first pick we are just choosing p or q so can raise everything to the power 1 (pick) to get the same formula:</p>
+<p><span class="math display">\[ (p + q)^1 = 1^1 \]</span>
+and can generalise to n picks</p>
+<p><span class="math display">\[ (p + q)^n = 1^n \]</span>
+to expand this we’re going to get combinations of p and q to the powers from 0:n, multiplied by the combinatorics from <a href="https://en.wikipedia.org/wiki/Pascal%27s_triangle">Pascal’s triangle</a>.</p>
+<p>If we set this multiplication as m, we can express this as:</p>
+<p><span class="math display">\[ m = \frac{n!}{(n-k!)k!} \]</span>
+(where k is 0:n)</p>
+<p>so for n = 10 (turns of the car, or picks of a ball), we get</p>
+<pre class="r"><code>#calculate pascals triangle via factorials
+calc_pascal &lt;- function(n,k) {
+  factorial(n) / (factorial(n-k) * factorial(k))
+}
+
+#run for n turns
+n_turns &lt;- 10
+m = map2_dbl(n_turns, 0:n_turns, calc_pascal)
+m</code></pre>
+<pre><code>##  [1]   1  10  45 120 210 252 210 120  45  10   1</code></pre>
+<p>so for</p>
+<p><span class="math display">\[ (p + q)^{10}\]</span>
+we will expand this into</p>
+<p><span class="math display">\[ 1p^{10} + 10p^9q + 45p^8q^2 + 120 p^7q^3 + 210p^6q^4 + 252p^5q^5 + 210p^4q^6 + 120p^3q^7 + 45p^2q^8 + 10pq^9 + 1q^{10}\]</span>
+But where we now diverge from the balls in a bag, each time we draw (/turn), the position of our car updates. We don’t care about the probability of each of these per se, but the probabilities grouped by the final direction of the car.</p>
+<p>It should be clear that every p draw (a right turn), moves the car 1 cardinal direction to the right, whereas a left turn moves it -1 cardinal direction. In our expansion we have 210 examples of drawing 6 right turns and 4 left turns, which would end up having the car face due south (2 cardinal turns). For each term, we just have to minues the exponent of the left turns from the exponent of the right turns, then find the direction by taking the 4th modulus of this.</p>
+<p>For a binomial expansion like this, it’s very easy:</p>
+<pre class="r"><code>#calculate the end heading for each term of the expansion
+term_direction = (n_turns:0 - 0:n_turns) %% 4
+term_direction</code></pre>
+<pre><code>##  [1] 2 0 2 0 2 0 2 0 2 0 2</code></pre>
+<p>so we’re either going to end up facing north (0 overall turn) or south (2 overall turns). We can then multiply these by the m for each term</p>
+<pre class="r"><code>#list of cardinal direction
+final_directions &lt;- c(&quot;north&quot;, &quot;east&quot;, &quot;south&quot;, &quot;west&quot;)
+
+#loop through each expansion term to get the final direction
+direction_p &lt;- c()
+for(d in 0:3) {
+  direction_p[d+1] &lt;- sum(m[term_direction == d])
+}
+
+#find the probability of facing any direction
+names(direction_p) &lt;- final_directions
+direction_p / sum(direction_p)</code></pre>
+<pre><code>## north  east south  west 
+##   0.5   0.0   0.5   0.0</code></pre>
+<p>so we have a 50% chance of ending up facing either north or south. So the answer to this weeks riddler express is</p>
+<p><span class="math display">\[p(North) = 0.5 \]</span></p>
+<div id="extra-credit" class="section level2">
+<h2>Extra Credit</h2>
+<p>For extra credit, the driver decides instead to turn left, right, or continue straight with equal probability (1/3). In addition to p and q, we now also have an r probability where</p>
+<p><span class="math display">\[ r = p(No Turn) \]</span>
+We can then use expand.grid() to produce combinations of these three probabilities, and count the combinations by number of each of these:</p>
+<pre class="r"><code>#find combinations of p, q, and r
+extra_credit &lt;- expand.grid(rep(list(c(&quot;p&quot;, &quot;q&quot;, &quot;r&quot;)), n_turns)) %&gt;%
+  #label each combination
+  mutate(id = 1:n()) %&gt;%
+  #count numbers of p, q, and r
+  pivot_longer(cols = starts_with(&quot;Var&quot;)) %&gt;%
+  group_by(id, value) %&gt;%
+  summarise(n = n()) %&gt;%
+  #pivot back to wide
+  pivot_wider(id_cols = id, names_from = value, values_from = n) %&gt;%
+  mutate_at(c(&quot;p&quot;, &quot;q&quot;, &quot;r&quot;),  ~replace(., is.na(.), 0)) %&gt;%
+  #count numbers of each combination
+  group_by(p, q, r) %&gt;%
+  summarise(n = n()) %&gt;%
+  arrange(n)
+
+extra_credit</code></pre>
+<pre><code>## # A tibble: 66 x 4
+## # Groups:   p, q [66]
+##        p     q     r     n
+##    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt;
+##  1     0     0    10     1
+##  2     0    10     0     1
+##  3    10     0     0     1
+##  4     0     1     9    10
+##  5     0     9     1    10
+##  6     1     0     9    10
+##  7     1     9     0    10
+##  8     9     0     1    10
+##  9     9     1     0    10
+## 10     0     2     8    45
+## # ... with 56 more rows</code></pre>
+<p>As we might expect, we get the same number of each combinations, but with 3x combinations for each x^n y^n (for each combination of p, q, and r). As we know that the final heading will be the difference in number of right and left turns, we can subtract these and count the number of combinations leading to each direction</p>
+<pre class="r"><code>extra_credit_answer &lt;- extra_credit %&gt;%
+  mutate(net_turns = p - q) %&gt;%
+  mutate(final_direction = net_turns %% 4) %&gt;%
+  .$final_direction %&gt;%
+  table()
+
+names(extra_credit_answer) &lt;- final_directions
+extra_credit_answer / sum(extra_credit_answer)</code></pre>
+<pre><code>##     north      east     south      west 
+## 0.2727273 0.2272727 0.2727273 0.2272727</code></pre>
+<p>giving us an answer of</p>
+<p><span class="math display">\[ p(North) = 0.\dot{2}\dot{7} \]</span>
+# Riddler Classic</p>
+<p><em>Polly Gawn loves to play “connect the dots.” Today, she’s playing a particularly challenging version of the game, which has six unlabeled dots on the page. She would like to connect them so that they form the vertices of a hexagon. To her surprise, she finds that there are many different hexagons she can draw, each with the same six vertices.</em></p>
+<p><em>What is the greatest possible number of unique hexagons Polly can draw using six points?</em></p>
+<p>This is a pretty tricky question! I can’t see any way to analytically solve it and given that it involves polygons (and not just pure numbers) it seems like a tricky question to brute force. That doesn’t mean we can’t try though.</p>
+<p>Let’s start by using the data in the hint- that for n = 4 points, the maximum number is 3 polygons, given that the fourth point lies within an enclosing triangle of the other three. We can generate some points randomly for this pretty easily, and use the <a href="https://r-spatial.github.io/sf/articles/sf1.html">simple features</a> package to test the properties of the resulting polygons:</p>
+<pre class="r"><code>#generate 3 random points
+points &lt;- data.frame(
+  x = runif(3),
+  y = runif(3)
+)
+
+#create a triangle from these points
+triangle &lt;- sf_polygon(points)
+
+#randomly generate a fourth point within the bounding box of these points
+new_point &lt;- data.frame(
+  x = runif(1, min = min(points$x), max = max(points$x)),
+  y = runif(1, min = min(points$y), max = max(points$y))
+)
+
+#keep generate this point until it lies within the triangle of the previous 3
+while(length(unlist(st_contains(triangle, sf_point(new_point)))) ==0) {
+  new_point &lt;- data.frame(
+    x = runif(1, min = min(points$x), max = max(points$x)),
+    y = runif(1, min = min(points$y), max = max(points$y))
+  )
+}
+
+#bind the fourth point onto the previous 3
+points &lt;- rbind(points, new_point)
+
+#plot the points
+p2 &lt;- ggplot() +
+  #triangle
+  geom_sf(data = triangle, alpha = 0.1) +
+  geom_point(data = points, aes(x, y), 
+             shape = 21, fill = &quot;skyblue&quot;, colour = &quot;black&quot;, size = 3) +
+  theme_minimal()
+
+p2</code></pre>
+<p><img src="/post/2020-06-28-riddlerjune26_files/figure-html/generate_four_points-1.png" width="672" /></p>
+<p>Now we need to brute force through every possible polygon. To do this we can use combinatorics again, this time with the permutations() function from the gtools package. We create every possible route of points, then take only the routes that start on the first point (to cut down our search space, as many routes will be the same just shifted to a different start node)</p>
+<pre class="r"><code>#create all possible routes of 4 points
+routes &lt;- permutations(4, 4, 1:4) %&gt;%
+  as.data.frame() %&gt;%
+  #filter those beginning with node 1
+  filter(V1 == 1)</code></pre>
+<p>For each route we then create the resulting polygon by ordering the points and creating a simple features polygon. These are then bound together and each given an id.</p>
+<pre class="r"><code>#cycle through routes to create polygons
+for(r in seq(nrow(routes))) {
+  nodes &lt;- as.numeric(routes[r,])
+  sf_points &lt;- points[nodes,]
+  sf &lt;- sf_polygon(sf_points)
+  
+  if(r == 1) {
+    polygons &lt;- sf
+  } else {
+    polygons &lt;- rbind(polygons, sf)
+  }
+}
+
+polygons$id &lt;- 1:nrow(polygons)
+
+#plot the resulting polygons
+p3 &lt;- ggplot() +
+  geom_sf(data = polygons, fill = &quot;dodgerblue&quot;) +
+  theme_minimal() +
+  theme(axis.text = element_blank()) +
+  facet_wrap(~id)
+
+p3</code></pre>
+<p><img src="/post/2020-06-28-riddlerjune26_files/figure-html/test_resulting_polygons-1.png" width="672" /></p>
+<p>However, we know that there are only 3 unique polygons for n = 4 points. Why have we found 6? From inspection it’s pretty clear that even though they all have unique paths, 3 of these are duplicates of 3 others. This occurs as for each starting node, there are two paths to create each polygon, a ‘clockwise’ path and an ‘anticlockwise’ one.</p>
+<p>We can easily test for this and remove half the polygons as such:</p>
+<pre class="r"><code>#test for duplicate polygons
+duplicates &lt;- as.data.frame(st_equals(polygons, polygons)) %&gt;%
+  #ignore self matches
+  filter(row.id != col.id) %&gt;%
+  mutate(id = 1:n()) %&gt;%
+  #remove the last 3 polygons
+  top_frac(0.5, id)
+
+polygons &lt;- polygons[-duplicates$row.id,]
+
+#replot
+p4 &lt;- ggplot() +
+  geom_sf(data = polygons, fill = &quot;dodgerblue&quot;) +
+  theme_minimal() +
+  theme(axis.text = element_blank()) +
+  facet_wrap(~id)
+
+p4</code></pre>
+<p><img src="/post/2020-06-28-riddlerjune26_files/figure-html/remove_duplicate_polygons-1.png" width="672" /></p>
+<p>And we have our 3 unique polygons. For a higher number n, we want to spin out and generalise two functions:</p>
+<ul>
+<li>one to create points on a ‘page’</li>
+<li>one to build as many unique polygons as possible</li>
+</ul>
+<p>To create points, we can pretty much verbatim take the previous code. I’ve added a second argument of how many points should lie within a perimeter triangle of points, though this will always be n-3 (where n &gt; 3), as far as I can see.</p>
+<pre class="r"><code>#take our previous code for any n
+create_points &lt;- function(sides, within) {
+  points &lt;- data.frame(
+    x = runif(sides - within),
+    y = runif(sides - within)
+  )
+  perimeter &lt;- sf_polygon(points)
+  
+  new_points &lt;- data.frame(
+    x = runif(within, min = min(points$x), max = max(points$x)),
+    y = runif(within, min = min(points$y), max = max(points$y))
+  )
+
+  while(length(unlist(st_contains(perimeter, sf_point(new_points)))) != within) {
+    new_points &lt;- data.frame(
+      x = runif(within, min = min(points$x), max = max(points$x)),
+      y = runif(within, min = min(points$y), max = max(points$y))
+    )
+  }
+  
+  points &lt;- rbind(points, new_points) %&gt;%
+    mutate(id = 1:n())
+  return(points)
+}
+
+#run to create a pentagon
+five_points &lt;- create_points(5, 2)
+
+#plot the five points
+p5 &lt;- ggplot() +
+  geom_point(data = five_points, aes(x, y, fill = as.factor(id)),
+             shape = 21, colour = &quot;black&quot;, size = 3) +
+  scale_fill_discrete(guide = FALSE) +
+  theme_minimal()
+
+p5</code></pre>
+<p><img src="/post/2020-06-28-riddlerjune26_files/figure-html/generalise_point_creation-1.png" width="672" /></p>
+<p>The second function (to test how many polygons can be drawn) needs two minor tweaks. Polygons are created as before, but to test for duplicates, we now take the smaller id each time, and also use st_is_valid() to check that the polygon does not contain any self-intersections (where lines cross each other).</p>
+<pre class="r"><code>#create polygons for n points
+get_unique_polygons &lt;- function(points) {
+  #create polygons as before
+  sides &lt;- nrow(points)
+  routes &lt;- permutations(sides, sides, 1:sides) %&gt;%
+    as.data.frame() %&gt;%
+    filter(V1 == 1)
+  
+  for(r in seq(nrow(routes))) {
+    nodes &lt;- as.numeric(routes[r,])
+    sf_points &lt;- points[nodes,]
+    sf &lt;- sf_polygon(sf_points)
+    
+    if(r == 1) {
+      polygons &lt;- sf
+    } else {
+      polygons &lt;- rbind(polygons, sf)
+    }
+  }
+  
+  polygons$id &lt;- 1:nrow(polygons)
+  
+  #find duplicate polygons
+  duplicates &lt;- as.data.frame(st_equals(polygons, polygons)) %&gt;%
+    filter(row.id != col.id) %&gt;%
+    mutate(smaller = case_when(
+      row.id &lt; col.id ~ row.id,
+      col.id &lt; row.id ~ col.id
+    ))
+  #always take the smaller id
+  polygons &lt;- polygons[polygons$id %in% duplicates$smaller,]
+  #test for valid polygons
+  #i.e. no self-intersections
+  polygons &lt;- polygons[st_is_valid(polygons),]
+  
+  return(polygons)
+}
+
+#create pentagons
+pentagons &lt;- get_unique_polygons(five_points)
+#calculate and arrange by the area of each for aesthetics
+pentagons$area &lt;- st_area(pentagons)
+pentagons &lt;- pentagons %&gt;%
+    arrange(area) %&gt;%
+    mutate(id = 1:n())
+
+#plot the unique pentagons
+p6 &lt;- ggplot() +
+  geom_sf(data = pentagons, aes(fill = area)) +
+  scale_fill_continuous(guide = FALSE) +
+  theme_minimal() +
+  theme(axis.text = element_blank()) +
+  facet_wrap(~id, nrow = 2)
+
+p6</code></pre>
+<p><img src="/post/2020-06-28-riddlerjune26_files/figure-html/create_polygons_function-1.png" width="672" /></p>
+<p>So for 5 points, the answer seems to be 8 unique polygons that can be drawn.</p>
+<p>For higher n, I then ran these function repeatedly and found the largest number of polygons for any random allocation of points, I’ve used 6 here, but the number can be any. At n = 6 points it’s already struggling (my code here wasn’t written for efficiency) and at 7 is reaaalllly slow, so the loops can be arbitrarily large and run while you make dinner/watch TV etc.</p>
+<pre class="r"><code>#very dirty inefficient brute force code
+all_n &lt;- c()
+n_points &lt;- 6
+for(i in 1:1){
+  #randomly create points
+  points &lt;- create_points(n_points, n_points-3)
+  #build polygons from these
+  polygon &lt;- get_unique_polygons(points)
+  n &lt;- nrow(polygon)
+  all_n[i] &lt;- n
+  #report back from the loop
+  print(paste(i, &quot;loops run&quot;))
+  print(paste(&quot;biggest n so far is&quot;, max(all_n)))
+  print(all_n)
+}</code></pre>
+<pre><code>## [1] &quot;1 loops run&quot;
+## [1] &quot;biggest n so far is 24&quot;
+## [1] 24</code></pre>
+<p>While I was running this to check if I’d missed anything, I tried to solve the problem logically (but not analytically). It seemed clear that you want as many points within larger perimeter triangle of 3 points. It also seemed like you wanted to make sure that none of these points were on a straight line of 3 points (which would limit the number of possible connections of those 3 points). For n = 6 I settled on a slightly offset (by rounding errors) triangle-within-a-triangle</p>
+<pre class="r"><code>#logic-created six points
+six_points &lt;- data.frame(
+  x = c(0, 1, 0.55, 0.25, 0.75, 0.45),
+  y = c(0, 0, sqrt(0.75), 0.22, 0.22, 0.65)
+)
+
+
+#plot the six points
+p7 &lt;- ggplot() +
+  geom_point(data = six_points, aes(x, y),
+             shape = 21, fill = &quot;skyblue&quot;, colour = &quot;black&quot;, size = 3) +
+  theme_minimal()
+
+p7</code></pre>
+<p><img src="/post/2020-06-28-riddlerjune26_files/figure-html/six_points-1.png" width="672" /></p>
+<p>if we pass these points through our function we find that it can create 29 unique polygons (the same number I found from ~100 loops of my brute force attack). Plotting them as before, these are:</p>
+<pre class="r"><code>#test the six points and munge
+heaxgons &lt;- get_unique_polygons(six_points)
+heaxgons$area &lt;- st_area(heaxgons)
+heaxgons &lt;- heaxgons %&gt;%
+    arrange(area) %&gt;%
+    mutate(id = 1:n())
+
+#plot
+p8 &lt;- ggplot() +
+  geom_sf(data = heaxgons, aes(fill = area)) +
+  scale_fill_continuous(guide = FALSE) +
+  theme_minimal() +
+  theme(axis.text = element_blank()) +
+  facet_wrap(~id)
+  
+p8</code></pre>
+<p><img src="/post/2020-06-28-riddlerjune26_files/figure-html/create_hexagons-1.png" width="672" /></p>
+<p>This isn’t a proof, but I feel reasonably confident in this as the answer for the classic</p>
+</div>
+<div id="extra-credit-1" class="section level2">
+<h2>Extra Credit</h2>
+<p>As mentioned, now we want to find this for 7 points creating heptagons. Given we can now fit 4 spare points inside our original triangle, I decided to see what would happen if you stretched the triangle-within-a-triangle and point the final point inside this.</p>
+<pre class="r"><code>#logic-created seven points
+#stretched y axis on point six
+#point seven lies within new triangle
+seven_points &lt;- data.frame(
+  x = c(0, 1, 0.55, 0.25, 0.75, 0.5, 0.45),
+  y = c(0, 0, sqrt(0.75), 0.22, 0.22, 0.75, 0.65)
+)
+
+#munge our heptagons
+heptagons &lt;- get_unique_polygons(seven_points)
+heptagons$area &lt;- st_area(heptagons)
+heptagons &lt;- heptagons %&gt;%
+    arrange(area) %&gt;%
+    mutate(id = 1:n())
+
+#aaaaand plot
+p9 &lt;- ggplot() +
+  geom_sf(data = heptagons, aes(fill = area)) +
+  scale_fill_continuous(guide = FALSE) +
+  theme_minimal() +
+  theme(axis.text = element_blank()) +
+  facet_wrap(~id)
+  
+p9</code></pre>
+<p><img src="/post/2020-06-28-riddlerjune26_files/figure-html/test_heptagon-1.png" width="672" /></p>
+<p>Again, running a brute force (though for few iterations as seven really stretches the inefficient code here), 91 polygons seems a common end point, which is pretty close. I think there’s probably a very limited error on the difference between 91 and 92 polygons, so I maybe got lucky. But who knows?</p>
+</div>
+</div>
+<div id="final-answers" class="section level1">
+<h1>Final Answers</h1>
+<div id="express" class="section level2">
+<h2>Express</h2>
+<div id="section" class="section level3">
+<h3>0.5</h3>
+</div>
+<div id="extra-credit-0.27-recurring" class="section level3">
+<h3>extra credit: 0.27 recurring</h3>
+</div>
+</div>
+<div id="classic" class="section level2">
+<h2>Classic</h2>
+<div id="section-1" class="section level3">
+<h3>29</h3>
+</div>
+<div id="section-2" class="section level3">
+<h3>92</h3>
+</div>
+</div>
+</div>
+
+      </div>
+
+      
+
+
+<div class="article-tags">
+  
+  <a class="btn btn-primary btn-outline" href="/tags/riddler">riddler</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/rstats">rstats</a>
+  
+</div>
+
+
+
+    </div>
+  </div>
+
+</article>
+
+
+
+<div class="article-container article-widget">
+  <div class="hr-light"></div>
+  <h3>Related</h3>
+  <ul>
+    
+    <li><a href="/post/riddler-1st-feb-2019/">Riddler 1st February 2019</a></li>
+    
+    <li><a href="/post/how_i_made_my_millions/">#TidyTuesday - Building Stalk Portfolios with R</a></li>
+    
+    <li><a href="/post/dixon_coles_2/">An Introduction to Modelling Soccer Matches in R (part 2)</a></li>
+    
+    <li><a href="/post/advent_calendar_trivia/">Advent Calendar of Football Trivia Analyses</a></li>
+    
+    <li><a href="/post/r-inforcement_learning_one/">R-inforcement Learning Part One- Tic Tac Toe</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="article-container">
+  
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="powered-by">
+
+      &copy; 2018 &middot; 
+
+      Powered by the
+      <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+      <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+      <span class="pull-right" aria-hidden="true">
+        <a href="#" id="back_to_top">
+          <span class="button_icon">
+            <i class="fa fa-chevron-up fa-2x"></i>
+          </span>
+        </a>
+      </span>
+
+    </p>
+  </div>
+</footer>
+
+
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close btn-large" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Cite</h4>
+      </div>
+      <div>
+        <pre><code class="modal-body tex"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-primary btn-outline js-copy-cite" href="#" target="_blank">
+          <i class="fa fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-primary btn-outline js-download-cite" href="#" target="_blank">
+          <i class="fa fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+    
+
+    
+
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.3/imagesloaded.pkgd.min.js" integrity="sha512-umsR78NN0D23AzgoZ11K7raBD+R6hqKojyBZs1w8WvYlsI+QuKRGBx3LFCwhatzBunCjDuJpDHwxD13sLMbpRA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha512-iztkobsvnjKfAtTNdHkGVjAYTrrtlC7mGp/54c40wowO7LhURYl3gVzzcEqGl/qKXQltJ2HwMrdLcNUdo+N/RQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.4/isotope.pkgd.min.js" integrity="sha512-VDBOIlDbuC4VWxGJNmuFRQ0Li0SKkDpmGyuhAG5LTDLd/dJ/S0WMVxriR2Y+CyPL5gzjpN4f/6iqWVBJlht0tQ==" crossorigin="anonymous"></script>
+    
+    
+    <script src="/js/hugo-academic.js"></script>
+    
+
+    
+    
+      
+      
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+      
+
+      
+
+      
+
+      <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    
+    
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_CHTML" integrity="sha512-tOav5w1OjvsSJzePRtt2uQPFwBoHt1VZcUq8l8nm5284LEKE9FSJBQryzMBzHxY5P0zRdNqEcpLIRVYFNgu1jw==" crossorigin="anonymous"></script>
+    
+    
+
+  </body>
+</html>
+
