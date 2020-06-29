@@ -260,33 +260,6 @@ Liverpool Football Club have had a pretty impressive season until recently, winn
     </div>
   </div>
   
-  <div>
-    <h2><a href="/unfinished/five_min_trivia_invincibles/">Five Minute Football Trivia - Invincibles</a></h2>
-    <div class="article-style">
-      
-      library(tidyverse)
-library(igraph)
-library(tidygraph)
-library(ggraph)
-vb_matches &lt;- readr::read_csv(&#39;<a href="https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-19/vb_matches.csv&amp;#39" target="_blank">https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-19/vb_matches.csv&amp;#39</a>;, guess_max = 76000) %&gt;%
-mutate(w_team = paste(w_player1, w_player2, sep = &quot;/&quot;),
-l_team = paste(l_player1, l_player2, sep = &quot;/&quot;))
-get_score_ratio &lt;- function(score) {
-if(is.na(score) | grepl(&quot;Forfeit|retired&quot;, score)) {
-#check whatever min return is
-return(1.001)
-} else {
-sets &lt;- unlist(strsplit(score, &quot;, &quot;))
-w_points &lt;-0
-l_points &lt;- 0
-for(s in seq(length(sets))) {
-split_set_score &lt;- unlist(strsplit(sets[s], &quot;-&quot;))
-w_points &lt;- w_points + as.numeric(split_set_score[1])
-l_points &lt;- l_points + as.
-      
-    </div>
-  </div>
-  
 
   
 

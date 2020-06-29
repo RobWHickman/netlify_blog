@@ -328,7 +328,7 @@ set.seed(22081992)</code></pre>
 <p>This weeks express deals with an erratic driver:</p>
 <p><em>In Riddler City, the city streets follow a grid layout, running north-south and east-west. You’re driving north when you decide to play a little game. Every time you reach an intersection, you randomly turn left or right, each with a 50 percent chance.</em></p>
 <p><em>After driving through 10 intersections, what is the probability that you are still driving north?</em></p>
-<p>So all we have to do is create a biomial tree of depth 10 and then sum by final heading direction. As the driver <em>must</em> turn left or right at each junction, we actually only have to consider the final turn as this will change it from whichever North/South or East/West it is heading to the other with p = 0.5. But if we want to prove this, let’s consider it as a more canonical ball-drawing probability task where one can draw balls from a bag:</p>
+<p>So all we have to do is create a binomial tree of depth 10 and then sum by final heading direction. As the driver <em>must</em> turn left or right at each junction, we actually only have to consider the final turn as this will change it from whichever North/South or East/West it is heading to the other with p = 0.5. But if we want to prove this, let’s consider it as a more canonical ball-drawing probability task where one can draw balls from a bag:</p>
 <ul>
 <li>Red (right) ball with probability p or</li>
 <li>Lime (left) ball with probability q</li>
@@ -360,7 +360,7 @@ m</code></pre>
 we will expand this into</p>
 <p><span class="math display">\[ 1p^{10} + 10p^9q + 45p^8q^2 + 120 p^7q^3 + 210p^6q^4 + 252p^5q^5 + 210p^4q^6 + 120p^3q^7 + 45p^2q^8 + 10pq^9 + 1q^{10}\]</span>
 But where we now diverge from the balls in a bag, each time we draw (/turn), the position of our car updates. We don’t care about the probability of each of these per se, but the probabilities grouped by the final direction of the car.</p>
-<p>It should be clear that every p draw (a right turn), moves the car 1 cardinal direction to the right, whereas a left turn moves it -1 cardinal direction. In our expansion we have 210 examples of drawing 6 right turns and 4 left turns, which would end up having the car face due south (2 cardinal turns). For each term, we just have to minues the exponent of the left turns from the exponent of the right turns, then find the direction by taking the 4th modulus of this.</p>
+<p>It should be clear that every p draw (a right turn), moves the car 1 cardinal direction to the right, whereas a left turn moves it -1 cardinal direction. In our expansion we have 210 examples of drawing 6 right turns and 4 left turns, which would end up having the car face due south (2 cardinal turns). For each term, we just have to minus the exponent of the left turns from the exponent of the right turns, then find the direction by taking the 4th modulus of this.</p>
 <p>For a binomial expansion like this, it’s very easy:</p>
 <pre class="r"><code>#calculate the end heading for each term of the expansion
 term_direction = (n_turns:0 - 0:n_turns) %% 4

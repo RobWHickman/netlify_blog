@@ -68,15 +68,6 @@
     
     <url>
     
-      <loc>/unfinished/five_min_trivia_invincibles/</loc>
-      <lastmod>2020-03-04T00:00:00+00:00</lastmod>
-    </url>
-    
-  
-    
-    
-    <url>
-    
       <loc>/post/advent_calendar_trivia/</loc>
       <lastmod>2019-12-01T00:00:00+00:00</lastmod>
     </url>
@@ -488,16 +479,6 @@
     
       <loc>/tags/</loc>
       <lastmod>2017-01-01T00:00:00+00:00</lastmod>
-      <priority>0</priority>
-    </url>
-    
-  
-    
-    
-    <url>
-    
-      <loc>/unfinished/</loc>
-      <lastmod>2020-03-04T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
