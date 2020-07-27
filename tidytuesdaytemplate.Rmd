@@ -1,0 +1,42 @@
+---
+title: "Tidy Tuesday Plot Script"
+author: "robert hickman"
+date: "27/07/2020"
+output: html_document
+---
+
+```{r libraries, warning=FALSE,message=FALSE}
+library(tidytuesdayR)
+library(tidyverse)
+library(ggpubr)
+library(gganimate)
+```
+
+```{r directories, warning=FALSE,message=FALSE}
+week <- "2020-07-28"
+save_dir <- paste0("./static/img/tidytuesday_animations/", week)
+
+if(!exists(save_dir)) {
+  dir.create(save_dir)
+}
+```
+
+Code is written inside the quotation function per pass and then plotted and saved
+
+```{r code, warning=FALSE,message=FALSE}
+x <- quote(
+  ggplot(mtcars, aes(x = mpg, y = disp, size = wt)) + geom_point()
+)
+
+p <- eval(x) + ggparagraph(x)
+
+```
+
+
+
+After being finished, create an animation showing the progress. Not run upon running the rmarkdown script
+
+```{r create_animation, warning=FALSE,message=FALSE,eval=FALSE}
+
+```
+
