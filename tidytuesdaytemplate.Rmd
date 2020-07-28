@@ -9,7 +9,7 @@ output: html_document
 library(tidytuesdayR)
 library(tidyverse)
 library(ggpubr)
-library(gganimate)
+library(gifski)
 ```
 
 ```{r directories, warning=FALSE,message=FALSE}
@@ -23,9 +23,32 @@ if(!exists(save_dir)) {
 
 Code is written inside the quotation function per pass and then plotted and saved
 
+```{r}
+plots <- dir(save_dir)
+
+ifelse(
+  length(plots) == 0, 
+  plot <- "plot1.png", 
+  plot <- paste0("plot", max(as.numeric(gsub("(plot)([0-9]*)(.png)", "\\2", plots)) + 1), ".png")
+)
+
+img <- png::readPNG(RCurl::getURLContent("https://raw.githubusercontent.com/allisonhorst/palmerpenguins/master/man/figures/lter_penguins.png"))
+g <- grid::rasterGrob(img, interpolate=TRUE)
+p <- ggplot(mtcars, aes(x = hp, y = mpg)) +
+  geom_point() +
+  annotation_custom(g, xmin = 200, xmax = 300, ymin = 25, ymax = 32.5) +
+  theme_minimal()
+
+ggsave(file.path(save_dir, plot))
+```
+
 ```{r code, warning=FALSE,message=FALSE}
 x <- quote(
+  tuesdata <- tidytuesdayR::tt_load('2020-07-28') %>%
+    .$penguins
+
   ggplot(mtcars, aes(x = mpg, y = disp, size = wt)) + geom_point()
+  
 )
 
 p <- eval(x) + ggparagraph(x)
@@ -37,6 +60,10 @@ p <- eval(x) + ggparagraph(x)
 After being finished, create an animation showing the progress. Not run upon running the rmarkdown script
 
 ```{r create_animation, warning=FALSE,message=FALSE,eval=FALSE}
+plots <- dir(save_dir)
+png_files <- list.files(save_dir, pattern = ".*png$", full.names = TRUE)
+gifski(png_files, gif_file = file.path(save_dir, "tidytuesday_anamiation.gif"), width = 800, height = 600, delay = 0.25)
+
 
 ```
 
