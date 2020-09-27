@@ -11,6 +11,407 @@
     <atom:link href="/" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>Slicing the onion 3 ways- Toy problems in R, python, and Julia</title>
+      <link>/post/riddler_nba_tour_de_frace/</link>
+      <pubDate>Sun, 27 Sep 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/riddler_nba_tour_de_frace/</guid>
+      <description>
+
+
+&lt;p&gt;Between writing up my thesis, applying to jobs &lt;a href=&#34;robwhickman@gmail.com&#34;&gt;hire me! I’m quite good at programming&lt;/a&gt;, and the ongoing pandemic, I don’t really have time to write full blogposts. I have however decided to brush up my python skills and dive headfirst into Julia. As such, I like to answer the toy problems posted at &lt;a href=&#34;https://fivethirtyeight.com/tag/the-riddler/&#34;&gt;fivethirtyeight’s riddler&lt;/a&gt; weekly. These will likely be even a few weeks late but it motivates me to tend to the blog and keep up my programming.&lt;/p&gt;
+&lt;div id=&#34;express&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Express&lt;/h2&gt;
+&lt;p&gt;&lt;em&gt;From Zack Beamer comes a baffling brain teaser of basketball, just in time for the NBA playoffs:&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Once a week, folks from Blacksburg, Greensboro, and Silver Spring get together for a game of pickup basketball. Every week, anywhere from one to five individuals will show up from each town, with each outcome equally likely.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Using all the players that show up, they want to create exactly two teams of equal size. Being a prideful bunch, everyone wears a jersey that matches the color mentioned in the name of their city. However, since it might create confusion to have one jersey playing for both sides, they agree that the residents of two towns will combine forces to play against the third town’s residents.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;What is the probability that, on any given week, it’s possible to form two equal teams with everyone playing, where two towns are pitted against the third?&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Extra credit: Suppose that, instead of anywhere from one to five individuals per town, anywhere from one to N individuals show up per town. Now what’s the probability that there will be two equal teams?&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;This is a nice little combinatorics problem, as such we can solve it by finding all combinations and then the combinations where the maximum value is equal to the sum of the remaining values:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#create lists of possible values for all team a, b, or c
+players &amp;lt;- list(a = 1:5, b = 1:5, c = 1:5)
+#find all combinations
+player_combinations &amp;lt;- do.call(expand.grid, players)
+
+#get the value of the largest team in each combination
+largest_team &amp;lt;- apply(player_combinations, 1, max)
+#get the sum of the remaining teams in each combination
+reamining_players &amp;lt;- apply(player_combinations, 1, function(x) sum(x) - max(x))
+
+#check when these match
+matched_teams &amp;lt;- nrow(player_combinations[which(largest_team == reamining_players),])
+#find the fraction which match
+fraction_even_teams &amp;lt;- matched_teams / nrow(player_combinations)
+
+fraction_even_teams&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 0.24&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So the answer to the main express question is 0.24, or about 1 in 4 chance.&lt;/p&gt;
+&lt;p&gt;It’s easy to expand this to multiple players by allowing the first line to take any value:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#rewrite previous chunk as function that takes max_players as an argument
+find_matches_fraction &amp;lt;- function(max_players) {
+  players &amp;lt;- list(a = seq(max_players), b = seq(max_players), c = seq(max_players))
+  player_combinations &amp;lt;- do.call(expand.grid, players)
+  
+  largest_team &amp;lt;- apply(player_combinations, 1, max)
+  reamining_players &amp;lt;- apply(player_combinations, 1, function(x) sum(x) - max(x))
+  
+  matched_teams &amp;lt;- nrow(player_combinations[which(largest_team == reamining_players),])
+  fraction_even_teams &amp;lt;- matched_teams / nrow(player_combinations)
+}
+
+#run for n 1:50
+fraction_even_teams &amp;lt;- lapply(seq(50), find_matches_fraction)
+
+answers_df &amp;lt;- data.frame(
+  townspeople = seq(50),
+  chance = unlist(fraction_even_teams)
+)
+
+#for plotting
+library(ggplot2)
+
+#plot the answers for 1 to n players where max n is 50
+p1 &amp;lt;- ggplot(answers_df, aes(x = townspeople, y = chance)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = &amp;quot;solution to Riddler express&amp;quot;,
+    subtitle = &amp;quot;chance of matched team with max n players&amp;quot;,
+    x = &amp;quot;max N players per town&amp;quot;,
+    y = &amp;quot;chance of even teams&amp;quot;
+  ) +
+  theme_minimal()
+
+p1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2020-09-27-riddler_nba_and_tour_files/figure-html/solve_express_r_extra-1.png&#34; width=&#34;672&#34; /&gt;
+Let’s implement this in python. I won’t comment lines again, the flow of the function is fundamentally the same&lt;/p&gt;
+&lt;pre class=&#34;python&#34;&gt;&lt;code&gt;import itertools
+
+def find_matches_fraction(max_players):
+  team_a = range(1,max_players)
+  team_b = range(1,max_players)
+  team_c = range(1,max_players)
+ 
+  matched_team = []
+  for players in list(itertools.product(team_a,team_b,team_c)):
+      largest_team = max(players)
+     
+      l_combinations = list(players)
+      l_combinations.pop(l_combinations.index(max(l_combinations)))
+      remaining_players = sum(l_combinations)
+     
+      if remaining_players == largest_team:
+          matched_team.append(1)
+      else:
+          matched_team.append(0)
+         
+  fraction_success = sum(matched_team) / len(matched_team)
+  return(fraction_success)
+
+answer_express = find_matches_fraction(6)
+print(answer_express)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 0.24&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And in Julia&lt;/p&gt;
+&lt;pre class=&#34;julia&#34;&gt;&lt;code&gt;using IterTools
+
+function find_matches_fraction_jl(max_players)
+  team_a = 1:max_players
+  team_b = 1:max_players
+  team_c = 1:max_players
+ 
+  matched_teams = []
+
+  for players in product(team_a, team_b, team_c)
+    largest_team = maximum(players)
+    other_teams = collect(players)
+    deleteat!(other_teams, argmax(players))
+    remaining_players = sum(other_teams)
+   
+    if largest_team == remaining_players
+      push!(matched_teams, 1)
+    else
+      push!(matched_teams, 0)
+    end
+  end
+  
+  fraction_success = sum(matched_teams) / length(matched_teams)
+  return fraction_success
+end&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## find_matches_fraction_jl (generic function with 1 method)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;julia&#34;&gt;&lt;code&gt;
+answer_express = find_matches_fraction_jl(5);
+answer_express&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 0.24&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can also run these chunks in R using &lt;a href=&#34;https://rstudio.github.io/reticulate/&#34;&gt;reticulate&lt;/a&gt; and &lt;a href=&#34;https://cran.r-project.org/web/packages/JuliaCall/readme/README.html&#34;&gt;JuliaCall&lt;/a&gt;&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#packages to call other languages into R
+library(JuliaCall)
+library(reticulate)
+
+#run the functions to check answers
+py$find_matches_fraction(as.integer(6))&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 0.24&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;julia_eval(&amp;quot;find_matches_fraction_jl(5)&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 0.24&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then use &lt;a href=&#34;https://www.rdocumentation.org/packages/microbenchmark/versions/1.4-7/topics/microbenchmark&#34;&gt;microbenchmark&lt;/a&gt; to test the speeds of the functions written here. We run each n times and look at the distribution of times spent running each.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#microbenchmark to time functions
+library(microbenchmark)
+
+#run each function 10000 times
+n &amp;lt;- 10000
+bench_express &amp;lt;- microbenchmark(
+  jl = julia_eval(&amp;quot;find_matches_fraction_jl(5)&amp;quot;),
+  py = py$find_matches_fraction(as.integer(6)),
+  r = find_matches_fraction(5),
+  times = n
+)
+
+#plot the speeds of each functions
+p2 &amp;lt;- ggplot2::autoplot(bench_express) +
+  labs(
+    title = &amp;quot;benchmarking of functions for Riddler Express&amp;quot;
+  ) +
+  theme_minimal()
+
+p2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2020-09-27-riddler_nba_and_tour_files/figure-html/benchmark_express-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;I’m pretty happy with that. Even my rusty python ends up being faster than the R code (which I wrote for expressiveness and not speed per se), but my first ever solution in Julia outstrips both!&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;classic&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Classic&lt;/h2&gt;
+&lt;p&gt;&lt;em&gt;This month, the Tour de France is back, and so is the Tour de FiveThirtyEight!&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;For every mountain in the Tour de FiveThirtyEight, the first few riders to reach the summit are awarded points. The rider with the most such points at the end of the Tour is named “King of the Mountains” and gets to wear a special polka dot jersey.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;At the moment, you are racing against three other riders up one of the mountains. The first rider over the top gets 5 points, the second rider gets 3, the third rider gets 2, and the fourth rider gets 1.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;All four of you are of equal ability — that is, under normal circumstances, you all have an equal chance of reaching the summit first. But there’s a catch — two of your competitors are on the same team. Teammates are able to work together, drafting and setting a tempo up the mountain. Whichever teammate happens to be slower on the climb will get a boost from their faster teammate, and the two of them will both reach the summit at the faster teammate’s time.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;As a lone rider, the odds may be stacked against you. In your quest for the polka dot jersey, how many points can you expect to win on this mountain, on average?&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;A quick guess can be gotten by assuming there were &lt;em&gt;no&lt;/em&gt; teams and just taking the expected points after random assignment&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;riders &amp;lt;- 4
+points &amp;lt;- c(5,3,2,1)
+
+sum(points/riders)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 2.75&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then work out the answer to the classic analytically by calculating the chance that the rider is bumped back a spot for any position they find themselves in. For instance, if they finish 2nd, there is a 1 in 2 chance the rider ahead of them is part of the team, which would bump our rider into 3rd to make run for the teammate.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;expected_points &amp;lt;- 
+  #first
+  (points[1] / riders) + 
+  #second
+  (points[2] / riders)/(riders-1) + 2 * (points[(riders-1)] / riders)/(riders-1) + 
+  #third
+  (points[(riders-1)] / riders) / (riders-1) + 2 *(points[riders] / riders)/(riders-1) + 
+  #last
+  (points[riders] / riders)
+
+expected_points&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## [1] 2.416667&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So we have our answer, but what about for any combination of team and points? We can write an R function to assign riders to teams and simulating many races to get an estimate of the total points. We could again solve these analytically, but that wouldn’t really benefit my programming.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;get_team_points &amp;lt;- function(teams, points) {
+  team_pos &amp;lt;- sample(unique(teams), length(unique(teams)), prob = table(teams))
+  all_positions &amp;lt;- unlist(lapply(team_pos, function(p) rep(p, length(which(p == teams)))))
+  team_points &amp;lt;- lapply(unique(teams), function(i) sum(points[which(all_positions == i)]))
+  names(team_points) &amp;lt;- unique(teams)
+  return(team_points)
+}
+
+sim_race &amp;lt;- function(n_riders, n_per_team = 2, points = c(5,3,2,1), times = 1000) {
+  leftover_riders &amp;lt;- (n_riders-1) %% n_per_team
+ 
+  teams &amp;lt;- (n_riders - leftover_riders - 1) / n_per_team
+ 
+  teamed_riders &amp;lt;- c(
+    rep(seq(teams), each = n_per_team),
+    rep(max(teams)+1, leftover_riders),
+    999
+  )
+ 
+  all_points &amp;lt;- c(
+    points,
+    rep(0, n_riders - length(points))
+  )
+ 
+  simmed_points &amp;lt;- unlist(purrr::rerun(times, get_team_points(teamed_riders, all_points)))
+  expected_points &amp;lt;- tapply(simmed_points, names(simmed_points), sum) / times
+  expected_points[names(expected_points) == 999]
+}
+
+expected_points &amp;lt;- sim_race(4, 2, points = c(5,3,2,1), times = 10000)
+expected_points&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;##    999 
+## 2.4093&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For a range of n riders and team sizes, we can calculate our riders expected points per race (we’ll use the same point structure of c(1:n-1, n+1)) for a little extra flourish&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;riders &amp;lt;- 1:20
+n_per_team &amp;lt;- 1:5
+
+library(dplyr)
+
+arguments &amp;lt;- expand.grid(riders, n_per_team) %&amp;gt;%
+  dplyr::rename(n_riders = Var1, n_per_team = Var2) %&amp;gt;%
+  #must be more riders than riders per team
+  dplyr::filter(n_riders &amp;gt; n_per_team)
+arguments$points &amp;lt;- lapply(arguments$n_riders, function(r) c(r+1, (r-1):1))
+
+#use map2
+library(purrr)
+
+sims &amp;lt;- 1000
+arguments$expected_points &amp;lt;- pmap_dbl(arguments, sim_race, times = sims)
+
+#plot the expected points
+p3 &amp;lt;- ggplot(arguments, aes(x = n_riders, y = n_per_team)) +
+  geom_tile(aes(fill = expected_points / (n_riders+1))) +
+  scale_fill_viridis_c(option = &amp;quot;plasma&amp;quot;, name = &amp;quot;expected points\n / max possible points&amp;quot;) +
+  labs(
+    title = &amp;quot;solution to Riddler classic&amp;quot;,
+    subtitle = &amp;quot;expected points for our rider&amp;quot;,
+    x = &amp;quot;total n riders&amp;quot;,
+    y = &amp;quot;number of riders per team&amp;quot;
+  ) +
+  theme_minimal()
+
+p3&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2020-09-27-riddler_nba_and_tour_files/figure-html/extra_credit_classic-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Lets now port our function for this over the python…&lt;/p&gt;
+&lt;pre class=&#34;python&#34;&gt;&lt;code&gt;from numpy.random import choice
+import numpy as np
+import pandas as pd
+import math
+import itertools
+
+def sim_race_py(n_riders, n_per_team, points):
+  n_teams = math.ceil((n_riders - 1) / n_per_team) + 1
+  filled_teams = math.floor((n_riders - 1) / n_per_team)
+  leftover_riders = (n_riders - 1) % n_per_team
+  
+  if leftover_riders &amp;gt; 0:
+    extra_riders = [leftover_riders, 1]
+  else:
+    extra_riders = 1
+  
+  if filled_teams == 1:
+    win_prob = [n_per_team, extra_riders]
+  else:
+    win_prob = [n_per_team] * filled_teams
+    win_prob.extend([extra_riders])
+  flattened_probs = list(pd.core.common.flatten(win_prob))
+  
+  sum_probs = np.sum(flattened_probs)
+  adjusted_probs = [p/sum_probs for p in flattened_probs]
+  
+  no_teams = list(range(len(flattened_probs)))
+  
+  finish_order = choice(no_teams, len(no_teams), p = adjusted_probs, replace = False)
+  
+  expanded_finish_order = []
+  for team in finish_order:
+   if team &amp;lt; filled_teams:
+     expanded_finish_order += [team] * n_per_team
+   else:
+      if team != max(no_teams):
+        expanded_finish_order += [team] * leftover_riders
+      else:
+        expanded_finish_order += [team]
+  
+  won_points = points[np.argmax(expanded_finish_order)]
+  return won_points
+
+def sim_races_py(n_riders, n_per_team, points, n_times):
+  won_points = []
+  for _ in range(n_times):
+    sim_points = sim_race_py(n_riders, n_per_team, points)
+    won_points.append(sim_points)
+    expected_points = np.sum(won_points) / len(won_points)
+    
+  return(expected_points)
+  
+answer_classic = sim_races_py(4,2,[5,3,2,1], 10000)
+print(answer_classic)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 2.4286&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;…and in Julia&lt;/p&gt;
+&lt;pre class=&#34;julia&#34;&gt;&lt;code&gt;using StatsBase
+
+function sim_race_jl(n_riders, n_per_team, points);
+  n_teams = Int(ceil((n_riders - 1) / n_per_team));
+  filled_teams = Int(floor((n_riders - 1) / n_per_team));
+  leftover_riders = mod(n_riders - 1, n_per_team);
+  
+  if leftover_riders &amp;gt; 0
+    extra_riders = [leftover_riders, 1];
+  else
+    extra_riders = 1;
+  end
+  
+  if filled_teams == 1
+    win_prob = vcat(n_per_team, extra_riders);
+  else
+    win_prob = vcat(repeat([n_per_team], filled_teams), extra_riders);
+  end
+  
+  finish_order = sample(1:length(win_prob),
+                        ProbabilityWeights(win_prob), 
+                        length(win_prob), 
+                        replace = false
+  );
+  
+  expanded_finish_order = Vector{Int}();
+  for team in finish_order
+    if team &amp;lt;= filled_teams
+       append!(expanded_finish_order, repeat([team], n_per_team));
+    else
+      if team != length(finish_order)
+        append!(expanded_finish_order, repeat([team], leftover_riders));
+      else
+        append!(expanded_finish_order, team);
+      end
+    end
+  end
+  
+  rider_position = findall(expanded_finish_order .== maximum(expanded_finish_order));
+  points_won = points[rider_position];
+return points_won
+end&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## sim_race_jl (generic function with 1 method)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;julia&#34;&gt;&lt;code&gt;
+function sim_races_jl(n_riders, n_per_team, points, n_times);
+  won_points = Vector{Int}();
+  
+  for _ in 1:n_times
+    sim_points = sim_race_jl(n_riders, n_per_team, points);
+    append!(won_points, sim_points);
+  end
+    
+  expected_points = sum(won_points) / length(won_points);
+    
+  return expected_points;
+end&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## sim_races_jl (generic function with 1 method)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;julia&#34;&gt;&lt;code&gt;
+answer_classic = sim_races_jl(4,2,[5,3,2,1], 10000);
+answer_classic&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 2.4098&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And then lets benchmark each of these functions again&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#run each function 10000 times
+n &amp;lt;- 10000
+
+bench_classic &amp;lt;- microbenchmark(
+  jl = julia_eval(&amp;quot;sim_race_jl(4,2,[5,3,2,1])&amp;quot;),
+  py = py$sim_race_py(as.integer(4),as.integer(2),c(5,3,2,1)),
+  r = sim_race(4,2,c(5,3,2,1), times = 1),
+  times = n
+)
+
+#plot the speeds of each functions
+p4 &amp;lt;- ggplot2::autoplot(bench_classic) +
+  labs(
+    title = &amp;quot;benchmarking of functions for Riddler Classic&amp;quot;
+  ) +
+  theme_minimal()
+
+p4&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2020-09-27-riddler_nba_and_tour_files/figure-html/benchmark_classic-1.png&#34; width=&#34;672&#34; /&gt;
+A bit closer this time. I think I haven’t quite got efficiency for more involved functions down for python and Julia. Julia still wins this round but I feel could be speed up by at least a factor 2 or 3x.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
       <title>The Riddler - June 26th</title>
       <link>/post/riddler_june_26th/</link>
       <pubDate>Mon, 29 Jun 2020 00:00:00 +0000</pubDate>
@@ -5565,438 +5966,6 @@ p2&lt;/code&gt;&lt;/pre&gt;
 &lt;h1 id=&#34;r-package&#34;&gt;R Package&lt;/h1&gt;
 
 &lt;p&gt;alongside the white paper, I am putting together an R package to easily reproduce the findings, and also extend into other similar models of possession value. The code can be found &lt;a href=&#34;https://github.com/RobWHickman/EPV&#34; target=&#34;_blank&#34;&gt;on Github&lt;/a&gt;&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Racing Bar Charts and Some data.table Munging</title>
-      <link>/post/racing_bar_charts/</link>
-      <pubDate>Sun, 17 Nov 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/racing_bar_charts/</guid>
-      <description>
-
-
-&lt;p&gt;A while ago (and also still a bit) &lt;a href=&#34;https://app.flourish.studio/@flourish/bar-chart-race&#34;&gt;racing bar charts&lt;/a&gt; were all the rage on data visualisation forums/twitter. Perhaps one of the real breakout examples is this tweet from the, always excellent, John Burn-Murdochat the Financial Times, looking at the most populous cities in the world since the middle ages:&lt;/p&gt;
-&lt;blockquote class=&#34;twitter-tweet&#34;&gt;
-&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
-New project:&lt;br&gt; &lt;br&gt;A “Bar Chart Race” animation showing the changing ranks of the 10 biggest cities in the world since 1500.&lt;br&gt;&lt;br&gt;Fascinating to watch giant cities vanish after falling in conquests, and amazing that three UK cities were in the top 8 in the late 1800s. &lt;a href=&#34;https://t.co/KglMZbYobr&#34;&gt;pic.twitter.com/KglMZbYobr&lt;/a&gt;
-&lt;/p&gt;
-— John Burn-Murdoch (&lt;span class=&#34;citation&#34;&gt;@jburnmurdoch&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/jburnmurdoch/status/1107552367795412992?ref_src=twsrc%5Etfw&#34;&gt;March 18, 2019&lt;/a&gt;
-&lt;/blockquote&gt;
-&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
-&lt;p&gt;As with most things I blog about here I wondered if I could make them in R, and how easy that would be. The first half of this post is basically recreating the aforementioned gif pretty simply using &lt;a href=&#34;https://github.com/thomasp85/gganimate&#34;&gt;gganimate&lt;/a&gt;. However, I also wanted to see if I could use the format to look at the strongest English football teams across history in &lt;a href=&#34;&#34;&gt;link to second half of blogpost&lt;/a&gt; which gave me an unexpected lesson in using &lt;a href=&#34;https://cran.r-project.org/web/packages/data.table/vignettes/datatable-intro.html&#34;&gt;data.table&lt;/a&gt; and especially some lesser used facets of it- ones that might require more complex multiline solutions in the tidyverse.&lt;/p&gt;
-&lt;div id=&#34;reproducing-racing-bar-charts-in-r&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Reproducing Racing Bar Charts in R&lt;/h1&gt;
-&lt;p&gt;Getting on with actually producing racing bar charts, first we want to load up the libraries we’ll need.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
-library(gganimate)
-library(tweenr)
-library(stringi)
-#for getting the continents of various cities
-library(countrycode)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then also grab the data. This isn’t exactly all the data used by John in his tweet but it’s close enough. I can’t remember where I got the data from but similar datasets can be found by googling “world cities populations csv” e.g. &lt;a href=&#34;https://datahub.io/core/population-city&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#read in data from blog repo
-city_data &amp;lt;- read.csv(&amp;quot;https://raw.githubusercontent.com/RobWHickman/netlify_blog/race_bar_charts/static/files/racing_bar_charts/city_populations.csv&amp;quot;, 
-                 encoding = &amp;quot;UTF-8&amp;quot;, stringsAsFactors = FALSE)
-
-head(city_data)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##   Country.Code Country.or.area City.Code               Urban.Agglomeration
-## 1          392           Japan     21671                             Tokyo
-## 2          356           India     21228                             Delhi
-## 3          156           China     20656                          Shanghai
-## 4           76          Brazil     20287                      S&amp;lt;e3&amp;gt;o Paulo
-## 5          356           India     21206                   Mumbai (Bombay)
-## 6          484          Mexico     21853 Ciudad de M&amp;lt;e9&amp;gt;xico (Mexico City)
-##   Note  Latitude Longitude  X1950  X1955  X1960  X1965  X1970  X1975
-## 1  325  35.68950 139.69171 11,275 13,713 16,679 20,284 23,298 26,615
-## 2  318  28.66667  77.21667  1,369  1,782  2,283  2,845  3,531  4,426
-## 3  202  31.22000 121.46000  4,301  5,846  6,820  6,428  6,036  5,627
-## 4   NA -23.55000 -46.64000  2,334  3,044  3,970  5,494  7,620  9,614
-## 5   NA  19.07398  72.88084  2,857  3,432  4,060  4,854  5,811  7,082
-## 6  330  19.42732 -99.14187  3,365  4,294  5,479  6,969  8,831 10,734
-##    X1980  X1985  X1990  X1995  X2000  X2005  X2010  X2015  X2020  X2025
-## 1 28,549 30,304 32,530 33,587 34,450 35,622 36,834 38,001 38,323 37,876
-## 2  5,558  7,325  9,726 12,407 15,732 18,670 21,935 25,703 29,348 32,727
-## 3  5,966  6,847  7,823 10,450 13,959 16,763 19,980 23,741 27,137 29,442
-## 4 12,089 13,395 14,776 15,913 17,014 18,288 19,660 21,066 22,119 22,899
-## 5  8,658 10,391 12,436 14,310 16,367 17,891 19,422 21,043 22,838 25,207
-## 6 13,028 14,278 15,642 17,017 18,457 19,276 20,132 20,999 21,868 22,916
-##    X2030
-## 1 37,190
-## 2 36,060
-## 3 30,751
-## 4 23,444
-## 5 27,797
-## 6 23,865&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then we want to pull out the relevant data and do some melting to get a nice long format data frame of our data.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;city_data &amp;lt;- city_data %&amp;gt;%
-  #select out relevant columns
-  select(country_id = Country.Code, country = Country.or.area,
-         city_id = City.Code, city = Urban.Agglomeration,
-         X1950, X1955, X1960, X1965, X1970, X1975, X1980, X1985, X1990,
-         X1995, X2000, X2005, X2010, X2015, X2020, X2025, X2030) %&amp;gt;%
-  #melt the data to long format
-  reshape2::melt(id.vars = c(&amp;quot;country_id&amp;quot;, &amp;quot;country&amp;quot;, &amp;quot;city_id&amp;quot;, &amp;quot;city&amp;quot;),
-                 variable.name = &amp;quot;year&amp;quot;, value.name = &amp;quot;population&amp;quot;) %&amp;gt;%
-  #conver the data into usuable numbers
-  mutate(year = as.numeric(gsub(&amp;quot;^X&amp;quot;, &amp;quot;&amp;quot;, year)),
-         population = as.numeric(gsub(&amp;quot;,&amp;quot;, &amp;quot;&amp;quot;, population)),
-         #convert the text into utf-8 readable
-         city = stri_trans_general(city, &amp;quot;latin-ascii&amp;quot;)) %&amp;gt;%
-  #extract the english names for cities
-  mutate(city_name = case_when(
-    grepl(&amp;quot;\\(&amp;quot;, city) ~ str_extract(city,  &amp;quot;(?&amp;lt;=\\().+?(?=\\))&amp;quot;),
-    grepl(&amp;quot;-&amp;quot;, city) ~ gsub(&amp;quot;-.*&amp;quot;, &amp;quot;&amp;quot;, city),
-    TRUE ~ as.character(city)
-  ))
-
-head(city_data)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##   country_id country city_id                                  city year
-## 1        392   Japan   21671                                 Tokyo 1950
-## 2        356   India   21228                                 Delhi 1950
-## 3        156   China   20656                              Shanghai 1950
-## 4         76  Brazil   20287                      S&amp;lt;U+FFFD&amp;gt;o Paulo 1950
-## 5        356   India   21206                       Mumbai (Bombay) 1950
-## 6        484  Mexico   21853 Ciudad de M&amp;lt;U+FFFD&amp;gt;xico (Mexico City) 1950
-##   population        city_name
-## 1      11275            Tokyo
-## 2       1369            Delhi
-## 3       4301         Shanghai
-## 4       2334 S&amp;lt;U+FFFD&amp;gt;o Paulo
-## 5       2857           Bombay
-## 6       3365      Mexico City&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;As the y axis of our racing bar chart is going to be the cities rank in terms of population for any given observation year, we need to list cities in order. Using the Tidyverse a simple group_by() and mutating an order column will do the trick&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;city_data &amp;lt;- city_data %&amp;gt;%
-  #group by and find order at any point
-  group_by(year) %&amp;gt;%
-  arrange(-population) %&amp;gt;%
-  mutate(order = row_number()) %&amp;gt;%
-  ungroup()
-
-head(city_data)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## # A tibble: 6 x 8
-##   country_id country city_id city   year population city_name order
-##        &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt;     &amp;lt;int&amp;gt; &amp;lt;chr&amp;gt; &amp;lt;dbl&amp;gt;      &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;     &amp;lt;int&amp;gt;
-## 1        392 Japan     21671 Tokyo  2020      38323 Tokyo         1
-## 2        392 Japan     21671 Tokyo  2015      38001 Tokyo         1
-## 3        392 Japan     21671 Tokyo  2025      37876 Tokyo         1
-## 4        392 Japan     21671 Tokyo  2030      37190 Tokyo         1
-## 5        392 Japan     21671 Tokyo  2010      36834 Tokyo         1
-## 6        356 India     21228 Delhi  2030      36060 Delhi         2&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I also wanted to colour the bars by the continent of the city for a little extra aesthetic. Easy to do by joining with the data from countrycode.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the id data for each unique city
-id_data &amp;lt;- city_data %&amp;gt;%
-  select(city_id, city_name, country_id, country) %&amp;gt;%
-  unique() %&amp;gt;%
-  #find the continent of each city
-  mutate(continent = countrycode(.$country, origin = &amp;quot;country.name&amp;quot;, destination = &amp;quot;continent&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then we just need to do a final bit of munging on our data. I think in theory it’s possible to do this purely within the gganimate plotting machinery, but I prefer to munge the data outside.&lt;/p&gt;
-&lt;p&gt;First we want to select the columns that will be ‘animated’- i.e. the population and the order, and then also the time information (year), and group (city_id). We pre-specify a linear ease (i.e that between time points the numbers increase/decrease linearly per frame).&lt;/p&gt;
-&lt;p&gt;Finally I merge in our id data we prepared above and also round off the population numbers to leave a data frame ready for plotting!&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#the number of frames the output will contain
-frames &amp;lt;- 500
-
-#use tweenr to manually make the naimation frame data
-frame_data &amp;lt;- city_data %&amp;gt;%
-  group_by(year) %&amp;gt;%
-  arrange(-population) %&amp;gt;%
-  mutate(order = row_number()) %&amp;gt;%
-  #tweenr stuff here
-  select(city_id, year, population, order) %&amp;gt;%
-  mutate(ease = &amp;quot;linear&amp;quot;) %&amp;gt;%
-  tween_elements(., &amp;quot;year&amp;quot;, &amp;quot;city_id&amp;quot;, &amp;quot;ease&amp;quot;, nframes= frames) %&amp;gt;%
-  #select out columns
-  select(population, order, year, .frame, city_id = .group) %&amp;gt;%
-  #merge in id data
-  merge(., id_data, by = &amp;#39;city_id&amp;#39;) %&amp;gt;%
-  #munge population numbers
-  mutate(pop = round(population/1000, 2))
-
-head(frame_data)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##   city_id population    order     year .frame city_name country_id
-## 1   20001    82.0000  849.000 1950.000      0     Herat          4
-## 2   20001   565.0000 1213.000 2030.000    500     Herat          4
-## 3   20001   101.1290 1141.129 1969.516    122     Herat          4
-## 4   20001   245.2500 1510.250 2001.875    324     Herat          4
-## 5   20001   178.2581 1314.000 1988.871    243     Herat          4
-## 6   20001   335.7419 1516.419 2014.839    405     Herat          4
-##       country continent  pop
-## 1 Afghanistan      Asia 0.08
-## 2 Afghanistan      Asia 0.56
-## 3 Afghanistan      Asia 0.10
-## 4 Afghanistan      Asia 0.25
-## 5 Afghanistan      Asia 0.18
-## 6 Afghanistan      Asia 0.34&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then we just want to filter out only the information we want to plot (the top 10 cities per year, I use 10.8 so you see cities as they enter the top 10) and use the lesser-spotted geom_tile() geom from ggplot2 which I found is the easiest to manually move about. After some extra aesthetics we then specify the transition_states()- in our case transition based on the year- and some cool little extras like dynamically adjusting the y axis, and also fading bars as they enter and exit the plot.&lt;/p&gt;
-&lt;p&gt;At the bottom we then turn this plot into a gif using animate and add a little pause at the start and end.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p_cities &amp;lt;- frame_data %&amp;gt;%
-  #only want to plot the top 10
-  filter(order &amp;lt; 10.8) %&amp;gt;%
-  ggplot(aes(y = order, x = pop)) +
-  #hack to plot the moving bars
-  #from v helpful answer at
-  #https://stackoverflow.com/questions/53162821/
-  #animated-sorted-bar-chart-with-bars-overtaking-each-other/53163549
-  geom_tile(aes(x = pop/2, width = pop, fill = continent),
-            alpha = 0.8, colour = &amp;quot;black&amp;quot;, height = 0.9) +
-  geom_text(aes(label = sprintf(&amp;quot;%1.2f&amp;quot;,pop)), hjust = 1) +
-  geom_text(aes(x = 0, label = paste(city_name, &amp;quot; &amp;quot;)),
-            vjust = 0.2, hjust = 1) +
-  #add labels to plot
-  labs(title=&amp;#39;{round(as.numeric(closest_state))}&amp;#39;,
-       x = &amp;quot;Population (millions)&amp;quot;, y = &amp;quot;&amp;quot;) +
-  #y limits at 0-10.5
-  #don&amp;#39;t clip as will screw the labels outside the plot
-  coord_cartesian(ylim = c(0,10.5), clip = &amp;quot;off&amp;quot;) +
-  #flip the y axis
-  scale_y_reverse(position = &amp;quot;left&amp;quot;) +
-  #theme stuff
-  #taken from same stackoverflow answer
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0, size = 22),
-        axis.ticks.y = element_blank(),
-        axis.text.y  = element_blank(), 
-        #make sure labels will be visible
-        plot.margin = margin(0,0,0,2.5, &amp;quot;cm&amp;quot;)) +
-  #transition by our calculated year
-  transition_states(year, transition_length = 1, state_length = 0) +
-  #scale x axis as pop increases
-  view_follow(fixed_y = TRUE) +
-  #fade as bares enter and exit the plot
-  exit_fade() +
-  enter_fade()
-
-#animate the gif
-city_gif &amp;lt;- animate(p_cities, frames, start_pause = 10, end_pause = 20)
-#e.g. if you want to save the output
-#anim_save(&amp;quot;city_gif.gif&amp;quot;, city_gif)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;And voilà! here is our gif&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;city_gif&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-11-17-gnarly_data_table_bar_charts_files/figure-html/plot_city_gif-1.gif&#34; /&gt;&lt;!-- --&gt;&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;soccer-through-the-ages&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Soccer Through the Ages&lt;/h1&gt;
-&lt;p&gt;So as I mentioned, I wanted the example to be a plot of how English football teams have risen and fallen in strength over the ~150 years the league has been playing. This turned out to be more difficult than I anticipated so also gives a nice little extension to using data.table beyond the basic i,j,k syntax.&lt;/p&gt;
-&lt;p&gt;For this we need James Curley’s engsoccerdata package and then also data.table and zoo for munging our data&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#use James Curley&amp;#39;s engsoccer data for the match data
-#club data and updated english football dat ain latest release
-#November 2019
-library(engsoccerdata)
-
-#data.table and zoo for munging
-library(data.table)
-library(zoo)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then we want to select only the relevant bits of the data for calculating the &lt;a href=&#34;https://en.wikipedia.org/wiki/Elo_rating_system&#34;&gt;ELO&lt;/a&gt; ratings of teams on a match-by-match basis. For this I use the formula used by the folks who calculate the national football ELO ratings at &lt;a href=&#34;https://www.eloratings.net/about&#34;&gt;eloratings.net&lt;/a&gt; so if you’re confused by what K and G mean look there.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#some dates in the engsoccerdata::england data are off
-#original should work by time of reading
-#match_data &amp;lt;- engsoccerdata:;england %&amp;gt;%
-match_data &amp;lt;- readRDS(&amp;quot;../../static/files/racing_bar_charts/england_data.rds&amp;quot;) %&amp;gt;%
-  mutate(date = as.Date(Date)) %&amp;gt;%
-  select(date, season = Season, home, visitor, tier, hgoal, vgoal, result) %&amp;gt;%
-  mutate(K = (5-tier) * 10) %&amp;gt;%
-  mutate(G = case_when(
-    abs(hgoal-vgoal) &amp;lt; 2 ~ 1,
-    abs(hgoal-vgoal) &amp;lt; 3 ~ 1.5,
-    abs(hgoal-vgoal) &amp;gt;= 3 ~ (11 + abs(hgoal-vgoal)) / 8
-  )) %&amp;gt;%
-  mutate(result = case_when(
-    result == &amp;quot;H&amp;quot; ~ 1,
-    result == &amp;quot;A&amp;quot; ~ 0,
-    result == &amp;quot;D&amp;quot; ~ 0.5
-  )) %&amp;gt;%
-  arrange(date)
-
-head(match_data)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;##         date season                    home              visitor tier
-## 1 1888-09-08   1888        Bolton Wanderers         Derby County    1
-## 2 1888-09-08   1888                 Everton      Accrington F.C.    1
-## 3 1888-09-08   1888       Preston North End              Burnley    1
-## 4 1888-09-08   1888              Stoke City West Bromwich Albion    1
-## 5 1888-09-08   1888 Wolverhampton Wanderers          Aston Villa    1
-## 6 1888-09-15   1888             Aston Villa           Stoke City    1
-##   hgoal vgoal result  K     G
-## 1     3     6    0.0 40 1.750
-## 2     2     1    1.0 40 1.000
-## 3     5     2    1.0 40 1.750
-## 4     0     2    0.0 40 1.500
-## 5     1     1    0.5 40 1.000
-## 6     5     1    1.0 40 1.875&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We can then define a quick function to update ELO ratings based on the match results and push out the updated ratings to a data frame holding the current rating over time. This will take a few minutes given how many matches we have so it’s worth going to make a cup of tea while it runs.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#start all teams with an ELO of 1000
-team_ratings &amp;lt;- data.frame(team = unique(match_data$home),
-                           rating = 1000)
-
-#function to calculate team ELO and update back to the ratings df
-calc_ELO &amp;lt;- function(row) {
-  #get the difference in ratings
-  hr &amp;lt;- team_ratings$rating[which(team_ratings$team == row$home)]
-  vr &amp;lt;- team_ratings$rating[which(team_ratings$team == row$visitor)]
-  dr &amp;lt;- (hr + 100) - vr
-  
-  e_result &amp;lt;- 1/ (10^(-dr/400)+1)
-  new_hr &amp;lt;- hr + ((row$K*row$G) * (row$result - e_result))
-  new_vr &amp;lt;- vr + ((row$K*row$G) * ((1-row$result) - (1-e_result)))
-  
-  team_ratings$rating[which(team_ratings$team == row$home)] &amp;lt;&amp;lt;- new_hr
-  team_ratings$rating[which(team_ratings$team == row$visitor)] &amp;lt;&amp;lt;- new_vr
-  
-  output_row &amp;lt;- row %&amp;gt;%
-    mutate(h_rating = new_hr, v_rating = new_vr)
-  
-  return(output_row)
-}
-
-#split and lapply function
-elo_data &amp;lt;- match_data %&amp;gt;%
-  split(f = seq(nrow(.))) %&amp;gt;%
-  lapply(., calc_ELO) %&amp;gt;%
-  do.call(rbind, .)
-
-#melt the elo data
-melted_elo_data &amp;lt;- elo_data %&amp;gt;%
-  select(date, season, home, visitor, h_rating, v_rating) %&amp;gt;%
-  reshape2::melt(id.vars = c(&amp;quot;date&amp;quot;, &amp;quot;season&amp;quot;, &amp;quot;h_rating&amp;quot;, &amp;quot;v_rating&amp;quot;),
-                 variable.name = &amp;quot;location&amp;quot;, value.name = &amp;quot;team&amp;quot;) %&amp;gt;%
-  mutate(rating = case_when(
-    location == &amp;quot;home&amp;quot; ~ h_rating,
-    location == &amp;quot;visitor&amp;quot; ~ v_rating
-  )) %&amp;gt;%
-  select(date, season, team, rating)
-
-#df of each teams rating after each game day
-head(melted_elo_data)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now we have our ELO ratings for each team updated after every match, we can start munging the data to plot the racing bar chart. Most of this is fairly standard data.table munging but there’s an operation up top that I was pretty pleased with.&lt;/p&gt;
-&lt;p&gt;The English football season typically runs from mid August until mid May. Given that teams do not play competitive matches in this time, it gives 3 months of dead space where team ratings shouldn’t change which is going to be pretty boring in our final gif.&lt;/p&gt;
-&lt;p&gt;Therefore, I wanted to find out the total time within each season- i.e. the first match in any division in English football to the last match in any division (as different leagues may start and end on different dates). Therefore we need to find the minimum and maximum date value for each season and seq between them.&lt;/p&gt;
-&lt;p&gt;You could in theory do this using ddply- see &lt;a href=&#34;https://stackoverflow.com/questions/16573995/subset-by-group-with-data-table&#34;&gt;a question asked by Hadley Wickham on Stack Overflow&lt;/a&gt; but it’s a) quicker in data.table and also I think the one line aspect to do everything is super pleasing.&lt;/p&gt;
-&lt;p&gt;We know once we have the row numbers for the min date we can easily subset based using them in data.table such as&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dt_data[subset_condition, values_needed]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;but we need to actually find the row numbers for the subset condition to use in i. We can do this in a 3.5 step process as follows:&lt;/p&gt;
-&lt;ol style=&#34;list-style-type: decimal&#34;&gt;
-&lt;li&gt;re supply the data (melted_elo_data)&lt;/li&gt;
-&lt;li&gt;add a column of the condition of the minimum data using .I[which.min(date)]
-(2.5) do this by season as we need it for every season&lt;/li&gt;
-&lt;li&gt;keep only this new minimum date information by selecting the newly initialised V1 column&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;&lt;img src=&#34;/img/datatableI.png&#34; /&gt;
-We then also do this for the max date in each sequence and use map2 to sequence between each min and max date (could also use mapply but I just prefer map2s syntax).&lt;/p&gt;
-&lt;p&gt;We then have to make sure that every team is listed for every date so after joining the data.table of team rating information with the data.table of dates, we want to cross-join (CJ) by date and team. I;d never actually used cross-join before, but it’s essentially the equivalent of tidyr::complete().&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;setDT(melted_elo_data)
-
-#get the min and max date for each season and seq between them
-days &amp;lt;- map2(melted_elo_data[melted_elo_data[, .I[which.min(date)], by = &amp;quot;season&amp;quot;]$V1, date], 
-             melted_elo_data[melted_elo_data[, .I[which.max(date)], by = &amp;quot;season&amp;quot;]$V1, date],
-             seq.Date, by = &amp;quot;day&amp;quot;) %&amp;gt;%
-  #unlist screws up dates
-  do.call(&amp;quot;c&amp;quot;, .) %&amp;gt;%
-  #convert to dt for joining
-  data.table(date = .)
-
-#expand the dt by dates
-#join each date first
-munged_football_data &amp;lt;- melted_elo_data[days, on = &amp;quot;date&amp;quot;] %&amp;gt;%
-  #cross-join so that every team is represented on every date
-  #equivelant of tidyr::complete
-  .[CJ(date = date, team = team, unique=TRUE), 
-    on=.(date, team)] %&amp;gt;%
-  #filter out the completion of NA team for dates
-  .[!is.na(team)] %&amp;gt;%
-  #also a a column for the calendar year by rejoining based on date
-  .[days[, year := as.numeric(gsub(&amp;quot;-.*&amp;quot;, &amp;quot;&amp;quot;, date))], 
-    on = &amp;quot;date&amp;quot;, allow.cartesian = TRUE]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Finally, we need to use gganimate::tween() again to fill in the missing ratings in the days where teams aren’t playing. Luckily, gganimate contains tween_fill which is perfect for this and plays nicely with data.table. I tween the ratings linearly between matches (and also take a rolling mean), and tween the positions using a cubic function so teams spend a little more time roughly in a nice plotting order.&lt;/p&gt;
-&lt;p&gt;After that, all that’s left is to order the frames properly and we’re almost read for plotting!&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;munged_football_data &amp;lt;- munged_football_data %&amp;gt;%
-  .[order(date)] %&amp;gt;%
-  #use tween fill for each team to get intermediate ratings
-  .[, rating := tween_fill(rating, ease = &amp;quot;linear&amp;quot;), by = team] %&amp;gt;%
-  .[, rating := na.locf(rating, na.rm = FALSE), by = &amp;quot;team&amp;quot;] %&amp;gt;%
-  .[, frame := .GRP, by = date] %&amp;gt;%
-  #take every 5th frame to cut down on final gif size
-  #not strictly necessary
-  .[frame %% 5 == 1] %&amp;gt;%
-  #take the rolling mean over 30 days to smooth out jumps
-  .[order(date), 
-    roll_rating := frollmean(rating, n = 6, algo = &amp;quot;exact&amp;quot;, align = &amp;quot;left&amp;quot;),
-    by = &amp;quot;team&amp;quot;] %&amp;gt;%
-  #remove unrated rows
-  .[!is.na(roll_rating)] %&amp;gt;%
-    #order by rolling rating
-  .[order(-roll_rating)] %&amp;gt;%
-  #rating stransition over a 10 day window
-  #order by rating (as with the cities when rating by size)
-  .[frame %% 30 == 1, team_order := 1:.N, by = date] %&amp;gt;%
-  #use tweenr to make transitions smooth
-  .[order(date), 
-    order_fill := tween_fill(team_order, ease = &amp;quot;cubic-in-out&amp;quot;),
-    by = team] %&amp;gt;%
-  .[!is.na(order_fill)] %&amp;gt;%
-  .[order(date)] %&amp;gt;%
-  .[frame != lag(frame, default = 0), year_frame := 1:.N, by = year] %&amp;gt;%
-  #fill down
-  .[, year_frame := na.locf(year_frame)] %&amp;gt;%
-  #frame is the season plus the amount through that season
-  #could probably do something fancy and label as unique days but this suffices
-  .[, year_frame := year + year_frame/(max(year_frame) + 1)] %&amp;gt;%
-  .[, c(&amp;quot;date&amp;quot;, &amp;quot;team&amp;quot;, &amp;quot;roll_rating&amp;quot;, &amp;quot;order_fill&amp;quot;, &amp;quot;year_frame&amp;quot;)]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;To plot, first I join in data from engosccerdata::club_data which is a new dataset of some basic information for English football clubs that’s new to the package. It contains a primary and secondary colour for each club so adds a little bit of extra aesthetic to the final gif. Then I basically plot as before using geom_tile() from ggplot()&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#use the newly added club data from engsoccerdata
-plotting_data &amp;lt;- engsoccerdata::england_club_data %&amp;gt;%
-  #filter only teams we have in our dataset
-  filter(team %in% munged_football_data$team) %&amp;gt;%
-  #join
-  munged_football_data[., on = &amp;quot;team&amp;quot;] %&amp;gt;%
-  #only plot a cutdown here as gifs are large
-  filter(date &amp;gt; &amp;quot;2015-07-01&amp;quot;) %&amp;gt;%
-  #only want to plot the top 10
-  filter(order_fill &amp;lt; 10.8)
-
-#get the colour and fill palettes from the plotting data
-palette &amp;lt;- plotting_data %&amp;gt;%
-  filter(!duplicated(team)) 
-fills &amp;lt;- palette %&amp;gt;%
-  .$col1 %&amp;gt;%
-  as.character() %&amp;gt;%
-  `names&amp;lt;-`(palette$team)
-cols &amp;lt;- palette %&amp;gt;%
-  .$col2 %&amp;gt;%
-  as.character() %&amp;gt;%
-  `names&amp;lt;-`(palette$team)
-
-#plot roughly as before
-p_football &amp;lt;- plotting_data %&amp;gt;%
-  ggplot(aes(y = order_fill, x = roll_rating, fill = team, colour = team)) +
-  geom_tile(aes(x = roll_rating/2, width = roll_rating),
-            alpha = 0.8, height = 0.9, size = 1) +
-  geom_text(aes(x = 0, label = paste(short_name, &amp;quot; &amp;quot;)),
-            vjust = 0.2, hjust = 1, colour = &amp;quot;black&amp;quot;) +
-  geom_text(aes(label = sprintf(&amp;quot;%1.2f&amp;quot;,roll_rating)), 
-            hjust = 1.5, colour = &amp;quot;black&amp;quot;) +
-  scale_fill_manual(values = fills, guide = FALSE) +
-  scale_colour_manual(values = cols, guide = FALSE) +
-  labs(title=&amp;#39;{as.character(current_frame)}&amp;#39;,
-       x = &amp;quot;ELO rating&amp;quot;, y = &amp;quot;&amp;quot;) +
-  coord_cartesian(ylim = c(0,10.5), clip = &amp;quot;off&amp;quot;) +
-  scale_y_reverse(position = &amp;quot;left&amp;quot;) +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0, size = 22),
-        axis.ticks.y = element_blank(),
-        axis.text.y  = element_blank(), 
-        plot.margin = margin(0,0,0,2.5, &amp;quot;cm&amp;quot;)) +
-  transition_manual(date) +
-  view_follow(fixed_y = TRUE)
-
-#animate the gif
-football_gif &amp;lt;- animate(p_football, 
-                        nframes = length(unique(plotting_data$year_frame)),
-                        fps = 10,
-                        end_pause = 10)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;football_gif&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2019-11-17-gnarly_data_table_bar_charts_files/figure-html/football_gif-1.gif&#34; /&gt;&lt;!-- --&gt;&lt;/p&gt;
-&lt;p&gt;Anyway, cheers. It was a fun one to play around with. I’ll put the full gifs of 1880-2019 online at some point!&lt;/p&gt;
-&lt;p&gt;Best,&lt;/p&gt;
-&lt;/div&gt;
 </description>
     </item>
     
