@@ -5,6 +5,15 @@
     
     <url>
     
+      <loc>/post/riddler_nba_tour_de_frace/</loc>
+      <lastmod>2020-09-27T00:00:00+00:00</lastmod>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/post/riddler_june_26th/</loc>
       <lastmod>2020-06-29T00:00:00+00:00</lastmod>
     </url>
@@ -437,6 +446,16 @@
     
     <url>
     
+      <loc>/tags/julia/</loc>
+      <lastmod>2020-09-27T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/project/</loc>
       <lastmod>2019-11-21T00:00:00+00:00</lastmod>
       <priority>0</priority>
@@ -697,6 +716,16 @@
     
     <url>
     
+      <loc>/tags/python/</loc>
+      <lastmod>2020-09-27T00:00:00+00:00</lastmod>
+      <priority>0</priority>
+    </url>
+    
+  
+    
+    
+    <url>
+    
       <loc>/tags/rcpp/</loc>
       <lastmod>2019-11-28T00:00:00+00:00</lastmod>
       <priority>0</priority>
@@ -728,7 +757,7 @@
     <url>
     
       <loc>/tags/riddler/</loc>
-      <lastmod>2020-06-29T00:00:00+00:00</lastmod>
+      <lastmod>2020-09-27T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     
@@ -758,7 +787,7 @@
     <url>
     
       <loc>/tags/rstats/</loc>
-      <lastmod>2020-06-29T00:00:00+00:00</lastmod>
+      <lastmod>2020-09-27T00:00:00+00:00</lastmod>
       <priority>0</priority>
     </url>
     

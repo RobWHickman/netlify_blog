@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme" content="hugo-academic">
+  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="author" content="Robert Hickman">
+
+  
+  
+  
+  
+    
+      
+    
+  
+  <meta name="description" content="knitr::opts_chunk$set(message = FALSE, warning=FALSE)Between writing up my thesis, applying to jobs hire me! I’m quite good at programming, and the ongoing pandemic, I don’t really have time to write full blogposts. I have however decided to brush up my python skills and dive headfirst into Julia. As such, I like to answer the toy problems posted at fivethirtyeight’s riddler weekly. These will likely be even a few weeks late but it motivates me to tend to the blog and keep up my programming.">
+
+  
+  <link rel="alternate" hreflang="en-us" href="/post/riddler_nba_tour_de_frace/">
+
+  
+
+
+  
+
+  
+  
+  <meta name="theme-color" content="#0095eb">
+  
+  
+  
+  
+    
+  
+  
+    
+    
+      
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+      
+    
+  
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha512-6MXa8B6uaO18Hid6blRMetEIoPqHf7Ux1tnyIQdpt9qI5OACx7C+O3IVTr98vwGnlcg0LOLa02i9Y1HpVhlfiw==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.1/css/academicons.min.css" integrity="sha512-NThgw3XKQ1absAahW6to7Ey42uycrVvfNfyjqcFNgCmOCQ5AR4AO0SiXrN+8ZtYeappp56lk1WtvjVmEa+VR6A==" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous">
+  
+  
+  
+  
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Montserrat:400,700%7cRoboto:400,400italic,700%7cRoboto&#43;Mono">
+  
+  <link rel="stylesheet" href="/styles.css">
+  
+
+  
+
+  
+  <link rel="alternate" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  <link rel="feed" href="/index.xml" type="application/rss+xml" title="Robert Hickman">
+  
+
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" href="/img/icon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
+
+  <link rel="canonical" href="/post/riddler_nba_tour_de_frace/">
+
+  <meta property="twitter:card" content="summary_large_image">
+  
+  <meta property="twitter:site" content="@robert_squared">
+  <meta property="twitter:creator" content="@robert_squared">
+  
+  <meta property="og:site_name" content="Robert Hickman">
+  <meta property="og:url" content="/post/riddler_nba_tour_de_frace/">
+  <meta property="og:title" content="Slicing the onion 3 ways- Toy problems in R, python, and Julia | Robert Hickman">
+  <meta property="og:description" content="knitr::opts_chunk$set(message = FALSE, warning=FALSE)Between writing up my thesis, applying to jobs hire me! I’m quite good at programming, and the ongoing pandemic, I don’t really have time to write full blogposts. I have however decided to brush up my python skills and dive headfirst into Julia. As such, I like to answer the toy problems posted at fivethirtyeight’s riddler weekly. These will likely be even a few weeks late but it motivates me to tend to the blog and keep up my programming.">
+  <meta property="og:locale" content="en-us">
+  
+  <meta property="article:published_time" content="2020-09-27T00:00:00&#43;00:00">
+  
+  <meta property="article:modified_time" content="2020-09-27T00:00:00&#43;00:00">
+  
+
+  <script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+</script>
+<script async type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  <title>Slicing the onion 3 ways- Toy problems in R, python, and Julia | Robert Hickman</title>
+
+</head>
+<body id="top" data-spy="scroll" data-target="#toc" data-offset="71" >
+
+<nav class="navbar navbar-default navbar-fixed-top" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="navbar-header">
+      
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+              data-target=".navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      
+      <a class="navbar-brand" href="/">Robert Hickman</a>
+    </div>
+
+    
+    <div class="collapse navbar-collapse">
+
+      
+      
+      <ul class="nav navbar-nav navbar-right">
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#about">
+            
+            <span>Home</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#publications_selected">
+            
+            <span>Publications</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#posts">
+            
+            <span>Posts</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/#projects">
+            
+            <span>Projects</span>
+            
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        
+          
+        
+
+        <li class="nav-item">
+          <a href="/files/cv/cv.pdf">
+            
+            <span>CV</span>
+            
+          </a>
+        </li>
+
+        
+        
+      
+
+      
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+
+<article class="article" itemscope itemtype="http://schema.org/Article">
+
+  
+
+
+  <div class="article-container">
+    <div class="article-inner">
+      <h1 itemprop="name">Slicing the onion 3 ways- Toy problems in R, python, and Julia</h1>
+
+      
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    
+    <time datetime="2020-09-27 00:00:00 &#43;0000 UTC" itemprop="datePublished dateModified">
+      Sep 27, 2020
+    </time>
+  </span>
+  <span itemscope itemprop="author publisher" itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="Robert Hickman">
+  </span>
+
+  
+  <span class="middot-divider"></span>
+  <span class="article-reading-time">
+    9 min read
+  </span>
+  
+
+  
+  
+
+  
+  
+  
+  
+
+  
+  
+<div class="share-box" aria-hidden="true">
+  <ul class="share">
+    <li>
+      <a class="twitter"
+         href="https://twitter.com/intent/tweet?text=Slicing%20the%20onion%203%20ways-%20Toy%20problems%20in%20R%2c%20python%2c%20and%20Julia&amp;url=%2fpost%2friddler_nba_tour_de_frace%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-twitter"></i>
+      </a>
+    </li>
+    <li>
+      <a class="facebook"
+         href="https://www.facebook.com/sharer.php?u=%2fpost%2friddler_nba_tour_de_frace%2f"
+         target="_blank" rel="noopener">
+        <i class="fa fa-facebook"></i>
+      </a>
+    </li>
+    <li>
+      <a class="linkedin"
+         href="https://www.linkedin.com/shareArticle?mini=true&amp;url=%2fpost%2friddler_nba_tour_de_frace%2f&amp;title=Slicing%20the%20onion%203%20ways-%20Toy%20problems%20in%20R%2c%20python%2c%20and%20Julia"
+         target="_blank" rel="noopener">
+        <i class="fa fa-linkedin"></i>
+      </a>
+    </li>
+    <li>
+      <a class="weibo"
+         href="http://service.weibo.com/share/share.php?url=%2fpost%2friddler_nba_tour_de_frace%2f&amp;title=Slicing%20the%20onion%203%20ways-%20Toy%20problems%20in%20R%2c%20python%2c%20and%20Julia"
+         target="_blank" rel="noopener">
+        <i class="fa fa-weibo"></i>
+      </a>
+    </li>
+    <li>
+      <a class="email"
+         href="mailto:?subject=Slicing%20the%20onion%203%20ways-%20Toy%20problems%20in%20R%2c%20python%2c%20and%20Julia&amp;body=%2fpost%2friddler_nba_tour_de_frace%2f">
+        <i class="fa fa-envelope"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+  
+
+</div>
+
+
+      <div class="article-style" itemprop="articleBody">
+        
+
+
+<pre class="r"><code>knitr::opts_chunk$set(message = FALSE, warning=FALSE)</code></pre>
+<p>Between writing up my thesis, applying to jobs <a href="">hire me! I’m quite good at programming</a>, and the ongoing pandemic, I don’t really have time to write full blogposts. I have however decided to brush up my python skills and dive headfirst into Julia. As such, I like to answer the toy problems posted at <a href="https://fivethirtyeight.com/tag/the-riddler/">fivethirtyeight’s riddler</a> weekly. These will likely be even a few weeks late but it motivates me to tend to the blog and keep up my programming.</p>
+<div id="express" class="section level2">
+<h2>Express</h2>
+<p><em>From Zack Beamer comes a baffling brain teaser of basketball, just in time for the NBA playoffs:</em></p>
+<p><em>Once a week, folks from Blacksburg, Greensboro, and Silver Spring get together for a game of pickup basketball. Every week, anywhere from one to five individuals will show up from each town, with each outcome equally likely.</em></p>
+<p><em>Using all the players that show up, they want to create exactly two teams of equal size. Being a prideful bunch, everyone wears a jersey that matches the color mentioned in the name of their city. However, since it might create confusion to have one jersey playing for both sides, they agree that the residents of two towns will combine forces to play against the third town’s residents.</em></p>
+<p><em>What is the probability that, on any given week, it’s possible to form two equal teams with everyone playing, where two towns are pitted against the third?</em></p>
+<p><em>Extra credit: Suppose that, instead of anywhere from one to five individuals per town, anywhere from one to N individuals show up per town. Now what’s the probability that there will be two equal teams?</em></p>
+<p>This is a nice little combinatorics problem, as such we can solve it by finding all combinations and then the combinations where the maximum value is equal to the sum of the remaining values:</p>
+<pre class="r"><code>#create lists of possible values for all team a, b, or c
+players &lt;- list(a = 1:5, b = 1:5, c = 1:5)
+#find all combinations
+player_combinations &lt;- do.call(expand.grid, players)
+
+#get the value of the largest team in each combination
+largest_team &lt;- apply(player_combinations, 1, max)
+#get the sum of the remaining teams in each combination
+reamining_players &lt;- apply(player_combinations, 1, function(x) sum(x) - max(x))
+
+#check when these match
+matched_teams &lt;- nrow(player_combinations[which(largest_team == reamining_players),])
+#find the fraction which match
+fraction_even_teams &lt;- matched_teams / nrow(player_combinations)
+
+fraction_even_teams</code></pre>
+<pre><code>## [1] 0.24</code></pre>
+<p>So the answer to the main express question is 0.24, or about 1 in 4 chance.</p>
+<p>It’s easy to expand this to multiple players by allowing the first line to take any value:</p>
+<pre class="r"><code>#rewrite previous chunk as function that takes max_players as an argument
+find_matches_fraction &lt;- function(max_players) {
+  players &lt;- list(a = seq(max_players), b = seq(max_players), c = seq(max_players))
+  player_combinations &lt;- do.call(expand.grid, players)
+  
+  largest_team &lt;- apply(player_combinations, 1, max)
+  reamining_players &lt;- apply(player_combinations, 1, function(x) sum(x) - max(x))
+  
+  matched_teams &lt;- nrow(player_combinations[which(largest_team == reamining_players),])
+  fraction_even_teams &lt;- matched_teams / nrow(player_combinations)
+}
+
+#run for n 1:50
+fraction_even_teams &lt;- lapply(seq(50), find_matches_fraction)
+
+answers_df &lt;- data.frame(
+  townspeople = seq(50),
+  chance = unlist(fraction_even_teams)
+)
+
+#for plotting
+library(ggplot2)
+
+#plot the answers for 1 to n players where max n is 50
+p1 &lt;- ggplot(answers_df, aes(x = townspeople, y = chance)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = &quot;solution to Riddler express&quot;,
+    subtitle = &quot;chance of matched team with max n players&quot;,
+    x = &quot;max N players per town&quot;,
+    y = &quot;chance of even teams&quot;
+  ) +
+  theme_minimal()
+
+p1</code></pre>
+<p><img src="/post/2020-09-27-riddler_nba_and_tour_files/figure-html/solve_express_r_extra-1.png" width="672" />
+Let’s implement this in python. I won’t comment lines again, the flow of the function is fundamentally the same</p>
+<pre class="python"><code>import itertools
+
+def find_matches_fraction(max_players):
+  team_a = range(1,max_players)
+  team_b = range(1,max_players)
+  team_c = range(1,max_players)
+ 
+  matched_team = []
+  for players in list(itertools.product(team_a,team_b,team_c)):
+      largest_team = max(players)
+     
+      l_combinations = list(players)
+      l_combinations.pop(l_combinations.index(max(l_combinations)))
+      remaining_players = sum(l_combinations)
+     
+      if remaining_players == largest_team:
+          matched_team.append(1)
+      else:
+          matched_team.append(0)
+         
+  fraction_success = sum(matched_team) / len(matched_team)
+  return(fraction_success)
+
+py_ans = find_matches_fraction(6)
+print(py_ans)</code></pre>
+<pre><code>## 0.24</code></pre>
+<p>And in Julia</p>
+<pre class="julia"><code>using IterTools
+
+function find_matches_fraction_jl(max_players)
+  team_a = 1:max_players
+  team_b = 1:max_players
+  team_c = 1:max_players
+ 
+  matched_teams = []
+
+  for players in product(team_a, team_b, team_c)
+    largest_team = maximum(players)
+    other_teams = collect(players)
+    deleteat!(other_teams, argmax(players))
+    remaining_players = sum(other_teams)
+   
+    if largest_team == remaining_players
+      push!(matched_teams, 1)
+    else
+      push!(matched_teams, 0)
+    end
+  end
+  
+  fraction_success = sum(matched_teams) / length(matched_teams)
+  return fraction_success
+end</code></pre>
+<pre><code>## find_matches_fraction_jl (generic function with 1 method)</code></pre>
+<pre class="julia"><code>
+julia_ans = find_matches_fraction_jl(5)</code></pre>
+<pre><code>## 0.24</code></pre>
+<pre class="julia"><code>print(julia_ans)</code></pre>
+<pre><code>## 0.24</code></pre>
+<p>We can also run these chunks in R using <a href="https://rstudio.github.io/reticulate/">reticulate</a> and <a href="https://cran.r-project.org/web/packages/JuliaCall/readme/README.html">JuliaCall</a></p>
+<pre class="r"><code>#packages to call other languages into R
+library(JuliaCall)
+library(reticulate)
+
+#run the functions to check answers
+py$find_matches_fraction(as.integer(6))</code></pre>
+<pre><code>## [1] 0.24</code></pre>
+<pre class="r"><code>julia_eval(&quot;find_matches_fraction_jl(5)&quot;)</code></pre>
+<pre><code>## [1] 0.24</code></pre>
+<pre class="r"><code>#microbenchmark to time functions
+library(microbenchmark)
+
+#run each function 10000 times
+n &lt;- 10000
+bench_express &lt;- microbenchmark(
+  jl = julia_eval(&quot;find_matches_fraction_jl(5)&quot;),
+  py = py$find_matches_fraction(as.integer(6)),
+  r = find_matches_fraction(5),
+  times = n
+)
+
+#plot the speeds of each functions
+p2 &lt;- ggplot2::autoplot(bench_express) +
+  labs(
+    title = &quot;benchmarking of functions for Riddler Express&quot;
+  ) +
+  theme_minimal()
+
+p2</code></pre>
+<p><img src="/post/2020-09-27-riddler_nba_and_tour_files/figure-html/benchmark_express-1.png" width="672" /></p>
+<p>I’m pretty happy with that. Even my rusty python ends up being faster than the R code (which I wrote for expressiveness and not speed per se), but my first ever solution in Julia outstrips both!</p>
+</div>
+<div id="classic" class="section level2">
+<h2>Classic</h2>
+<p><em>This month, the Tour de France is back, and so is the Tour de FiveThirtyEight!</em></p>
+<p><em>For every mountain in the Tour de FiveThirtyEight, the first few riders to reach the summit are awarded points. The rider with the most such points at the end of the Tour is named “King of the Mountains” and gets to wear a special polka dot jersey.</em></p>
+<p><em>At the moment, you are racing against three other riders up one of the mountains. The first rider over the top gets 5 points, the second rider gets 3, the third rider gets 2, and the fourth rider gets 1.</em></p>
+<p><em>All four of you are of equal ability — that is, under normal circumstances, you all have an equal chance of reaching the summit first. But there’s a catch — two of your competitors are on the same team. Teammates are able to work together, drafting and setting a tempo up the mountain. Whichever teammate happens to be slower on the climb will get a boost from their faster teammate, and the two of them will both reach the summit at the faster teammate’s time.</em></p>
+<p><em>As a lone rider, the odds may be stacked against you. In your quest for the polka dot jersey, how many points can you expect to win on this mountain, on average?</em></p>
+<p>A quick guess can be gotten by assuming there were <em>no</em> teams and just taking the expected points after random assignment</p>
+<pre class="r"><code>riders &lt;- 4
+points &lt;- c(5,3,2,1)
+
+sum(points/riders)</code></pre>
+<pre><code>## [1] 2.75</code></pre>
+<p>We can then work out the answer to the classic analytically by calculating the chance that the rider is bumped back a spot for any position they find themselves in. For instance, if they finish 2nd, there is a 1 in 2 chance the rider ahead of them is part of the team, which would bump our rider into 3rd to make run for the teammate.</p>
+<pre class="r"><code>expected_points &lt;- 
+  #first
+  (points[1] / riders) + 
+  #second
+  (points[2] / riders)/(riders-1) + 2 * (points[(riders-1)] / riders)/(riders-1) + 
+  #third
+  (points[(riders-1)] / riders) / (riders-1) + 2 *(points[riders] / riders)/(riders-1) + 
+  #last
+  (points[riders] / riders)
+
+expected_points</code></pre>
+<pre><code>## [1] 2.416667</code></pre>
+<p>So we have our answer, but what about for any combination of team and points? We can write an R function to assign riders to teams and simulating many races to get an estimate of the total points. We could again solve these analytically, but that wouldn’t really benefit my programming.</p>
+<pre class="r"><code>get_team_points &lt;- function(teams, points) {
+  team_pos &lt;- sample(unique(teams), length(unique(teams)), prob = table(teams))
+  all_positions &lt;- unlist(lapply(team_pos, function(p) rep(p, length(which(p == teams)))))
+  team_points &lt;- lapply(unique(teams), function(i) sum(points[which(all_positions == i)]))
+  names(team_points) &lt;- unique(teams)
+  return(team_points)
+}
+
+sim_race &lt;- function(n_riders, n_per_team = 2, points = c(5,3,2,1), times = 1000) {
+  leftover_riders &lt;- (n_riders-1) %% n_per_team
+ 
+  teams &lt;- (n_riders - leftover_riders - 1) / n_per_team
+ 
+  teamed_riders &lt;- c(
+    rep(seq(teams), each = n_per_team),
+    rep(max(teams)+1, leftover_riders),
+    999
+  )
+ 
+  all_points &lt;- c(
+    points,
+    rep(0, n_riders - length(points))
+  )
+ 
+  simmed_points &lt;- unlist(purrr::rerun(times, get_team_points(teamed_riders, all_points)))
+  expected_points &lt;- tapply(simmed_points, names(simmed_points), sum) / times
+  expected_points[names(expected_points) == 999]
+}
+
+expected_points &lt;- sim_race(4, 2, points = c(5,3,2,1), times = 10000)
+expected_points</code></pre>
+<pre><code>##    999 
+## 2.4209</code></pre>
+<p>For a range of n riders and team sizes, we can calculate our riders expected points per race (we’ll use the same point structure of c(1:n-1, n+1)) for a little extra flourish</p>
+<pre class="r"><code>riders &lt;- 1:20
+n_per_team &lt;- 1:5
+
+library(dplyr)
+
+arguments &lt;- expand.grid(riders, n_per_team) %&gt;%
+  dplyr::rename(n_riders = Var1, n_per_team = Var2) %&gt;%
+  #must be more riders than riders per team
+  dplyr::filter(n_riders &gt; n_per_team)
+arguments$points &lt;- lapply(arguments$n_riders, function(r) c(r+1, (r-1):1))
+
+#use map2
+library(purrr)
+
+sims &lt;- 1000
+arguments$expected_points &lt;- pmap_dbl(arguments, sim_race, times = sims)
+
+#plot the expected points
+p3 &lt;- ggplot(arguments, aes(x = n_riders, y = n_per_team)) +
+  geom_tile(aes(fill = expected_points / (n_riders+1))) +
+  scale_fill_viridis_c(option = &quot;plasma&quot;, name = &quot;expected points\n / max possible points&quot;) +
+  labs(
+    title = &quot;solution to Riddler classic&quot;,
+    subtitle = &quot;expected points for our rider&quot;,
+    x = &quot;total n riders&quot;,
+    y = &quot;number of riders per team&quot;
+  ) +
+  theme_minimal()
+
+p3</code></pre>
+<p><img src="/post/2020-09-27-riddler_nba_and_tour_files/figure-html/extra_credit_classic-1.png" width="672" /></p>
+<p>Lets now port our function for this over the python…</p>
+<pre class="python"><code>from numpy.random import choice
+import numpy as np
+import pandas as pd
+import math
+import itertools
+
+def sim_race_py(n_riders, n_per_team, points):
+  n_teams = math.ceil((n_riders - 1) / n_per_team) + 1
+  filled_teams = math.floor((n_riders - 1) / n_per_team)
+  leftover_riders = (n_riders - 1) % n_per_team
+  
+  if leftover_riders &gt; 0:
+    extra_riders = [leftover_riders, 1]
+  else:
+    extra_riders = 1
+  
+  if filled_teams == 1:
+    win_prob = [n_per_team, extra_riders]
+  else:
+    win_prob = [n_per_team] * filled_teams
+    win_prob.extend([extra_riders])
+  flattened_probs = list(pd.core.common.flatten(win_prob))
+  
+  sum_probs = np.sum(flattened_probs)
+  adjusted_probs = [p/sum_probs for p in flattened_probs]
+  
+  no_teams = list(range(len(flattened_probs)))
+  
+  finish_order = choice(no_teams, len(no_teams), p = adjusted_probs, replace = False)
+  
+  expanded_finish_order = []
+  for team in finish_order:
+   if team &lt; filled_teams:
+     expanded_finish_order += [team] * n_per_team
+   else:
+      if team != max(no_teams):
+        expanded_finish_order += [team] * leftover_riders
+      else:
+        expanded_finish_order += [team]
+  
+  won_points = points[np.argmax(expanded_finish_order)]
+  return won_points
+
+def sim_races_py(n_riders, n_per_team, points, n_times):
+  won_points = []
+  for _ in range(n_times):
+    sim_points = sim_race_py(n_riders, n_per_team, points)
+    won_points.append(sim_points)
+    expected_points = np.sum(won_points) / len(won_points)
+    
+  return(expected_points)
+  
+answer = sim_races_py(4,2,[5,3,2,1], 10000)
+answer</code></pre>
+<pre><code>## 2.4295</code></pre>
+<p>…and in Julia</p>
+<pre class="julia"><code>using StatsBase
+
+function sim_race_jl(n_riders, n_per_team, points)
+  n_teams = Int(ceil((n_riders - 1) / n_per_team));
+  filled_teams = Int(floor((n_riders - 1) / n_per_team));
+  leftover_riders = mod(n_riders - 1, n_per_team);
+  
+  if leftover_riders &gt; 0
+    extra_riders = [leftover_riders, 1];
+  else
+    extra_riders = 1;
+  end
+  
+  if filled_teams == 1
+    win_prob = vcat(n_per_team, extra_riders);
+  else
+    win_prob = vcat(repeat([n_per_team], filled_teams), extra_riders);
+  end
+  
+  finish_order = sample(1:length(win_prob),
+                        ProbabilityWeights(win_prob), 
+                        length(win_prob), 
+                        replace = false
+  );
+  
+  expanded_finish_order = Vector{Int}()
+  for team in finish_order
+    if team &lt;= filled_teams
+       append!(expanded_finish_order, repeat([team], n_per_team))
+    else
+      if team != length(finish_order)
+        append!(expanded_finish_order, repeat([team], leftover_riders))
+      else
+        append!(expanded_finish_order, team)
+      end
+    end
+  end
+  
+  rider_position = findall(expanded_finish_order .== maximum(expanded_finish_order));
+  points_won = points[rider_position];
+return points_won
+end</code></pre>
+<pre><code>## sim_race_jl (generic function with 1 method)</code></pre>
+<pre class="julia"><code>
+function sim_races_jl(n_riders, n_per_team, points, n_times)
+  won_points = Vector{Int}()
+  
+  for _ in 1:n_times
+    sim_points = sim_race_jl(n_riders, n_per_team, points)
+    append!(won_points, sim_points)
+  end
+    
+  expected_points = sum(won_points) / length(won_points)
+    
+  return expected_points
+end</code></pre>
+<pre><code>## sim_races_jl (generic function with 1 method)</code></pre>
+<pre class="julia"><code>
+answer = sim_races_jl(4,2,[5,3,2,1], 10000)</code></pre>
+<pre><code>## 2.3927</code></pre>
+<pre class="julia"><code>answer</code></pre>
+<pre><code>## 2.3927</code></pre>
+<p>And then lets benchmark each of these functions again</p>
+<pre class="r"><code>#run each function 10000 times
+n &lt;- 10000
+
+bench_classic &lt;- microbenchmark(
+  jl = julia_eval(&quot;sim_race_jl(4,2,[5,3,2,1])&quot;),
+  py = py$sim_race_py(as.integer(4),as.integer(2),c(5,3,2,1)),
+  r = sim_race(4,2,c(5,3,2,1), times = 1),
+  times = n
+)
+
+#plot the speeds of each functions
+p4 &lt;- ggplot2::autoplot(bench_classic) +
+  labs(
+    title = &quot;benchmarking of functions for Riddler Classic&quot;
+  ) +
+  theme_minimal()
+
+p4</code></pre>
+<p><img src="/post/2020-09-27-riddler_nba_and_tour_files/figure-html/benchmark_classic-1.png" width="672" />
+A bit closer this time. I think I haven’t quite got efficiency for more involved functions down for python and Julia. Julia still wins this round but I feel could be speed up by at least a factor 2 or 3x.</p>
+</div>
+
+      </div>
+
+      
+
+
+<div class="article-tags">
+  
+  <a class="btn btn-primary btn-outline" href="/tags/riddler">riddler</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/rstats">rstats</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/python">python</a>
+  
+  <a class="btn btn-primary btn-outline" href="/tags/julia">Julia</a>
+  
+</div>
+
+
+
+    </div>
+  </div>
+
+</article>
+
+
+
+<div class="article-container article-widget">
+  <div class="hr-light"></div>
+  <h3>Related</h3>
+  <ul>
+    
+    <li><a href="/post/riddler_june_26th/">The Riddler - June 26th</a></li>
+    
+    <li><a href="/post/riddler-1st-feb-2019/">Riddler 1st February 2019</a></li>
+    
+    <li><a href="/post/how_i_made_my_millions/">#TidyTuesday - Building Stalk Portfolios with R</a></li>
+    
+    <li><a href="/post/dixon_coles_2/">An Introduction to Modelling Soccer Matches in R (part 2)</a></li>
+    
+    <li><a href="/post/advent_calendar_trivia/">Advent Calendar of Football Trivia Analyses</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="article-container">
+  
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="powered-by">
+
+      &copy; 2018 &middot; 
+
+      Powered by the
+      <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+      <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+      <span class="pull-right" aria-hidden="true">
+        <a href="#" id="back_to_top">
+          <span class="button_icon">
+            <i class="fa fa-chevron-up fa-2x"></i>
+          </span>
+        </a>
+      </span>
+
+    </p>
+  </div>
+</footer>
+
+
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close btn-large" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Cite</h4>
+      </div>
+      <div>
+        <pre><code class="modal-body tex"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-primary btn-outline js-copy-cite" href="#" target="_blank">
+          <i class="fa fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-primary btn-outline js-download-cite" href="#" target="_blank">
+          <i class="fa fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+    
+
+    
+
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha512-3P8rXCuGJdNZOnUx/03c1jOTnMn3rP63nBip5gOP2qmUh5YAdVAvFZ1E+QLZZbC1rtMrQb+mah3AfYW11RUrWA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.3/imagesloaded.pkgd.min.js" integrity="sha512-umsR78NN0D23AzgoZ11K7raBD+R6hqKojyBZs1w8WvYlsI+QuKRGBx3LFCwhatzBunCjDuJpDHwxD13sLMbpRA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha512-iztkobsvnjKfAtTNdHkGVjAYTrrtlC7mGp/54c40wowO7LhURYl3gVzzcEqGl/qKXQltJ2HwMrdLcNUdo+N/RQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.4/isotope.pkgd.min.js" integrity="sha512-VDBOIlDbuC4VWxGJNmuFRQ0Li0SKkDpmGyuhAG5LTDLd/dJ/S0WMVxriR2Y+CyPL5gzjpN4f/6iqWVBJlht0tQ==" crossorigin="anonymous"></script>
+    
+    
+    <script src="/js/hugo-academic.js"></script>
+    
+
+    
+    
+      
+      
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+      
+
+      
+
+      
+
+      <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    
+    
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_CHTML" integrity="sha512-tOav5w1OjvsSJzePRtt2uQPFwBoHt1VZcUq8l8nm5284LEKE9FSJBQryzMBzHxY5P0zRdNqEcpLIRVYFNgu1jw==" crossorigin="anonymous"></script>
+    
+    
+
+  </body>
+</html>
+
