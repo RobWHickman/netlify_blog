@@ -19,7 +19,7 @@
       <description>
 
 
-&lt;p&gt;Between writing up my thesis, applying to jobs &lt;a href=&#34;&#34;&gt;hire me! I’m quite good at programming&lt;/a&gt;, and the ongoing pandemic, I don’t really have time to write full blogposts. I have however decided to brush up my python skills and dive headfirst into Julia. As such, I like to answer the toy problems posted at &lt;a href=&#34;https://fivethirtyeight.com/tag/the-riddler/&#34;&gt;fivethirtyeight’s riddler&lt;/a&gt; weekly. These will likely be even a few weeks late but it motivates me to tend to the blog and keep up my programming.&lt;/p&gt;
+&lt;p&gt;Between writing up my thesis, applying to jobs &lt;a href=&#34;robwhickman@gmail.com&#34;&gt;hire me! I’m quite good at programming&lt;/a&gt;, and the ongoing pandemic, I don’t really have time to write full blogposts. I have however decided to brush up my python skills and dive headfirst into Julia. As such, I like to answer the toy problems posted at &lt;a href=&#34;https://fivethirtyeight.com/tag/the-riddler/&#34;&gt;fivethirtyeight’s riddler&lt;/a&gt; weekly. These will likely be even a few weeks late but it motivates me to tend to the blog and keep up my programming.&lt;/p&gt;
 &lt;div id=&#34;express&#34; class=&#34;section level2&#34;&gt;
 &lt;h2&gt;Express&lt;/h2&gt;
 &lt;p&gt;&lt;em&gt;From Zack Beamer comes a baffling brain teaser of basketball, just in time for the NBA playoffs:&lt;/em&gt;&lt;/p&gt;
@@ -152,6 +152,7 @@ py$find_matches_fraction(as.integer(6))&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## [1] 0.24&lt;/code&gt;&lt;/pre&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;julia_eval(&amp;quot;find_matches_fraction_jl(5)&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;## [1] 0.24&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can then use &lt;a href=&#34;https://www.rdocumentation.org/packages/microbenchmark/versions/1.4-7/topics/microbenchmark&#34;&gt;microbenchmark&lt;/a&gt; to test the speeds of the functions written here. We run each n times and look at the distribution of times spent running each.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#microbenchmark to time functions
 library(microbenchmark)
 
@@ -234,7 +235,7 @@ sim_race &amp;lt;- function(n_riders, n_per_team = 2, points = c(5,3,2,1), times
 expected_points &amp;lt;- sim_race(4, 2, points = c(5,3,2,1), times = 10000)
 expected_points&lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code&gt;##    999 
-## 2.4188&lt;/code&gt;&lt;/pre&gt;
+## 2.4093&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;For a range of n riders and team sizes, we can calculate our riders expected points per race (we’ll use the same point structure of c(1:n-1, n+1)) for a little extra flourish&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;riders &amp;lt;- 1:20
 n_per_team &amp;lt;- 1:5
@@ -322,7 +323,7 @@ def sim_races_py(n_riders, n_per_team, points, n_times):
   
 answer_classic = sim_races_py(4,2,[5,3,2,1], 10000)
 print(answer_classic)&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## 2.3907&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 2.4286&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;…and in Julia&lt;/p&gt;
 &lt;pre class=&#34;julia&#34;&gt;&lt;code&gt;using StatsBase
 
@@ -384,7 +385,7 @@ end&lt;/code&gt;&lt;/pre&gt;
 &lt;pre class=&#34;julia&#34;&gt;&lt;code&gt;
 answer_classic = sim_races_jl(4,2,[5,3,2,1], 10000);
 answer_classic&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code&gt;## 2.3966&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;## 2.4098&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;And then lets benchmark each of these functions again&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#run each function 10000 times
 n &amp;lt;- 10000

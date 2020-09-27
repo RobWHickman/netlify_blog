@@ -17,7 +17,7 @@ header:
 
 
 
-<p>Between writing up my thesis, applying to jobs <a href="">hire me! I’m quite good at programming</a>, and the ongoing pandemic, I don’t really have time to write full blogposts. I have however decided to brush up my python skills and dive headfirst into Julia. As such, I like to answer the toy problems posted at <a href="https://fivethirtyeight.com/tag/the-riddler/">fivethirtyeight’s riddler</a> weekly. These will likely be even a few weeks late but it motivates me to tend to the blog and keep up my programming.</p>
+<p>Between writing up my thesis, applying to jobs <a href="robwhickman@gmail.com">hire me! I’m quite good at programming</a>, and the ongoing pandemic, I don’t really have time to write full blogposts. I have however decided to brush up my python skills and dive headfirst into Julia. As such, I like to answer the toy problems posted at <a href="https://fivethirtyeight.com/tag/the-riddler/">fivethirtyeight’s riddler</a> weekly. These will likely be even a few weeks late but it motivates me to tend to the blog and keep up my programming.</p>
 <div id="express" class="section level2">
 <h2>Express</h2>
 <p><em>From Zack Beamer comes a baffling brain teaser of basketball, just in time for the NBA playoffs:</em></p>
@@ -150,6 +150,7 @@ py$find_matches_fraction(as.integer(6))</code></pre>
 <pre><code>## [1] 0.24</code></pre>
 <pre class="r"><code>julia_eval(&quot;find_matches_fraction_jl(5)&quot;)</code></pre>
 <pre><code>## [1] 0.24</code></pre>
+<p>We can then use <a href="https://www.rdocumentation.org/packages/microbenchmark/versions/1.4-7/topics/microbenchmark">microbenchmark</a> to test the speeds of the functions written here. We run each n times and look at the distribution of times spent running each.</p>
 <pre class="r"><code>#microbenchmark to time functions
 library(microbenchmark)
 
@@ -232,7 +233,7 @@ sim_race &lt;- function(n_riders, n_per_team = 2, points = c(5,3,2,1), times = 1
 expected_points &lt;- sim_race(4, 2, points = c(5,3,2,1), times = 10000)
 expected_points</code></pre>
 <pre><code>##    999 
-## 2.4188</code></pre>
+## 2.4093</code></pre>
 <p>For a range of n riders and team sizes, we can calculate our riders expected points per race (we’ll use the same point structure of c(1:n-1, n+1)) for a little extra flourish</p>
 <pre class="r"><code>riders &lt;- 1:20
 n_per_team &lt;- 1:5
@@ -320,7 +321,7 @@ def sim_races_py(n_riders, n_per_team, points, n_times):
   
 answer_classic = sim_races_py(4,2,[5,3,2,1], 10000)
 print(answer_classic)</code></pre>
-<pre><code>## 2.3907</code></pre>
+<pre><code>## 2.4286</code></pre>
 <p>…and in Julia</p>
 <pre class="julia"><code>using StatsBase
 
@@ -382,7 +383,7 @@ end</code></pre>
 <pre class="julia"><code>
 answer_classic = sim_races_jl(4,2,[5,3,2,1], 10000);
 answer_classic</code></pre>
-<pre><code>## 2.3966</code></pre>
+<pre><code>## 2.4098</code></pre>
 <p>And then lets benchmark each of these functions again</p>
 <pre class="r"><code>#run each function 10000 times
 n &lt;- 10000
