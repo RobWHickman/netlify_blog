@@ -16,7 +16,7 @@ header:
 ---
 
 
-```{r chunk options}
+```{r chunk options, echo=FALSE}
 knitr::opts_chunk$set(message = FALSE, warning=FALSE)
 
 ```
@@ -123,8 +123,8 @@ def find_matches_fraction(max_players):
   fraction_success = sum(matched_team) / len(matched_team)
   return(fraction_success)
 
-py_ans = find_matches_fraction(6)
-print(py_ans)
+answer_express = find_matches_fraction(6)
+print(answer_express)
 ```
 
 And in Julia
@@ -156,8 +156,8 @@ function find_matches_fraction_jl(max_players)
   return fraction_success
 end
 
-julia_ans = find_matches_fraction_jl(5)
-print(julia_ans)
+answer_express = find_matches_fraction_jl(5);
+answer_express
 ```
 
 We can also run these chunks in R using [reticulate](https://rstudio.github.io/reticulate/) and [JuliaCall](https://cran.r-project.org/web/packages/JuliaCall/readme/README.html)
@@ -359,8 +359,8 @@ def sim_races_py(n_riders, n_per_team, points, n_times):
     
   return(expected_points)
   
-answer = sim_races_py(4,2,[5,3,2,1], 10000)
-answer
+answer_classic = sim_races_py(4,2,[5,3,2,1], 10000)
+print(answer_classic)
 
 ```
 ...and in Julia 
@@ -368,7 +368,7 @@ answer
 ```{julia}
 using StatsBase
 
-function sim_race_jl(n_riders, n_per_team, points)
+function sim_race_jl(n_riders, n_per_team, points);
   n_teams = Int(ceil((n_riders - 1) / n_per_team));
   filled_teams = Int(floor((n_riders - 1) / n_per_team));
   leftover_riders = mod(n_riders - 1, n_per_team);
@@ -391,15 +391,15 @@ function sim_race_jl(n_riders, n_per_team, points)
                         replace = false
   );
   
-  expanded_finish_order = Vector{Int}()
+  expanded_finish_order = Vector{Int}();
   for team in finish_order
     if team <= filled_teams
-       append!(expanded_finish_order, repeat([team], n_per_team))
+       append!(expanded_finish_order, repeat([team], n_per_team));
     else
       if team != length(finish_order)
-        append!(expanded_finish_order, repeat([team], leftover_riders))
+        append!(expanded_finish_order, repeat([team], leftover_riders));
       else
-        append!(expanded_finish_order, team)
+        append!(expanded_finish_order, team);
       end
     end
   end
@@ -409,21 +409,21 @@ function sim_race_jl(n_riders, n_per_team, points)
 return points_won
 end
 
-function sim_races_jl(n_riders, n_per_team, points, n_times)
-  won_points = Vector{Int}()
+function sim_races_jl(n_riders, n_per_team, points, n_times);
+  won_points = Vector{Int}();
   
   for _ in 1:n_times
-    sim_points = sim_race_jl(n_riders, n_per_team, points)
-    append!(won_points, sim_points)
+    sim_points = sim_race_jl(n_riders, n_per_team, points);
+    append!(won_points, sim_points);
   end
     
-  expected_points = sum(won_points) / length(won_points)
+  expected_points = sum(won_points) / length(won_points);
     
-  return expected_points
+  return expected_points;
 end
 
-answer = sim_races_jl(4,2,[5,3,2,1], 10000)
-answer
+answer_classic = sim_races_jl(4,2,[5,3,2,1], 10000);
+answer_classic
 ```
 
 
