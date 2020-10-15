@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>buses on Robert Hickman</title>
@@ -7,137 +7,16 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>&amp;copy; 2018</copyright>
-    <lastBuildDate>Thu, 04 Oct 2018 00:00:00 +0000</lastBuildDate>
-    <atom:link href="/tags/buses/" rel="self" type="application/rss+xml" />
-    
+    <lastBuildDate>Thu, 04 Oct 2018 00:00:00 +0000</lastBuildDate><atom:link href="/tags/buses/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>How I Learned To Stop Worrying and Love Heatmaps</title>
       <link>/post/getis-ord-heatmaps-tutorial/</link>
       <pubDate>Thu, 04 Oct 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/getis-ord-heatmaps-tutorial/</guid>
-      <description>
-
-
-&lt;p&gt;Whilst &lt;del&gt;getting some work done&lt;/del&gt; browsing twitter at work today, I came across &lt;a href=&#34;https://twitter.com/jburnmurdoch/status/1047470445459644416&#34;&gt;this tweet&lt;/a&gt; from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.&lt;/p&gt;
-&lt;p&gt;For instance, lets load some mapping libraries&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(tidyverse)
-library(sf)
-library(rgdal)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;For this blog I’m going to use data of bus stops in London, because there’s an absolute ton of them and because I love the London Datastore and it was the first public, heavy, point data file I came across.&lt;/p&gt;
-&lt;p&gt;Let’s grab some data to use as exemplars&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#get the shapefile data of london from GADM
-#downloads into a temp file
-gadm_url &amp;lt;- &amp;quot;https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_GBR_2_sf.rds&amp;quot;
-temp_dir &amp;lt;- tempdir()
-download.file(gadm_url, destfile = file.path(temp_dir, &amp;quot;london_shapefile.rds&amp;quot;), 
-              mode = &amp;quot;wb&amp;quot;, quiet = TRUE)
-london &amp;lt;- sf::st_as_sf(readRDS(file.path(temp_dir, &amp;quot;london_shapefile.rds&amp;quot;))) %&amp;gt;%
-  filter(grepl(&amp;quot;London&amp;quot;, NAME_2))
-
-#get the bus stop data
-#https://data.london.gov.uk/dataset/tfl-bus-stop-locations-and-routes
-bus &amp;lt;- read.csv(&amp;quot;https://files.datapress.com/london/dataset/tfl-bus-stop-locations-and-routes/bus-stops-10-06-15.csv&amp;quot;,
-                stringsAsFactors = FALSE) %&amp;gt;%
-  filter(!is.na(Location_Easting)) %&amp;gt;%
-  #convert to simple features
-  st_as_sf(coords = c(&amp;quot;Location_Easting&amp;quot;, &amp;quot;Location_Northing&amp;quot;), crs = st_crs(&amp;quot;+init=epsg:27700&amp;quot;)) %&amp;gt;%
-  #transform projection to match the boundary data
-  st_transform(crs = st_crs(london)) %&amp;gt;%
-  #remove bus stops outside of the limits of the london shapefile
-  .[unlist(st_intersects(london, .)),]&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now that we have the data, let’s have a first pass at plotting the points on a map of London using ggplot2&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#plot the bus stop locations
-p1 &amp;lt;- ggplot(bus) +
-  geom_sf(data = london, fill = &amp;quot;grey&amp;quot;) +
-  geom_sf(colour = &amp;quot;blue&amp;quot;, alpha = 0.2) +
-  ggtitle(&amp;quot;Bus Stops in London&amp;quot;) +
-  theme_void()
-
-plot(p1)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-10-04-getis-ord-tutorial_files/figure-html/plot_bus_stops-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;The points here do kiiiind of work alone- it’s possible to see the route along which buses travel. However, it’s still pretty heavy and takes some cognitive effort. It’s also worth remembering this is just the first example of data I came across- if working with stuff like common incident data, even a heavy alpha on the points is going to cover the map and leave it unreadable, as in the tweet up top.&lt;/p&gt;
-&lt;p&gt;But let’s say we plot it as a heatmap to try and sumamrise where the points are. In my opinion, this is even worse. For one- it stretches utside the boundaries of the shapes, even though we have filtered data to include no bus stops outside London. In this example that’s not a huge deal- but if London was (e.g.) an Island, the graph is now suggesting commutes into the sea. It’s also incredibly taxing to keep track of the various peaks and troughs- even in a simple model where bus stops generally increase as you go near to the centre&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#bind the coordinates as numeric
-bus &amp;lt;- bus %&amp;gt;%
-  cbind(., st_coordinates(bus))
-
-#plot the bus stops as a density map
-p2 &amp;lt;- ggplot() +
-  geom_sf(data = london) +
-  stat_density_2d(data = bus, aes(X, Y)) +
-  ggtitle(&amp;quot;Bus Stops in London&amp;quot;) +
-  theme_void()
-
-plot(p2)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-10-04-getis-ord-tutorial_files/figure-html/unnamed-chunk-1-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;Instead, we can bin the point data into equi-sized containers. I’m extremely partial to this, even though it’s not super popular. To do this with hexagonal bins (the closest to circular that still tessellates perfectly), we just have to create a grid of points and connect them up&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#merge the london wards into one boundary file
-london_union &amp;lt;- london %&amp;gt;%
-  group_by(&amp;quot;group&amp;quot;) %&amp;gt;%
-  summarise()
-
-#generate a grid of points separated hexagonally
-#no way to do this purely in sf yet afaik
-hex_points &amp;lt;- spsample(as_Spatial(london_union), type = &amp;quot;hexagonal&amp;quot;, cellsize = 0.01)
-
-#generate hexgaon polygons from these points
-hex_polygons &amp;lt;- HexPoints2SpatialPolygons(hex_points) %&amp;gt;%
-  st_as_sf(crs = st_crs(london_union)) %&amp;gt;%
-  #clip to the london shapefile
-  st_intersection(., london_union)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We can then find out which bin every bus stop is located in using st_intersects&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#find how many bus stops are within each hexagon
-hex_polygons$planning_no &amp;lt;- lengths(st_intersects(hex_polygons, bus))
-
-#plot the number of bus stops per bin
-p2 &amp;lt;- ggplot(hex_polygons) +
-  geom_sf(aes(fill = planning_no)) +
-  scale_fill_viridis_c(option = &amp;quot;magma&amp;quot;, &amp;quot;# Bus Stops&amp;quot;) +
-  theme_void() +
-  ggtitle(&amp;quot;Binned London Bus Stops&amp;quot;)
-
-plot(p2)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-10-04-getis-ord-tutorial_files/figure-html/bin_stops-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;However, this is still pretty confusing. It seems like bus stops are fairly randomly distributed as by chance one hexagon may contain multiple stops at its edges, whereas a neighbour may be juuuust missing out on these.&lt;/p&gt;
-&lt;p&gt;To mitigate this effect, we can study the spatial autocorrelation of each hexagon to it’s neighbours. There are multiple ways to do this, but the one I was first introduced to and have used most is the Getis-Ord local statistic. In this example I will include.self() which means we are using the Gi* variant of the statistic.&lt;/p&gt;
-&lt;p&gt;Basically- we tell R to find all the nearest neighbours of any bin (hexagon- though not necessarily so, we could e.g. use wards, but I think it looks messier). It then calculates the ratio of values within the bin and it’s neighbours, to the total number of points (bus stops). The reported Gi* value is a z statistic- it can be positive (more clustering) or negative (less) and used to find significant clusters. I’m not going to do any of that here- just accept for now that a high Getis_Ord Gi* value means a greater cluster of bus stops in that region.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(spdep)
-
-#find the centroid of each hexagon and convert to a matrix of points
-hex_points &amp;lt;- do.call(rbind, st_geometry(st_centroid(hex_polygons))) %&amp;gt;%
-  unlist() %&amp;gt;%
-  as.matrix.data.frame()
-
-#use a k-nearest-neighbour algorithm to find which shape neighbour which
-#super easy for the hexagons analytically obvs but important for e.g. using the ward boundaries instead
-neighbouring_hexes &amp;lt;- knn2nb(knearneigh(hex_points, k = 6), 
-                             row.names = rownames(hex_points)) %&amp;gt;%
-  include.self()
-
-#calculate the local G for a given variable (#bus stops) using the neihbours found previously
-localGvalues &amp;lt;- localG(x = as.numeric(hex_polygons$planning_no),
-                       listw = nb2listw(neighbouring_hexes, style = &amp;quot;B&amp;quot;),
-                       zero.policy = TRUE)
-
-#bind this back to the sf as a numeric variable column
-hex_polygons$smooth_planning_no &amp;lt;- as.numeric(localGvalues)
-
-#plot the statistic
-#+ve indicates more than would be expected
-p3 &amp;lt;- ggplot(hex_polygons) +
-  geom_sf(aes(fill = smooth_planning_no)) +
-  scale_fill_viridis_c(option = &amp;quot;magma&amp;quot;, name = &amp;quot;Gi* Statistic&amp;quot;) +
-  theme_void() +
-  ggtitle(&amp;quot;Getis-Ord Binned London Bus Stops Statistic&amp;quot;)
-
-plot(p3)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;img src=&#34;/post/2018-10-04-getis-ord-tutorial_files/figure-html/getis_ord-1.png&#34; width=&#34;672&#34; /&gt;&lt;/p&gt;
-&lt;p&gt;which generates a nice plot showing smoothed autocorrelation of dense public-transportation access. I like how you can clearly see the darker regions for the Lea Valley and Richmond Park, and in contrast the hubs of Kingston and Croydon, but in a way to is much more manageable than the contour map, or the point data itself.&lt;/p&gt;
-&lt;p&gt;It’s also worth bearing in mind, that this data is fairly organised (bus routes are to some extent, logically planned). When I first looked into spatial autocorrelation I was dealing with a huge number of dense points randomly dispersed over a significant proportion of England. At that level, techniques such as the finding the Getis-Ord statistic allow you to make sense of the data, AS WELL AS statistically test it. Though I haven’t ever worked with epidemiology data, apparently it’s a powerful technique to find clusters of disease outbreaks, and indeed, the data packaged with spdep is for SIDS data in North Carolina.&lt;/p&gt;
-&lt;p&gt;For more on this, I first learned about Getis-Ord from an excellent &lt;a href=&#34;https://pudding.cool/process/regional_smoothing/&#34;&gt;The Pudding&lt;/a&gt; post (from which some of my code is stolen), &lt;a href=&#34;http://pro.arcgis.com/en/pro-app/tool-reference/spatial-statistics/h-how-hot-spot-analysis-getis-ord-gi-spatial-stati.htm&#34;&gt;ARCGIS has&lt;/a&gt; a pretty good write up, and of course there is the CRAN page for the &lt;a href=&#34;https://cran.r-project.org/web/packages/spdep/index.html&#34;&gt;spdep library&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;Best,&lt;/p&gt;
-</description>
+      <description>Whilst getting some work done browsing twitter at work today, I came across this tweet from the always excellent John Burn-Murdoch on the scourge of heatmaps. What’s most frustrating about these maps is that ggplot2 (which is underrated as mapping software, especially when combined with packages like sf in R) makes it super easy to create this bland, uninformative maps.
+For instance, lets load some mapping libraries
+library(tidyverse)library(sf)library(rgdal)For this blog I’m going to use data of bus stops in London, because there’s an absolute ton of them and because I love the London Datastore and it was the first public, heavy, point data file I came across.</description>
     </item>
     
   </channel>
